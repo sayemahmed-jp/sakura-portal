@@ -109,6 +109,7 @@ td.num,th.num{text-align:right;white-space:nowrap}
 #toast.show{opacity:1}#toast.err{background:var(--red)}
 .muted{color:var(--muted)}.small{font-size:13px}
 .hide-m{}
+td.mt,td.mt2{display:none}
 /* mobile */
 .mtop{display:none}
 @media (max-width:860px){
@@ -122,5 +123,19 @@ td.num,th.num{text-align:right;white-space:nowrap}
   .form{grid-template-columns:1fr}
   .kv{grid-template-columns:120px 1fr}
   .hide-m{display:none}
+  table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+  table.stack tr:has(th){display:none}
+  table.stack tr{padding:10px 14px;border-top:1px solid var(--line)}
+  table.stack tr:first-child+tr{border-top:none}
+  table.stack td{border:none;padding:3px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right;background:transparent!important}
+  table.stack td::before{content:attr(data-l);color:var(--muted);font-size:12.5px;text-align:left;flex:none}
+  table.stack td[data-l=""]::before{display:none}
+  table.stack td.dm,table.stack td.hide-m{display:none}
+  table.stack td.mt,table.stack td.mt2{display:flex;font-size:15px;padding-bottom:6px}
+  table.stack td.mt{justify-content:flex-start;text-align:left}
+  table.stack tr:nth-child(even){background:#FBF7EE}
+  table.att-m td{justify-content:flex-start;text-align:left}
+  table.att-m .mk{width:100%}
+  table.att-m .mk button{flex:1;padding:9px 4px}
 }
 @media print{.side,.mtop,.no-print{display:none!important}.shell{display:block}.main{padding:0}}
