@@ -1,0 +1,126 @@
+:root{
+  --navy:#1B2945;--navy2:#26365A;--gold:#A3843A;--gold2:#C9A95C;--red:#C8372B;--green:#2E7D4F;
+  --ink:#26231E;--muted:#6E665A;--line:#E3D8C3;--bg:#F6F1E7;--card:#FFFDF8;--soft:#F3ECDD;
+  --r:10px;--shadow:0 1px 2px rgba(27,41,69,.06),0 6px 20px -12px rgba(27,41,69,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'Hind Siliguri',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5}
+a{color:var(--navy)}
+button,input,select,textarea{font:inherit;color:inherit}
+.boot{display:grid;place-items:center;height:100vh;color:var(--muted)}
+/* layout */
+.shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+.side{background:var(--navy);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid rgba(201,169,92,.35)}
+.brand b{display:block;font:800 15px/1.2 'Shippori Mincho B1',serif}
+.brand small{color:#E2C987;font-size:11px;letter-spacing:2px}
+.kamon{flex:none;width:40px;height:40px;border-radius:50%;background:#FBF8F1;border:2px solid var(--gold2);display:grid;place-items:center}
+.nav{display:flex;flex-direction:column;padding:10px 8px;gap:2px;flex:1}
+.nav a{display:flex;align-items:center;gap:10px;color:#E8E3D8;text-decoration:none;padding:10px 12px;border-radius:8px;font-weight:500}
+.nav a:hover{background:rgba(255,255,255,.07)}
+.nav a.on{background:var(--gold);color:#fff}
+.nav svg{width:18px;height:18px;flex:none}
+.who{padding:12px 16px;border-top:1px solid rgba(201,169,92,.35);font-size:13px;color:#E8E3D8}
+.who button{margin-top:6px;background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer}
+.main{padding:24px 28px 60px;min-width:0}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{margin:0;font:800 24px/1.25 'Noto Serif Bengali',serif;color:var(--navy)}
+.top p{margin:2px 0 0;color:var(--muted)}
+.demo-bar{background:#FFF4D6;border:1px solid #E9D28A;color:#6B5310;padding:8px 14px;border-radius:8px;margin-bottom:16px;font-size:14px}
+/* cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.card h2{margin:0 0 12px;font:700 17px 'Noto Serif Bengali',serif;color:var(--navy)}
+.grid{display:grid;gap:16px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.stat{padding:16px 18px}
+.stat .l{color:var(--muted);font-size:13px}
+.stat .v{font:700 26px/1.2 'Hind Siliguri';color:var(--navy);margin-top:4px}
+.stat .s{font-size:12px;color:var(--muted)}
+.stat.red .v{color:var(--red)}.stat.green .v{color:var(--green)}
+/* buttons & inputs */
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--navy);background:var(--navy);color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--navy2)}
+.btn.ghost{background:transparent;color:var(--navy)}
+.btn.ghost:hover{background:var(--soft)}
+.btn.red{background:var(--red);border-color:var(--red)}
+.btn.gold{background:var(--gold);border-color:var(--gold)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+input,select,textarea{border:1px solid #D6CBB5;background:#fff;border-radius:8px;padding:8px 10px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold2);outline-offset:0;border-color:var(--gold)}
+textarea{min-height:70px;resize:vertical}
+.form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 16px}
+.form .full{grid-column:1/-1}
+.form h3{grid-column:1/-1;margin:10px 0 0;font:700 15px 'Noto Serif Bengali';color:var(--navy);border-bottom:1px solid var(--line);padding-bottom:6px}
+.search{min-width:220px}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:var(--navy);color:#fff;text-align:left;font-weight:600;padding:9px 12px;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:middle}
+tr:nth-child(even) td{background:#FBF7EE}
+tr.click{cursor:pointer}tr.click:hover td{background:#F1E9D8}
+td.num,th.num{text-align:right;white-space:nowrap}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+/* badges */
+.b{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.b.active{background:#E3F1E8;color:var(--green)}.b.trial{background:#FFF4D6;color:#7A5B0B}.b.completed{background:#E5EAF4;color:var(--navy)}
+.b.dropped{background:#EEE;color:#666}.b.japan{background:#FBE3DF;color:var(--red)}
+.b.due{background:#FBE3DF;color:var(--red)}.b.paid{background:#E3F1E8;color:var(--green)}
+.b.missing{background:#EEE;color:#666}.b.received{background:#FFF4D6;color:#7A5B0B}.b.verified{background:#E3F1E8;color:var(--green)}
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 16px;overflow-x:auto}
+.tabs button{border:none;background:none;padding:9px 14px;cursor:pointer;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.tabs button.on{color:var(--navy);border-color:var(--red)}
+/* profile head */
+.phead{display:flex;gap:16px;align-items:center}
+.avatar{width:72px;height:72px;border-radius:50%;background:var(--soft);border:2px solid var(--gold2);display:grid;place-items:center;font:700 24px 'Noto Serif Bengali';color:var(--navy);overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+/* attendance marker */
+.mk{display:inline-flex;border:1px solid #D6CBB5;border-radius:8px;overflow:hidden}
+.mk button{border:none;background:#fff;padding:6px 10px;cursor:pointer;font-weight:600;font-size:13px;border-right:1px solid #E8DFCC}
+.mk button:last-child{border-right:none}
+.mk button.on.present{background:var(--green);color:#fff}.mk button.on.absent{background:var(--red);color:#fff}
+.mk button.on.late{background:#D9A520;color:#fff}.mk button.on.leave{background:#7C8AA5;color:#fff}
+/* progress */
+.bar{height:8px;background:#EDE5D3;border-radius:99px;overflow:hidden;min-width:80px}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar.low i{background:var(--red)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps span{padding:6px 10px;border-radius:8px;background:var(--soft);color:var(--muted);font-size:13px;font-weight:600}
+.steps span.done{background:var(--navy);color:#fff}
+.steps span.cur{background:var(--red);color:#fff}
+/* login */
+.login{min-height:100vh;display:grid;place-items:center;background:var(--navy);padding:20px}
+.login .card{width:100%;max-width:380px;padding:28px}
+.login h1{font:800 20px 'Noto Serif Bengali';color:var(--navy);margin:12px 0 2px}
+/* modal & toast */
+.modal{position:fixed;inset:0;background:rgba(15,22,38,.55);display:grid;place-items:center;padding:16px;z-index:50}
+.modal[hidden]{display:none}
+.modal-card{background:var(--card);border-radius:12px;max-width:720px;width:100%;max-height:92vh;overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal-card h2{margin:0 0 14px;font:700 18px 'Noto Serif Bengali';color:var(--navy)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;max-width:90vw}
+#toast.show{opacity:1}#toast.err{background:var(--red)}
+.muted{color:var(--muted)}.small{font-size:13px}
+.hide-m{}
+/* mobile */
+.mtop{display:none}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;inset:0 auto 0 0;width:250px;transform:translateX(-100%);transition:transform .2s;z-index:40}
+  .side.open{transform:none}
+  .mtop{display:flex;align-items:center;gap:10px;background:var(--navy);color:#fff;padding:10px 14px;position:sticky;top:0;z-index:30}
+  .mtop button{background:none;border:none;color:#fff;font-size:22px;cursor:pointer}
+  .main{padding:16px 14px 60px}
+  .g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}
+  .form{grid-template-columns:1fr}
+  .kv{grid-template-columns:120px 1fr}
+  .hide-m{display:none}
+}
+@media print{.side,.mtop,.no-print{display:none!important}.shell{display:block}.main{padding:0}}
