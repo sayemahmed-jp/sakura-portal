@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   wa_due: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর কোর্স ফি বাবদ {due} বকেয়া আছে{date}। অনুগ্রহ করে সময়মতো পরিশোধ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_absent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} {date} তারিখে ক্লাসে উপস্থিত ছিল না। এখন পর্যন্ত উপস্থিতি {pct}। জাপানে আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_result: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} "{exam}" পরীক্ষায় {marks} নম্বর পেয়েছে ({pct}, {result})। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_japan: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর জাপানের আবেদনের খবর: {school} ({intake} সেশন) — {status}। কিছু জানার থাকলে যোগাযোগ করবেন: {phone}',
   wa_lead: 'আসসালামু আলাইকুম {name}, {institute} থেকে বলছি। জাপানি ভাষা কোর্স (N5–N3) ও জাপানে পড়াশোনা নিয়ে আগ্রহ দেখানোর জন্য ধন্যবাদ। প্রথম ৩টি ক্লাস ফ্রি, আর সব বই কোর্স ফি-র মধ্যেই। কবে একবার অফিসে আসতে পারবেন জানাবেন? যোগাযোগ: {phone}'
 };
 const BATCH = { morning: 'সকাল ১০–১২টা', evening: 'সন্ধ্যা ৬–৮টা' };
@@ -52,6 +53,14 @@ const JSTAGES = [
   ['none', 'শুরু হয়নি'], ['docs', 'কাগজ জোগাড়'], ['school', 'স্কুল বাছাই'], ['applied', 'আবেদন জমা'],
   ['coe', 'COE পেয়েছে'], ['visa', 'ভিসা পেয়েছে'], ['departed', 'জাপানে গেছে']
 ];
+const APP_ST = { preparing: 'কাগজ তৈরি হচ্ছে', submitted: 'স্কুলে আবেদন জমা', interview: 'ইন্টারভিউ', accepted: 'স্কুল নিয়েছে', coe_applied: 'COE-র আবেদন হয়েছে', coe_granted: 'COE পেয়েছে', visa: 'ভিসা পেয়েছে', departed: 'জাপানে গেছে', rejected: 'স্কুল নেয়নি', coe_denied: 'COE পায়নি', withdrawn: 'বাদ দিয়েছে' };
+const APP_FLOW = ['preparing', 'submitted', 'interview', 'accepted', 'coe_applied', 'coe_granted', 'visa', 'departed'];
+const APP_CLOSED = ['rejected', 'coe_denied', 'withdrawn'];
+const APP_CLS = { preparing: 'trial', submitted: 'completed', interview: 'completed', accepted: 'completed', coe_applied: 'completed', coe_granted: 'active', visa: 'active', departed: 'japan', rejected: 'dropped', coe_denied: 'due', withdrawn: 'dropped' };
+const APP_STAGE = { preparing: 'school', submitted: 'applied', interview: 'applied', accepted: 'applied', coe_applied: 'applied', coe_granted: 'coe', visa: 'visa', departed: 'departed' };
+const SCHOOL_FEE = { none: 'দেওয়া হয়নি', partial: 'আংশিক দেওয়া', paid: 'পুরো দেওয়া' };
+const MONTH_BN = { '01': 'জানুয়ারি', '04': 'এপ্রিল', '07': 'জুলাই', '10': 'অক্টোবর' };
+const KOBE_SCHOOLS = [["春日日本語学院", "神戸市中央区", "神戸市中央区宮本通5-7-10", 171, 788000, "http://www.kasuga-kobe.jp/", "バングラデシュ人学生が在籍"], ["ECC日本語学院 神戸校", "神戸市中央区", "神戸市中央区琴ノ緒町5-5-6 ECC三宮ビル", 100, 908000, "https://www.ecc-nihongo.com/", "バングラデシュ人学生が在籍・三宮駅前"], ["神戸東洋日本語学院", "神戸市中央区", "神戸市中央区北長狭通4-5-7", 520, 825000, "https://jp-college.com/", "定員520名の大規模校"], ["KIJ語学院", "神戸市兵庫区", "神戸市兵庫区浜崎通3-7 兵庫駅南ビル", 510, 862640, "https://www.kij123.com/", "定員510名の大規模校"], ["富藤外国語学院", "神戸市中央区", "神戸市中央区北長狭通4-4-18 富士信ビル8F", 280, 918000, "https://www.tomifuji.ac.jp/", "南アジア(スリランカ)の実績"], ["京進ランゲージアカデミー神戸校", "神戸市灘区", "神戸市灘区将軍通4-1-3", 210, 720000, "https://www.kla.ac/jp/school/kobe/", "学費が比較的安い・南アジア実績"], ["神戸住吉国際日本語学校", "神戸市東灘区", "神戸市東灘区住吉宮町2-21-8", 120, 750000, "http://www.s-i-s-kobe.com", "ネパール・パキスタン等南アジア実績"], ["神戸外語教育学院", "神戸市長田区", "神戸市長田区六番町5-6-1", 364, null, "http://www.kobe-gaigo.jp.net/", "大規模校"], ["国際語学学院", "神戸市長田区", "神戸市長田区3番町5-5", 348, null, "http://www5d.biglobe.ne.jp/~ila/", "大規模校"], ["東京国際ビジネスカレッジ神戸校", "神戸市東灘区", "神戸市東灘区向洋町中9-1-6", null, null, "https://tibc-kobe.jp/", ""], ["神戸YMCA学院専門学校 日本語学科", "神戸市中央区", "神戸市中央区加納町2-7-11", 240, null, "https://www.kobeymca.ac.jp/vocational_school", "専門学校の日本語学科"], ["神戸電子専門学校 日本語学科", "神戸市中央区", "神戸市中央区北野町1-1-8", 200, null, "https://www.kobedenshi.ac.jp/whatsnew/course/overseas-students/japanese-lang", "IT系専門学校へ進学しやすい"], ["ヒューマンアカデミー日本語学校 神戸校", "神戸市中央区", "三宮駅から徒歩3分", null, null, "https://hajl.athuman.com/", "新設校は新しい送り出し機関を探していることが多い"], ["秀明神戸国際学院", "神戸市灘区", "神戸市灘区水道筋5-1-8 夷谷ビル", 158, null, "https://www3.hp-ez.com/hp/shumei-kobe/", ""], ["アジア学院", "神戸市兵庫区", "神戸市兵庫区入江通3-1-14", 160, null, "http://www.ari-edu.org/", ""], ["アリスト外語学院", "神戸市兵庫区", "神戸市兵庫区三川口町3-5-24", 160, null, "http://www.arist-f.com/", ""], ["コミュニカ学院", "神戸市中央区", "神戸市中央区東町116-2", 152, 915000, "http://www.communica-institute.org/", "欧米の学生が中心"], ["スバル外語学院", "神戸市長田区", "神戸市長田区六番町1-6-16", 140, null, "https://subarugaigo.jimdofree.com/", ""], ["日本語学院みらい", "神戸市中央区", "神戸市中央区三宮町2-11-1 センタープラザ西館7F", 100, null, "http://jli-mirai.com/", ""], ["神楽日本語学園", "神戸市長田区", "神戸市長田区神楽町2-3-1", null, null, "https://kagura-kobe.jp/", ""], ["神戸新長田日本語学院", "神戸市長田区", "神戸市長田区腕塚町9-7-13", null, null, "https://ksn-japanese.jp/", ""], ["神戸国際大学 経済学部国際別科", "神戸市中央区", "神戸市中央区磯辺通4-1-6", 80, null, "https://www.kobe-kiu.ac.jp/", "大学の別科"], ["阪神自動車航空鉄道専門学校 日本語別科", "神戸市長田区", "神戸市長田区林山町27-1", 80, null, "https://www.hits.ac.jp/", "専門学校の別科"], ["専門学校テクニカルカレッジ神戸 日本語学科", "神戸市中央区", "神戸市中央区琴ノ緒町5-7-1", null, null, "", ""], ["神戸国際語言学院(西宮市)", "西宮市", "西宮市本町6-21", null, null, "https://www.kobe-kg.jp/", "神戸の隣・バングラデシュ人の実績"]]; // [name, city, address, capacity, tuition ¥/yr, website, note] — from the Kobe schools sheet
 
 // ------------------------------------------------------------------ state
 const S = {
@@ -130,14 +139,14 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
   write(t, rows) { try { localStorage.setItem(this.key(t), JSON.stringify(rows)); } catch { toast('ব্রাউজারে জায়গা শেষ — ডেমো ফাইল ছোট রাখুন', true); } },
   async fetchAll(t) { return this.read(t); },
-  unique: { exam_results: [['exam_id', 'student_id']], students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
+  unique: { applications: [['student_id', 'school_id', 'intake']], exam_results: [['exam_id', 'student_id']], students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
   check(t, rows, row) {
     for (const cols of this.unique[t] || []) if (rows.some(r => r.id !== row.id && cols.every(c => r[c] === row[c]))) throw new Error('duplicate key');
   },
@@ -148,7 +157,7 @@ const Local = {
     if (t === 'students') for (const c of ['attendance', 'documents']) this.write(c, this.read(c).filter(r => r.student_id !== id));
     if (t === 'sessions') this.write('attendance', this.read('attendance').filter(r => r.session_id !== id));
     if (t === 'exams') this.write('exam_results', this.read('exam_results').filter(r => r.exam_id !== id));
-    if (t === 'students') this.write('exam_results', this.read('exam_results').filter(r => r.student_id !== id));
+    if (t === 'students') for (const c of ['exam_results', 'applications']) this.write(c, this.read(c).filter(r => r.student_id !== id));
   },
   async upsertResults(rows) {
     const all = this.read('exam_results');
@@ -196,7 +205,7 @@ const API = DEMO ? Local : Remote;
 async function loadAll() {
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
-  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
+  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
   TABLES.forEach((t, i) => { S[t] = rest[i]; });
   S.loaded = true;
@@ -313,10 +322,11 @@ const ICON = {
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
+  plane: '<path d="M2.5 13.5l19-8-5 15-4.5-5.5z"/><path d="M12 15l-2.5 5-1-6.5"/>',
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b></div>
   <div class="shell"><aside class="side" id="side">
@@ -347,6 +357,8 @@ function render() {
   if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
+  if (p[0] === 'japan') return viewJapan(q);
+  if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'settings') return viewSettings();
   return viewDashboard();
@@ -369,6 +381,7 @@ function viewDashboard() {
   const monthExp = monthSum(S.expenses, 'spent_on', m); const profit = monthIncome - monthExp;
   const follow = S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).sort((a, b) => a.next_follow_up.localeCompare(b.next_follow_up));
   const lastAbsent = (sid) => { const r = S.attendance.filter(x => x.student_id === sid && x.status === 'absent' && smap.has(x.session_id)).map(x => smap.get(x.session_id).class_date).sort(); return r[r.length - 1] || today; };
+  const jpSoon = S.applications.filter(a => appOpen(a) && appNext(a) && appNext(a)[0] <= isoPlus(21)).sort((a, b) => appNext(a)[0].localeCompare(appNext(b)[0]));
   const expByCat = {}; S.expenses.filter(e => (e.spent_on || '').startsWith(m)).forEach(e => { expByCat[e.category] = (expByCat[e.category] || 0) + num(e.amount); });
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
@@ -385,6 +398,7 @@ function viewDashboard() {
     <div class="card"><h2>সাম্প্রতিক জমা</h2>${recent.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>ছাত্র</th><th class="num">টাকা</th></tr>${recent.map(p => { const s = byId(S.students, p.student_id); return `<tr class="click" data-go="#/student/${p.student_id}?t=fees"><td>${fmtD(p.paid_on)}</td><td>${esc(studentName(s))}</td><td class="num">${tk(p.amount)}</td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কোনো জমা নেই</div>'}</div>
     <div class="card"><h2>ব্যাচ অনুযায়ী ছাত্র</h2><div class="tw"><table><tr><th>লেভেল</th><th>${BATCH.morning}</th><th>${BATCH.evening}</th></tr>${LEVELS.map(l => `<tr><td><b>${l}</b></td><td>${groups[l + '|morning'] || 0} জন</td><td>${groups[l + '|evening'] || 0} জন</td></tr>`).join('')}</table></div></div>
     <div class="card"><h2>আজকের ফলো-আপ</h2>${follow.length ? `<div class="tw"><table><tr><th>নাম</th><th>অবস্থা</th><th>তারিখ</th><th></th></tr>${follow.slice(0, 8).map(l => `<tr class="click" data-go="#/leads"><td>${esc(l.name)}<div class="small muted">${esc(l.phone)}</div></td><td>${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td>${l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : 'আজ'}</td><td class="num">${waBtn(l.phone, leadMsg(l), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">আজ কাউকে ফোন করার নেই</div>'}</div>
+    <div class="card"><h2>জাপান আবেদন: সামনের তারিখ</h2>${jpSoon.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>স্কুল</th><th>তারিখ</th></tr>${jpSoon.slice(0, 8).map(a => `<tr class="click" data-go="#/student/${a.student_id}?t=japan"><td>${esc(studentName(byId(S.students, a.student_id)))}</td><td>${esc(schoolName(byId(S.jp_schools, a.school_id)))}</td><td>${nextCell(a)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনের ৩ সপ্তাহে কোনো তারিখ নেই</div>'}</div>
     <div class="card"><h2>এ মাসের খরচ</h2>${Object.keys(expByCat).length ? `<div class="tw"><table><tr><th>খাত</th><th class="num">টাকা</th></tr>${Object.entries(expByCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr class="click" data-go="#/expenses"><td>${esc(EXP_CAT[k] || k)}</td><td class="num">${tk(v)}</td></tr>`).join('')}</table></div>` : '<div class="empty">এ মাসে কোনো খরচ লেখা হয়নি</div>'}</div>
   </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); });
 }
@@ -514,7 +528,9 @@ async function viewStudent(id, tab) {
     <form class="form" id="jf" style="margin-top:16px"><label class="f">বর্তমান ধাপ<select name="japan_stage">${JSTAGES.map(([k, l]) => `<option value="${k}" ${k === (s.japan_stage || 'none') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f">লক্ষ্য সেশন (যেমন 2027-04)<input name="intake" value="${esc(s.intake || '')}" placeholder="2027-04"></label>
     <label class="f full">জাপানের স্কুল<input name="target_school" value="${esc(s.target_school || '')}" placeholder="যেমন 春日日本語学院"></label>
-    <div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div></form></div>`;
+    <div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div></form></div>
+    <div class="row" style="margin:16px 0 10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">স্কুলে আবেদন</h2><span class="spacer"></span><button class="btn gold" id="napp">+ নতুন আবেদন</button></div>
+    <div class="tw">${(() => { const ap = S.applications.filter(x => x.student_id === s.id).sort((x, y) => (y.intake || '').localeCompare(x.intake || '')); return ap.length ? appRows(ap, { showStudent: false }) : '<div class="empty">এখনো কোনো স্কুলে আবেদন হয়নি</div>'; })()}</div>`;
   }
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
@@ -526,11 +542,12 @@ async function viewStudent(id, tab) {
     const del = $('#del'); if (del) del.onclick = async () => {
       if (S.payments.some(p => p.student_id === s.id)) return toast('এই ছাত্রের টাকা জমার রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "বাদ দিয়েছে" করে দিন।', true);
       if (!(await confirmBox(`${studentName(s)}-এর সব তথ্য, হাজিরা ও কাগজপত্র মুছে যাবে।`))) return;
-      try { await API.remove('students', s.id); S.students = S.students.filter(x => x.id !== s.id); S.attendance = S.attendance.filter(x => x.student_id !== s.id); S.documents = S.documents.filter(x => x.student_id !== s.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/students'; } catch (e) { toast(errMsg(e), true); }
+      try { await API.remove('students', s.id); S.students = S.students.filter(x => x.id !== s.id); S.attendance = S.attendance.filter(x => x.student_id !== s.id); S.documents = S.documents.filter(x => x.student_id !== s.id); S.applications = S.applications.filter(x => x.student_id !== s.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/students'; } catch (e) { toast(errMsg(e), true); }
     };
     if (tab === 'fees') { $('#addpay').onclick = () => paymentModal(s.id); $$('[data-rc]').forEach(b => b.onclick = () => printReceipt(byId(S.payments, b.dataset.rc))); }
     if (tab === 'att') { const c = $('#cert'); if (c) c.onclick = () => printCertificate(s); }
     if (tab === 'exams') { bindGo(); const t = $('#tr'); if (t) t.onclick = () => printTranscript(s); }
+    if (tab === 'japan') { $('#napp').onclick = () => appModal(null, { student_id: s.id, intake: s.intake || undefined }); bindApps(); }
     if (tab === 'japan') $('#jf').onsubmit = async (e) => { e.preventDefault(); try { putLocal('students', await API.update('students', s.id, formData(e.target))); toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
     if (tab === 'docs') {
       const saveDoc = async (k, patch) => {
@@ -840,6 +857,212 @@ function viewExam(id) {
   });
 }
 
+// ------------------------------------------------------------------ Japan: schools & applications
+const intakeLabel = (v) => v && /^\d{4}-\d{2}$/.test(v) ? `${v.slice(0, 4)} ${MONTH_BN[v.slice(5)] || v.slice(5) + ' মাস'}` : (v || '—');
+function intakeOptions(cur) {
+  const out = []; const d = new Date(); let y = d.getFullYear(), m = d.getMonth() + 1;
+  for (let i = 0; out.length < 8 && i < 40; i++) { if ([1, 4, 7, 10].includes(m)) out.push(`${y}-${pad(m, 2)}`); m++; if (m > 12) { m = 1; y++; } }
+  const used = S.applications.map(a => a.intake).filter(Boolean);
+  return [...new Set([...(cur ? [cur] : []), ...used, ...out])].sort();
+}
+const schoolName = (sc) => sc ? (sc.name_ja || sc.name_en || '—') : '—';
+const yen = (n) => n == null || n === '' ? '—' : '¥' + Math.round(num(n)).toLocaleString('en-US');
+const appOpen = (a) => !APP_CLOSED.includes(a.status) && a.status !== 'departed';
+function appNext(a) { // the nearest date that still matters for this application
+  const t = todayISO(); const c = [];
+  if (a.status === 'preparing' && a.deadline_on) c.push([a.deadline_on, 'আবেদনের শেষ তারিখ']);
+  if (['submitted', 'interview'].includes(a.status) && a.interview_on && a.interview_on >= t) c.push([a.interview_on, 'ইন্টারভিউ']);
+  if (['accepted', 'coe_applied'].includes(a.status) && a.result_on) c.push([a.result_on, 'COE-র ফল']);
+  if (a.status === 'visa' && a.depart_on) c.push([a.depart_on, 'যাত্রা']);
+  c.sort((x, y) => x[0].localeCompare(y[0])); return c[0] || null;
+}
+function nextCell(a) {
+  const n = appNext(a); if (!n) return '<span class="muted">—</span>';
+  const t = todayISO(); const late = n[0] < t; const soon = !late && n[0] <= isoPlus(7);
+  return `<span class="cell">${late ? badge('due', fmtD(n[0])) : soon ? badge('trial', fmtD(n[0])) : fmtD(n[0])}<div class="small muted">${n[1]}${late ? ' পার হয়েছে' : ''}</div></span>`;
+}
+const isoPlus = (days) => { const x = new Date(); x.setDate(x.getDate() + days); return `${x.getFullYear()}-${pad(x.getMonth() + 1, 2)}-${pad(x.getDate(), 2)}`; };
+function japanMsg(s, a) { const sc = byId(S.jp_schools, a.school_id); return fillTpl(S.settings.wa_japan, { ...tplBase(), name: s.name_bn || s.name_en, school: schoolName(sc), intake: intakeLabel(a.intake), status: APP_ST[a.status] || a.status }); }
+
+async function syncStudentStage(sid) { // move the student's Japan stage forward to match their best application
+  const s = byId(S.students, sid); if (!s) return;
+  const apps = S.applications.filter(a => a.student_id === sid && !APP_CLOSED.includes(a.status));
+  if (!apps.length) return;
+  const best = apps.reduce((b, a) => APP_FLOW.indexOf(a.status) > APP_FLOW.indexOf(b.status) ? a : b);
+  const order = JSTAGES.map(([k]) => k); const want = APP_STAGE[best.status];
+  const patch = {};
+  if (order.indexOf(want) > order.indexOf(s.japan_stage || 'none')) patch.japan_stage = want;
+  const sc = byId(S.jp_schools, best.school_id);
+  if (APP_FLOW.indexOf(best.status) >= APP_FLOW.indexOf('accepted') || !s.target_school) { if (sc && s.target_school !== schoolName(sc)) patch.target_school = schoolName(sc); if (best.intake && s.intake !== best.intake) patch.intake = best.intake; }
+  if (best.status === 'departed' && s.status !== 'japan') patch.status = 'japan';
+  if (Object.keys(patch).length) { putLocal('students', await API.update('students', sid, patch)); return patch; }
+}
+
+function schoolModal(sc) {
+  const v = sc || { prefecture: '兵庫県', intakes: '1, 4, 7, 10', active: 'yes' };
+  openModal(`<h2>${sc ? 'স্কুলের তথ্য' : 'নতুন জাপানি স্কুল'}</h2><form class="form" id="scf">
+    <label class="f full">স্কুলের নাম (জাপানি)<input name="name_ja" required value="${esc(v.name_ja || '')}" placeholder="যেমন 春日日本語学院"></label>
+    <label class="f full">স্কুলের নাম (ইংরেজি)<input name="name_en" value="${esc(v.name_en || '')}" placeholder="Kasuga Japanese Language School"></label>
+    <label class="f">প্রিফেকচার<input name="prefecture" value="${esc(v.prefecture || '')}" placeholder="兵庫県"></label>
+    <label class="f">শহর / ওয়ার্ড<input name="city" value="${esc(v.city || '')}" placeholder="神戸市中央区"></label>
+    <label class="f full">ঠিকানা<input name="address" value="${esc(v.address || '')}"></label>
+    <label class="f">বছরে টিউশন ফি (¥)<input name="tuition_yen" type="number" min="0" value="${esc(v.tuition_yen ?? '')}"></label>
+    <label class="f">আসন সংখ্যা<input name="capacity" type="number" min="0" value="${esc(v.capacity ?? '')}"></label>
+    <label class="f">ভর্তির মাস<input name="intakes" value="${esc(v.intakes || '')}" placeholder="1, 4, 7, 10"></label>
+    <label class="f">অবস্থা<select name="active"><option value="yes" ${v.active !== false && v.active !== 'no' ? 'selected' : ''}>কাজ চলছে</option><option value="no" ${v.active === false || v.active === 'no' ? 'selected' : ''}>এখন পাঠাচ্ছি না</option></select></label>
+    <label class="f">যোগাযোগের ব্যক্তি<input name="contact_person" value="${esc(v.contact_person || '')}" placeholder="যেমন 田中さん (入学担当)"></label>
+    <label class="f">ফোন<input name="phone" type="tel" value="${esc(v.phone || '')}"></label>
+    <label class="f">ইমেইল<input name="email" type="email" value="${esc(v.email || '')}"></label>
+    <label class="f">ওয়েবসাইট<input name="website" type="url" value="${esc(v.website || '')}" placeholder="https://"></label>
+    <label class="f full">নোট<textarea name="notes" placeholder="যেমন: আবেদনের শেষ তারিখ, এজেন্ট কমিশন, ভর্তি পরীক্ষা লাগে কিনা">${esc(v.notes || '')}</textarea></label>
+    <div class="full row" style="justify-content:flex-end">${sc && isAdmin() ? '<button type="button" class="btn ghost" id="scd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="scc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#scc').onclick = closeModal;
+  const del = $('#scd'); if (del) del.onclick = async () => {
+    if (S.applications.some(a => a.school_id === sc.id)) { closeModal(); return toast('এই স্কুলে আবেদনের রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "এখন পাঠাচ্ছি না" করে দিন।', true); }
+    closeModal(); if (!(await confirmBox(`${schoolName(sc)} তালিকা থেকে মুছে যাবে।`))) return;
+    try { await API.remove('jp_schools', sc.id); S.jp_schools = S.jp_schools.filter(x => x.id !== sc.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/japan?v=schools'; } catch (e) { toast(errMsg(e), true); }
+  };
+  $('#scf').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target); d.active = d.active !== 'no';
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try { const row = sc ? await API.update('jp_schools', sc.id, d) : await API.insert('jp_schools', d); putLocal('jp_schools', row); closeModal(); toast('সংরক্ষণ হয়েছে'); if (sc) render(); else location.hash = '#/school/' + row.id; }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+
+function appModal(a, preset = {}) {
+  const v = a || { status: 'preparing', school_fee: 'none', intake: intakeOptions()[0], ...Object.fromEntries(Object.entries(preset).filter(([, x]) => x != null && x !== '')) };
+  const studs = S.students.filter(s => s.status !== 'dropped' || s.id === v.student_id).sort((x, y) => (x.name_en || '').localeCompare(y.name_en || ''));
+  const schools = S.jp_schools.filter(sc => sc.active !== false || sc.id === v.school_id).sort((x, y) => schoolName(x).localeCompare(schoolName(y)));
+  if (!schools.length) return toast('আগে "স্কুল" ট্যাবে অন্তত একটা জাপানি স্কুল যোগ করুন', true);
+  const sel = (name, opts) => `<select name="${name}">${Object.entries(opts).map(([k, t]) => `<option value="${k}" ${v[name] === k ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  openModal(`<h2>${a ? 'আবেদনের তথ্য' : 'নতুন আবেদন'}</h2><form class="form" id="apf">
+    <label class="f full">ছাত্র<select name="student_id" required ${a ? 'disabled' : ''}><option value="">— বেছে নিন —</option>${studs.map(s => `<option value="${s.id}" ${v.student_id === s.id ? 'selected' : ''}>${esc(s.admission_no)} · ${esc(s.name_bn || s.name_en)}</option>`).join('')}</select></label>
+    <label class="f full">জাপানি স্কুল<select name="school_id" required><option value="">— বেছে নিন —</option>${schools.map(sc => `<option value="${sc.id}" ${v.school_id === sc.id ? 'selected' : ''}>${esc(schoolName(sc))}${sc.city ? ' · ' + esc(sc.city) : ''}</option>`).join('')}</select></label>
+    <label class="f">সেশন (ভর্তির মাস)<select name="intake" required>${intakeOptions(v.intake).map(x => `<option value="${x}" ${v.intake === x ? 'selected' : ''}>${intakeLabel(x)}</option>`).join('')}</select></label>
+    <label class="f">অবস্থা${sel('status', APP_ST)}</label>
+    <label class="f">স্কুলে আবেদনের শেষ তারিখ<input name="deadline_on" type="date" value="${esc(v.deadline_on || '')}"></label>
+    <label class="f">আবেদন জমার তারিখ<input name="submitted_on" type="date" value="${esc(v.submitted_on || '')}"></label>
+    <label class="f">ইন্টারভিউর তারিখ<input name="interview_on" type="date" value="${esc(v.interview_on || '')}"></label>
+    <label class="f">COE-র ফলের তারিখ<input name="result_on" type="date" value="${esc(v.result_on || '')}"></label>
+    <label class="f">যাত্রার তারিখ<input name="depart_on" type="date" value="${esc(v.depart_on || '')}"></label>
+    <label class="f">স্কুলের ফি (জাপানে পাঠানো)${sel('school_fee', SCHOOL_FEE)}</label>
+    <label class="f full">নোট<textarea name="note" placeholder="যেমন: স্কুল আরও ব্যাংক স্টেটমেন্ট চেয়েছে, ইন্টারভিউ Zoom-এ সকাল ১০টায় (জাপান সময়)">${esc(v.note || '')}</textarea></label>
+    <p class="full small muted" style="margin:0">অবস্থা বদলালে ছাত্রের "জাপান প্রসেস" ধাপ, স্কুল আর সেশন নিজে থেকে এগিয়ে যাবে।</p>
+    <div class="full row" style="justify-content:flex-end">${a && isAdmin() ? '<button type="button" class="btn ghost" id="apd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="apc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#apc').onclick = closeModal;
+  const del = $('#apd'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox('এই আবেদনের রেকর্ড মুছে যাবে।'))) return; try { await API.remove('applications', a.id); S.applications = S.applications.filter(x => x.id !== a.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  $('#apf').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target); if (a) delete d.student_id;
+    const sid = a ? a.student_id : d.student_id;
+    if (!sid || !d.school_id) return toast('ছাত্র আর স্কুল বেছে নিন', true);
+    if (S.applications.some(x => x.id !== (a && a.id) && x.student_id === sid && x.school_id === d.school_id && x.intake === d.intake)) return toast('এই ছাত্রের এই স্কুলে এই সেশনের আবেদন আগে থেকেই আছে', true);
+    const t = todayISO();
+    if (d.status === 'submitted' && !d.submitted_on) d.submitted_on = t;
+    if (['coe_granted', 'coe_denied'].includes(d.status) && !d.result_on) d.result_on = t;
+    d.updated_at = new Date().toISOString();
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      putLocal('applications', a ? await API.update('applications', a.id, d) : await API.insert('applications', d));
+      const moved = await syncStudentStage(sid).catch(() => null);
+      closeModal(); toast(moved && moved.japan_stage ? `সংরক্ষণ হয়েছে · ছাত্রের ধাপ এখন "${(JSTAGES.find(([k]) => k === moved.japan_stage) || [])[1]}"` : 'সংরক্ষণ হয়েছে'); render();
+    } catch (err) { toast(/duplicate|unique/i.test(errMsg(err) + (err && err.message)) ? 'এই ছাত্রের এই স্কুলে এই সেশনের আবেদন আগে থেকেই আছে' : errMsg(err), true); btn.disabled = false; }
+  };
+}
+
+function appRows(list, { showStudent = true, showSchool = true } = {}) {
+  return `<table class="stack"><tr>${showStudent ? '<th>ছাত্র</th>' : ''}${showSchool ? '<th>স্কুল</th>' : ''}<th>সেশন</th><th>অবস্থা</th><th>পরের তারিখ</th><th></th></tr>${list.map(a => {
+    const s = byId(S.students, a.student_id); const sc = byId(S.jp_schools, a.school_id);
+    const title = showStudent ? `<b>${esc(studentName(s))}</b>` : `<b>${esc(schoolName(sc))}</b>`;
+    return `<tr class="click" data-app="${a.id}"><td class="mt" data-l=""><span>${title}</span></td>${showStudent ? `<td class="dm"><b>${esc(studentName(s))}</b><div class="small muted">${esc(s ? s.admission_no : '')} · ${esc(s ? s.current_level : '')}</div></td>` : ''}${showSchool ? `<td ${showStudent ? 'data-l="স্কুল"' : 'class="dm"'}><span class="cell">${showStudent ? esc(schoolName(sc)) : `<b>${esc(schoolName(sc))}</b>`}<div class="small muted">${esc(sc ? sc.city || '' : '')}</div></span></td>` : ''}<td data-l="সেশন">${esc(intakeLabel(a.intake))}</td><td data-l="অবস্থা">${badge(APP_CLS[a.status], APP_ST[a.status] || a.status)}</td><td data-l="পরের তারিখ">${appOpen(a) ? nextCell(a) : '<span class="muted">—</span>'}</td><td class="num" data-l="">${s ? waBtn(guardianPhone(s), japanMsg(s, a), '') : ''}</td></tr>`;
+  }).join('')}</table>`;
+}
+function bindApps() { $$('[data-app]').forEach(tr => tr.onclick = () => appModal(byId(S.applications, tr.dataset.app))); $$('[data-app] a').forEach(el => el.addEventListener('click', e => e.stopPropagation())); }
+
+function viewJapan(q) {
+  const v = q.get('v') === 'schools' ? 'schools' : 'apps';
+  const tabs = `<div class="tabs"><button data-jv="apps" class="${v === 'apps' ? 'on' : ''}">আবেদন</button><button data-jv="schools" class="${v === 'schools' ? 'on' : ''}">জাপানি স্কুল (${S.jp_schools.length})</button></div>`;
+  const bindTabs = () => $$('[data-jv]').forEach(b => b.onclick = () => { location.hash = '#/japan' + (b.dataset.jv === 'schools' ? '?v=schools' : ''); });
+  if (v === 'schools') return viewSchools(q, tabs, bindTabs);
+  const f = { st: q.get('st') || 'open', in: q.get('in') || '', s: q.get('s') || '' };
+  const list = S.applications.filter(a => {
+    if (f.st === 'open' && !appOpen(a)) return false;
+    if (!['open', 'all'].includes(f.st) && a.status !== f.st) return false;
+    if (f.in && a.intake !== f.in) return false;
+    if (f.s) { const t = f.s.toLowerCase(); const s = byId(S.students, a.student_id); const sc = byId(S.jp_schools, a.school_id); if (![s && s.name_bn, s && s.name_en, s && s.admission_no, sc && sc.name_ja, sc && sc.name_en].some(x => (x || '').toLowerCase().includes(t))) return false; }
+    return true;
+  }).sort((a, b) => ((appNext(a) || ['9999'])[0]).localeCompare((appNext(b) || ['9999'])[0]) || APP_FLOW.indexOf(b.status) - APP_FLOW.indexOf(a.status));
+  const scope = S.applications.filter(a => !f.in || a.intake === f.in);
+  const count = (st) => scope.filter(a => a.status === st).length;
+  const soon = S.applications.filter(a => appOpen(a) && appNext(a) && appNext(a)[0] <= isoPlus(14)).length;
+  const decided = scope.filter(a => ['coe_granted', 'visa', 'departed', 'coe_denied'].includes(a.status)); const granted = decided.filter(a => a.status !== 'coe_denied').length;
+  const intakes = [...new Set(S.applications.map(a => a.intake).filter(Boolean))].sort().reverse();
+  const byIntake = intakes.map(i => { const r = S.applications.filter(a => a.intake === i); return { i, n: r.length, students: new Set(r.map(a => a.student_id)).size, coe: r.filter(a => ['coe_granted', 'visa', 'departed'].includes(a.status)).length, den: r.filter(a => a.status === 'coe_denied').length, dep: r.filter(a => a.status === 'departed').length }; });
+  mount('#/japan', `
+  <div class="top"><div><h1>জাপান আবেদন</h1><p>কে কোন স্কুলে আবেদন করেছে, ইন্টারভিউ, COE, ভিসা আর যাত্রা</p></div><div class="row"><button class="btn ghost" id="acsv">CSV</button><button class="btn" id="na">+ নতুন আবেদন</button></div></div>
+  ${tabs}
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">চলমান আবেদন</div><div class="v">${S.applications.filter(appOpen).length}</div><div class="s">${new Set(S.applications.filter(appOpen).map(a => a.student_id)).size} জন ছাত্র</div></div>
+    <div class="card stat ${soon ? 'red' : ''}"><div class="l">সামনের ১৪ দিনে তারিখ</div><div class="v">${soon}</div><div class="s">শেষ তারিখ, ইন্টারভিউ, COE, যাত্রা</div></div>
+    <div class="card stat green"><div class="l">COE পেয়েছে${f.in ? ' (এই সেশন)' : ''}</div><div class="v">${granted}</div><div class="s">${decided.length ? 'COE-র হার ' + Math.round(granted * 100 / decided.length) + '%' : 'এখনো ফল আসেনি'}</div></div>
+    <div class="card stat"><div class="l">জাপানে গেছে${f.in ? ' (এই সেশন)' : ''}</div><div class="v">${count('departed')}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px;padding:12px"><div class="steps">${APP_FLOW.map(st => `<a href="#/japan?st=${st}${f.in ? '&in=' + f.in : ''}" class="pipe ${f.st === st ? 'cur' : ''}">${APP_ST[st]} <b>${count(st)}</b></a>`).join('')}</div></div>
+  <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
+    <input class="search" name="s" placeholder="ছাত্র বা স্কুলের নাম দিয়ে খুঁজুন" value="${esc(f.s)}">
+    <select name="in"><option value="">সব সেশন</option>${intakes.map(i => `<option value="${i}" ${f.in === i ? 'selected' : ''}>${intakeLabel(i)}</option>`).join('')}</select>
+    <select name="st"><option value="open" ${f.st === 'open' ? 'selected' : ''}>চলমান আবেদন</option><option value="all" ${f.st === 'all' ? 'selected' : ''}>সব আবেদন</option>${Object.entries(APP_ST).map(([k, l]) => `<option value="${k}" ${f.st === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <button class="btn ghost">খুঁজুন</button></form>
+  <div class="tw">${list.length ? appRows(list) : `<div class="empty">${S.applications.length ? 'এই তালিকায় কোনো আবেদন নেই' : S.jp_schools.length ? 'এখনো কোনো আবেদন নেই। "+ নতুন আবেদন" দিয়ে শুরু করুন।' : 'আগে "জাপানি স্কুল" ট্যাবে স্কুল যোগ করুন, তারপর আবেদন লিখুন।'}</div>`}</div>
+  ${byIntake.length ? `<div class="card" style="margin-top:16px"><h2>সেশন অনুযায়ী ফলাফল</h2><div class="tw"><table class="stack"><tr><th>সেশন</th><th class="num">ছাত্র</th><th class="num">আবেদন</th><th class="num">COE পেয়েছে</th><th class="num">COE পায়নি</th><th class="num">জাপানে গেছে</th></tr>${byIntake.map(r => `<tr class="click" data-go="#/japan?st=all&in=${r.i}"><td data-l="সেশন"><b>${esc(intakeLabel(r.i))}</b></td><td class="num" data-l="ছাত্র">${r.students}</td><td class="num" data-l="আবেদন">${r.n}</td><td class="num" data-l="COE পেয়েছে">${r.coe}</td><td class="num" data-l="COE পায়নি">${r.den}</td><td class="num" data-l="জাপানে গেছে">${r.dep}</td></tr>`).join('')}</table></div><p class="small muted">COE-র হার ভালো থাকলে নতুন ছাত্রদের সেটা দেখানো যায়।</p></div>` : ''}`, () => {
+    bindTabs(); bindApps(); bindGo();
+    $('#na').onclick = () => appModal(null, f.in ? { intake: f.in } : {});
+    $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); location.hash = '#/japan?' + new URLSearchParams(Object.entries(d).filter(([, x]) => x)); };
+    $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
+    $('#acsv').onclick = () => csvDownload(`sakura-japan-applications-${todayISO()}.csv`, [['Admission no', 'Student', 'Passport', 'School', 'City', 'Intake', 'Status', 'Deadline', 'Submitted', 'Interview', 'COE result', 'Departure', 'School fee', 'Guardian phone', 'Note'], ...list.map(a => { const s = byId(S.students, a.student_id) || {}; const sc = byId(S.jp_schools, a.school_id) || {}; return [s.admission_no, s.name_en || s.name_bn, s.passport_no, schoolName(sc), sc.city, a.intake, APP_ST[a.status], a.deadline_on, a.submitted_on, a.interview_on, a.result_on, a.depart_on, SCHOOL_FEE[a.school_fee] || '', s.guardian_phone, a.note]; })]);
+  });
+}
+
+function viewSchools(q, tabs, bindTabs) {
+  const s = (q.get('s') || '').toLowerCase(); const showAll = q.get('all') === '1';
+  const stats = (id) => { const r = S.applications.filter(a => a.school_id === id); return { n: r.length, coe: r.filter(a => ['coe_granted', 'visa', 'departed'].includes(a.status)).length, open: r.filter(appOpen).length }; };
+  const list = S.jp_schools.filter(sc => (showAll || sc.active !== false) && (!s || [sc.name_ja, sc.name_en, sc.city, sc.prefecture].some(x => (x || '').toLowerCase().includes(s)))).sort((a, b) => stats(b.id).n - stats(a.id).n || schoolName(a).localeCompare(schoolName(b)));
+  const missingKobe = KOBE_SCHOOLS.filter(k => !S.jp_schools.some(sc => sc.name_ja === k[0])).length;
+  mount('#/japan', `
+  <div class="top"><div><h1>জাপান আবেদন</h1><p>যেসব জাপানি স্কুলে ছাত্র পাঠান তাদের তালিকা</p></div><div class="row">${missingKobe ? `<button class="btn ghost" id="kobe">কোবের ${missingKobe}টি স্কুল যোগ করুন</button>` : ''}<button class="btn" id="ns">+ নতুন স্কুল</button></div></div>
+  ${tabs}
+  <form class="row card" id="flt" style="padding:12px;margin-bottom:14px"><input type="hidden" name="v" value="schools"><input class="search" name="s" placeholder="স্কুল বা শহরের নাম" value="${esc(q.get('s') || '')}"><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="sall" ${showAll ? 'checked' : ''}> যাদের কাছে এখন পাঠাচ্ছি না তাদেরও দেখান</label><button class="btn ghost">খুঁজুন</button></form>
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>স্কুল</th><th>শহর</th><th class="num">টিউশন / বছর</th><th class="num">আবেদন</th><th class="num">COE</th></tr>${list.map(sc => { const st = stats(sc.id); return `<tr class="click" data-go="#/school/${sc.id}"><td class="mt" data-l=""><span><b>${esc(schoolName(sc))}</b></span></td><td class="dm"><b>${esc(schoolName(sc))}</b>${sc.name_en ? `<div class="small muted">${esc(sc.name_en)}</div>` : ''}${sc.active === false ? ' ' + badge('dropped', 'পাঠাচ্ছি না') : ''}</td><td data-l="শহর">${esc(sc.city || sc.prefecture || '—')}</td><td class="num" data-l="টিউশন / বছর">${yen(sc.tuition_yen)}</td><td class="num" data-l="আবেদন">${st.n ? st.n + (st.open ? ` <span class="small muted">(${st.open} চলমান)</span>` : '') : '—'}</td><td class="num" data-l="COE">${st.coe || '—'}</td></tr>`; }).join('')}</table>` : `<div class="empty">${S.jp_schools.length ? 'কোনো স্কুল পাওয়া যায়নি' : 'এখনো কোনো স্কুল যোগ করা হয়নি। কোবের স্কুলের তালিকা এক ক্লিকে যোগ করতে পারেন।'}</div>`}</div>`, () => {
+    bindTabs(); bindGo();
+    $('#ns').onclick = () => schoolModal(null);
+    $('#flt').onsubmit = (e) => { e.preventDefault(); const p = new URLSearchParams({ v: 'schools' }); const t = e.target.s.value.trim(); if (t) p.set('s', t); if ($('#sall').checked) p.set('all', '1'); location.hash = '#/japan?' + p; };
+    $('#sall').onchange = () => $('#flt').requestSubmit();
+    const kb = $('#kobe'); if (kb) kb.onclick = async () => {
+      if (!(await confirmBox(`কোবে ও আশেপাশের ${missingKobe}টি জাপানি ভাষা স্কুলের নাম, ঠিকানা, ফি আর ওয়েবসাইট তালিকায় যোগ হবে। পরে যেকোনোটা বদলানো বা মোছা যাবে।`, 'হ্যাঁ, যোগ করুন'))) return;
+      kb.disabled = true; let n = 0;
+      try { for (const [name_ja, city, address, capacity, tuition_yen, website, notes] of KOBE_SCHOOLS) { if (S.jp_schools.some(sc => sc.name_ja === name_ja)) continue; putLocal('jp_schools', await API.insert('jp_schools', { name_ja, prefecture: '兵庫県', city, address, capacity, tuition_yen, website, notes, intakes: '', active: true })); n++; } toast(`${n}টি স্কুল যোগ হয়েছে`); }
+      catch (err) { toast((n ? `${n}টি যোগ হয়েছে, তারপর সমস্যা: ` : '') + errMsg(err), true); }
+      render();
+    };
+  });
+}
+
+function viewSchool(id) {
+  const sc = byId(S.jp_schools, id);
+  if (!sc) return mount('#/japan', '<div class="empty">স্কুল পাওয়া যায়নি</div>');
+  const apps = S.applications.filter(a => a.school_id === sc.id).sort((a, b) => (b.intake || '').localeCompare(a.intake || '') || APP_FLOW.indexOf(b.status) - APP_FLOW.indexOf(a.status));
+  const coe = apps.filter(a => ['coe_granted', 'visa', 'departed'].includes(a.status)).length; const den = apps.filter(a => a.status === 'coe_denied').length;
+  const link = (u) => /^https?:\/\//i.test(u || '') ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>` : esc(u || '—');
+  const kv = [['ইংরেজি নাম', esc(sc.name_en || '—')], ['ঠিকানা', esc([sc.prefecture, sc.address || sc.city].filter(Boolean).join(' ') || '—')], ['বছরে টিউশন ফি', yen(sc.tuition_yen)], ['আসন', esc(sc.capacity ?? '—')], ['ভর্তির মাস', esc(sc.intakes || '—')], ['যোগাযোগ', esc(sc.contact_person || '—')], ['ফোন', esc(sc.phone || '—')], ['ইমেইল', sc.email ? `<a href="mailto:${esc(sc.email)}">${esc(sc.email)}</a>` : '—'], ['ওয়েবসাইট', link(sc.website)], ['নোট', esc(sc.notes || '—')]];
+  mount('#/japan', `
+  <div class="top"><div><h1>${esc(schoolName(sc))}</h1><p>${esc(sc.city || sc.prefecture || '')}${sc.active === false ? ' · এখন পাঠাচ্ছি না' : ''}</p></div><div class="row"><button class="btn ghost" id="se">সম্পাদনা</button><button class="btn" id="sa">+ এই স্কুলে আবেদন</button></div></div>
+  <div class="grid g3" style="margin-bottom:16px"><div class="card stat"><div class="l">মোট আবেদন</div><div class="v">${apps.length}</div><div class="s">${apps.filter(appOpen).length} চলমান</div></div><div class="card stat green"><div class="l">COE পেয়েছে</div><div class="v">${coe}</div></div><div class="card stat ${den ? 'red' : ''}"><div class="l">COE পায়নি</div><div class="v">${den}</div><div class="s">${coe + den ? 'COE-র হার ' + Math.round(coe * 100 / (coe + den)) + '%' : ''}</div></div></div>
+  <div class="grid g2"><div class="card"><h2>স্কুলের তথ্য</h2><dl class="kv">${kv.map(([k, x]) => `<dt>${k}</dt><dd>${x}</dd>`).join('')}</dl></div>
+  <div class="card"><h2>এই স্কুলে আবেদন</h2><div class="tw">${apps.length ? appRows(apps, { showSchool: false }) : '<div class="empty">এখনো কেউ আবেদন করেনি</div>'}</div></div></div>`, () => {
+    $('#se').onclick = () => schoolModal(sc); $('#sa').onclick = () => appModal(null, { school_id: sc.id }); bindApps();
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -896,6 +1119,7 @@ function viewSettings() {
     <label class="f full">বকেয়ার রিমাইন্ডার<textarea name="wa_due" ${ro}>${esc(st.wa_due)}</textarea></label>
     <label class="f full">অনুপস্থিতির খবর<textarea name="wa_absent" ${ro}>${esc(st.wa_absent)}</textarea></label>
     <label class="f full">পরীক্ষার রেজাল্ট ({exam} = পরীক্ষার নাম, {marks} = নম্বর, {result} = পাস/ফেল)<textarea name="wa_result" ${ro}>${esc(st.wa_result)}</textarea></label>
+    <label class="f full">জাপানের আবেদনের খবর ({school} = স্কুল, {intake} = সেশন, {status} = অবস্থা)<textarea name="wa_japan" ${ro}>${esc(st.wa_japan)}</textarea></label>
     <label class="f full">আগ্রহী ছাত্রকে প্রথম মেসেজ<textarea name="wa_lead" ${ro}>${esc(st.wa_lead)}</textarea></label>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
@@ -906,7 +1130,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -935,6 +1159,9 @@ async function seedDemo() {
     const ex = await Local.insert('exams', { exam_date: iso2(off), title: 'ডেমো ' + ti, type: ty, level: 'N5', batch: 'all', max_marks: mx, pass_marks: null });
     await Local.upsertResults(made.map((st, j) => ({ exam_id: ex.id, student_id: st.id, marks: j === 5 && off === -14 ? null : Math.round(mx * (0.45 + ((j * 7 + off * -3) % 50) / 100)), absent: j === 5 && off === -14, note: '' })));
   }
+  const scs = []; for (const [name_ja, city, address, capacity, tuition_yen, website, notes] of KOBE_SCHOOLS.slice(0, 3)) scs.push(await Local.insert('jp_schools', { name_ja: name_ja + '（ডেমো）', prefecture: '兵庫県', city, address, capacity, tuition_yen, website, notes, intakes: '1, 4, 7, 10', active: true }));
+  const nx = intakeOptions()[1] || intakeOptions()[0];
+  for (const [j, sc, st, dl, iv] of [[0, 0, 'interview', null, 5], [0, 1, 'submitted', null, 12], [1, 0, 'preparing', 4, null], [2, 2, 'coe_applied', null, null], [3, 1, 'coe_granted', null, null]]) await Local.insert('applications', { student_id: made[j].id, school_id: scs[sc].id, intake: nx, status: st, deadline_on: dl == null ? null : iso2(dl), submitted_on: st === 'preparing' ? null : iso2(-20), interview_on: iv == null ? null : iso2(iv), result_on: st === 'coe_applied' ? iso2(30) : st === 'coe_granted' ? iso2(-2) : null, school_fee: st === 'coe_granted' ? 'partial' : 'none', note: 'ডেমো তথ্য' });
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {
