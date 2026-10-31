@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
   textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' },
   wa_due: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর কোর্স ফি বাবদ {due} বকেয়া আছে{date}। অনুগ্রহ করে সময়মতো পরিশোধ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_absent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} {date} তারিখে ক্লাসে উপস্থিত ছিল না। এখন পর্যন্ত উপস্থিতি {pct}। জাপানে আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_result: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} "{exam}" পরীক্ষায় {marks} নম্বর পেয়েছে ({pct}, {result})। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_lead: 'আসসালামু আলাইকুম {name}, {institute} থেকে বলছি। জাপানি ভাষা কোর্স (N5–N3) ও জাপানে পড়াশোনা নিয়ে আগ্রহ দেখানোর জন্য ধন্যবাদ। প্রথম ৩টি ক্লাস ফ্রি, আর সব বই কোর্স ফি-র মধ্যেই। কবে একবার অফিসে আসতে পারবেন জানাবেন? যোগাযোগ: {phone}'
 };
 const BATCH = { morning: 'সকাল ১০–১২টা', evening: 'সন্ধ্যা ৬–৮টা' };
@@ -45,6 +46,7 @@ const LEAD_SRC = { facebook: 'ফেসবুক', walkin: 'সরাসরি �
 const LEAD_ST = { new: 'নতুন', contacted: 'কথা হয়েছে', trial: 'ট্রায়াল ক্লাসে', joined: 'ভর্তি হয়েছে', lost: 'আগ্রহ নেই' };
 const LEAD_ST_CLS = { new: 'trial', contacted: 'completed', trial: 'trial', joined: 'active', lost: 'dropped' };
 const LEAD_INT = { N5: 'N5 কোর্স', N4: 'N4 কোর্স', N3: 'N3 কোর্স', japan: 'শুধু জাপান প্রসেসিং', other: 'অন্যান্য' };
+const EXAM_TYPE = { quiz: 'সাপ্তাহিক কুইজ', test: 'টেস্ট', mock: 'মক টেস্ট', jlpt: 'JLPT (আসল)', nat: 'NAT-TEST (আসল)', speaking: 'কথা বলা / ইন্টারভিউ', other: 'অন্যান্য' };
 const DOC_STATUS = { missing: 'জমা হয়নি', received: 'জমা হয়েছে', verified: 'যাচাই হয়েছে' };
 const JSTAGES = [
   ['none', 'শুরু হয়নি'], ['docs', 'কাগজ জোগাড়'], ['school', 'স্কুল বাছাই'], ['applied', 'আবেদন জমা'],
@@ -128,14 +130,14 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
   write(t, rows) { try { localStorage.setItem(this.key(t), JSON.stringify(rows)); } catch { toast('ব্রাউজারে জায়গা শেষ — ডেমো ফাইল ছোট রাখুন', true); } },
   async fetchAll(t) { return this.read(t); },
-  unique: { students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
+  unique: { exam_results: [['exam_id', 'student_id']], students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
   check(t, rows, row) {
     for (const cols of this.unique[t] || []) if (rows.some(r => r.id !== row.id && cols.every(c => r[c] === row[c]))) throw new Error('duplicate key');
   },
@@ -145,6 +147,13 @@ const Local = {
     let rows = this.read(t).filter(r => r.id !== id); this.write(t, rows);
     if (t === 'students') for (const c of ['attendance', 'documents']) this.write(c, this.read(c).filter(r => r.student_id !== id));
     if (t === 'sessions') this.write('attendance', this.read('attendance').filter(r => r.session_id !== id));
+    if (t === 'exams') this.write('exam_results', this.read('exam_results').filter(r => r.exam_id !== id));
+    if (t === 'students') this.write('exam_results', this.read('exam_results').filter(r => r.student_id !== id));
+  },
+  async upsertResults(rows) {
+    const all = this.read('exam_results');
+    for (const r of rows) { const i = all.findIndex(x => x.exam_id === r.exam_id && x.student_id === r.student_id); if (i >= 0) all[i] = { ...all[i], ...r }; else all.push({ id: uuid(), ...r }); }
+    this.write('exam_results', all); return all.filter(a => rows.some(r => r.exam_id === a.exam_id && r.student_id === a.student_id));
   },
   async upsertAttendance(rows) {
     const all = this.read('attendance');
@@ -174,6 +183,7 @@ const Remote = {
   async insert(t, row) { const { data, error } = await sb.from(t).insert(row).select().single(); if (error) throw error; return data; },
   async update(t, id, patch) { const { data, error } = await sb.from(t).update(patch).eq('id', id).select().single(); if (error) throw error; return data; },
   async remove(t, id) { const { error } = await sb.from(t).delete().eq('id', id); if (error) throw error; },
+  async upsertResults(rows) { const { data, error } = await sb.from('exam_results').upsert(rows, { onConflict: 'exam_id,student_id' }).select(); if (error) throw error; return data; },
   async upsertAttendance(rows) { const { data, error } = await sb.from('attendance').upsert(rows, { onConflict: 'session_id,student_id' }).select(); if (error) throw error; return data; },
   async upload(path, file) { const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined }); if (error) throw error; return path; },
   async fileUrl(path) { const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
@@ -186,7 +196,7 @@ const API = DEMO ? Local : Remote;
 async function loadAll() {
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
-  for (const k of ['wa_due', 'wa_absent', 'wa_lead']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
+  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
   TABLES.forEach((t, i) => { S[t] = rest[i]; });
   S.loaded = true;
@@ -237,6 +247,11 @@ const guardianPhone = (s) => s.guardian_phone || s.phone;
 function dueMsg(s) { return fillTpl(S.settings.wa_due, { ...tplBase(), name: s.name_bn || s.name_en, due: tk(dueOf(s)), date: s.next_due_date ? ` (পরিশোধের তারিখ ${fmtD(s.next_due_date)})` : '' }); }
 function absentMsg(s, date, a) { return fillTpl(S.settings.wa_absent, { ...tplBase(), name: s.name_bn || s.name_en, date: fmtD(date), pct: a && a.pct != null ? a.pct + '%' : '—' }); }
 function leadMsg(l) { return fillTpl(S.settings.wa_lead, { ...tplBase(), name: l.name || '' }); }
+const passMark = (ex) => ex.pass_marks != null && ex.pass_marks !== '' ? num(ex.pass_marks) : Math.ceil(num(ex.max_marks) * 0.6);
+const pctOf = (r, ex) => (r && !r.absent && r.marks != null && num(ex.max_marks)) ? Math.round(num(r.marks) * 100 / num(ex.max_marks)) : null;
+const passed = (r, ex) => r && !r.absent && r.marks != null && num(r.marks) >= passMark(ex);
+function resultMsg(s, ex, r) { const p = pctOf(r, ex); return fillTpl(S.settings.wa_result, { ...tplBase(), name: s.name_bn || s.name_en, exam: ex.title, marks: r.absent ? 'অনুপস্থিত' : `${num(r.marks)}/${num(ex.max_marks)}`, pct: p == null ? '—' : p + '%', result: r.absent ? 'পরীক্ষা দেয়নি' : passed(r, ex) ? 'পাস' : 'পাস করেনি' }); }
+function studentResults(sid) { const em = new Map(S.exams.map(e => [e.id, e])); return S.exam_results.filter(r => r.student_id === sid && em.has(r.exam_id)).map(r => ({ r, ex: em.get(r.exam_id) })).sort((a, b) => (a.ex.exam_date || '').localeCompare(b.ex.exam_date || '')); }
 function monthSum(arr, field, m, amt = 'amount') { return arr.filter(x => (x[field] || '').startsWith(m)).reduce((a, x) => a + num(x[amt]), 0); }
 const badge = (cls, label) => `<span class="b ${esc(cls)}">${esc(label)}</span>`;
 const bar = (pct) => pct == null ? '<span class="muted small">—</span>' : `<div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar ${pct < 80 ? 'low' : ''}"><i style="width:${pct}%"></i></div><span class="small">${pct}%</span></div>`;
@@ -298,9 +313,10 @@ const ICON = {
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b></div>
   <div class="shell"><aside class="side" id="side">
@@ -329,6 +345,8 @@ function render() {
   if (p[0] === 'attendance') return viewAttendance(q);
   if (p[0] === 'expenses') return viewExpenses(q);
   if (p[0] === 'leads') return viewLeads(q);
+  if (p[0] === 'exams') return viewExams(q);
+  if (p[0] === 'exam') return viewExam(p[1]);
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'settings') return viewSettings();
   return viewDashboard();
@@ -454,7 +472,7 @@ async function viewStudent(id, tab) {
   const s = byId(S.students, id);
   if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const smap = sessionMap(); const a = attOf(s.id, smap); const paid = paidOf(s.id); const due = dueOf(s);
-  const TABS = [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস']];
+  const TABS = [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস']];
   let body = '';
   if (tab === 'info') {
     const kv = [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
@@ -479,6 +497,17 @@ async function viewStudent(id, tab) {
     <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; return `<tr data-doc="${k}"><td><b>${l}</b></td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
     <p class="small muted">ছবি বা PDF আপলোড করা যায়। ফাইল সুরক্ষিত থাকে, শুধু স্টাফরা লগইন করে দেখতে পারেন।</p>`;
   }
+  if (tab === 'exams') {
+    const res = studentResults(s.id); const taken = res.filter(x => pctOf(x.r, x.ex) != null);
+    const avg = taken.length ? Math.round(taken.reduce((a, x) => a + pctOf(x.r, x.ex), 0) / taken.length) : null;
+    const best = taken.length ? Math.max(...taken.map(x => pctOf(x.r, x.ex))) : null;
+    const W = 640, H = 160, pts = taken.map((x, i) => [taken.length === 1 ? W / 2 : 56 + i * (W - 80) / (taken.length - 1), 10 + (100 - pctOf(x.r, x.ex)) / 100 * H]);
+    const chart = taken.length >= 2 ? `<svg viewBox="0 0 ${W} ${H + 34}" width="100%" role="img" aria-label="রেজাল্টের ধারা">${[0, 50, 80, 100].map(v => `<line x1="44" x2="${W}" y1="${10 + (100 - v) / 100 * H}" y2="${10 + (100 - v) / 100 * H}" stroke="${v === 80 ? '#C9A95C' : '#E3D8C3'}" stroke-dasharray="${v === 80 ? '5 4' : ''}"/><text x="38" y="${14 + (100 - v) / 100 * H}" text-anchor="end" font-size="11" fill="#6E665A">${v}%</text>`).join('')}<polyline fill="none" stroke="#1B2945" stroke-width="2.5" points="${pts.map(p => p.join(',')).join(' ')}"/>${pts.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="${i === pts.length - 1 ? 5 : 3.5}" fill="${passed(taken[i].r, taken[i].ex) ? '#2E7D4F' : '#C8372B'}"><title>${esc(taken[i].ex.title)}: ${pctOf(taken[i].r, taken[i].ex)}%</title></circle>`).join('')}<text x="${W}" y="${H + 28}" text-anchor="end" font-size="10.5" fill="#6E665A">সোনালি দাগ = ৮০% · সবুজ = পাস · লাল = পাস করেনি</text></svg>` : '';
+    body = `<div class="grid g3"><div class="card stat"><div class="l">মোট পরীক্ষা</div><div class="v">${res.length}</div><div class="s">${res.length - taken.length ? (res.length - taken.length) + 'টিতে অনুপস্থিত' : ''}</div></div><div class="card stat ${avg != null && avg < 60 ? 'red' : 'green'}"><div class="l">গড় নম্বর</div><div class="v">${avg == null ? '—' : avg + '%'}</div></div><div class="card stat"><div class="l">সর্বোচ্চ</div><div class="v">${best == null ? '—' : best + '%'}</div></div></div>
+    ${chart ? `<div class="card" style="margin-top:14px"><h2>উন্নতির ধারা</h2>${chart}</div>` : ''}
+    <div class="row" style="margin:14px 0"><span class="spacer"></span><button class="btn gold" id="tr" ${res.length ? '' : 'disabled'}>成績証明書 (রেজাল্ট সার্টিফিকেট) প্রিন্ট</button></div>
+    <div class="tw">${res.length ? `<table class="stack"><tr><th>তারিখ</th><th>পরীক্ষা</th><th class="num">নম্বর</th><th class="num">%</th><th>ফল</th><th></th></tr>${[...res].reverse().map(({ r, ex }) => `<tr class="click" data-go="#/exam/${ex.id}"><td data-l="তারিখ">${fmtD(ex.exam_date)}</td><td data-l="পরীক্ষা"><b>${esc(ex.title)}</b><div class="small muted">${esc(EXAM_TYPE[ex.type] || ex.type)} · ${esc(ex.level)}</div></td><td class="num" data-l="নম্বর">${r.absent ? '—' : num(r.marks) + ' / ' + num(ex.max_marks)}</td><td class="num" data-l="%">${pctOf(r, ex) == null ? '—' : pctOf(r, ex) + '%'}</td><td data-l="ফল">${r.absent ? badge('dropped', 'অনুপস্থিত') : passed(r, ex) ? badge('active', 'পাস') : badge('due', 'পাস করেনি')}</td><td class="num" data-l="">${waBtn(guardianPhone(s), resultMsg(s, ex, r), '')}</td></tr>`).join('')}</table>` : '<div class="empty">এখনো কোনো পরীক্ষার নম্বর নেই। "পরীক্ষা ও রেজাল্ট" পাতা থেকে নম্বর তুলুন।</div>'}</div>`;
+  }
   if (tab === 'japan') {
     const idx = JSTAGES.findIndex(([k]) => k === (s.japan_stage || 'none'));
     body = `<div class="card"><h2>জাপানে আবেদনের ধাপ</h2><div class="steps">${JSTAGES.slice(1).map(([k, l], i) => `<span class="${i + 1 < idx ? 'done' : i + 1 === idx ? 'cur' : ''}">${i + 1}. ${l}</span>`).join('')}</div>
@@ -501,6 +530,7 @@ async function viewStudent(id, tab) {
     };
     if (tab === 'fees') { $('#addpay').onclick = () => paymentModal(s.id); $$('[data-rc]').forEach(b => b.onclick = () => printReceipt(byId(S.payments, b.dataset.rc))); }
     if (tab === 'att') { const c = $('#cert'); if (c) c.onclick = () => printCertificate(s); }
+    if (tab === 'exams') { bindGo(); const t = $('#tr'); if (t) t.onclick = () => printTranscript(s); }
     if (tab === 'japan') $('#jf').onsubmit = async (e) => { e.preventDefault(); try { putLocal('students', await API.update('students', s.id, formData(e.target))); toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
     if (tab === 'docs') {
       const saveDoc = async (k, patch) => {
@@ -726,6 +756,90 @@ function viewLeads(q) {
   });
 }
 
+// ------------------------------------------------------------------ exams
+function examModal(ex) {
+  const v = ex || { exam_date: todayISO(), type: 'quiz', level: 'N5', batch: 'all', max_marks: 20 };
+  const sel = (name, opts) => `<select name="${name}">${Object.entries(opts).map(([k, t]) => `<option value="${k}" ${String(v[name]) === k ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  openModal(`<h2>${ex ? 'পরীক্ষার তথ্য' : 'নতুন পরীক্ষা'}</h2><form class="form" id="xf">
+    <label class="f full">পরীক্ষার নাম<input name="title" required value="${esc(v.title || '')}" placeholder="যেমন: কুইজ ৪ — পাঠ ৮, বা টেস্ট ১ (পাঠ ১–১০)"></label>
+    <label class="f">ধরন${sel('type', EXAM_TYPE)}</label>
+    <label class="f">তারিখ<input name="exam_date" type="date" required value="${esc(v.exam_date || '')}"></label>
+    <label class="f">লেভেল${sel('level', Object.fromEntries(LEVELS.map(l => [l, l])))}</label>
+    <label class="f">ব্যাচ${sel('batch', { all: 'দুই ব্যাচ', ...BATCH })}</label>
+    <label class="f">পূর্ণ নম্বর<input name="max_marks" type="number" min="1" step="0.5" required value="${esc(v.max_marks)}"></label>
+    <label class="f">পাস নম্বর (খালি রাখলে ৬০%)<input name="pass_marks" type="number" min="0" step="0.5" value="${esc(v.pass_marks ?? '')}"></label>
+    <p class="full small muted" style="margin:0">JLPT N5: পূর্ণ নম্বর ১৮০, পাস ৮০। NAT-TEST 5Q: পূর্ণ নম্বর ১৮০, পাস ১০০।</p>
+    <div class="full row" style="justify-content:flex-end">${ex && isAdmin() ? '<button type="button" class="btn ghost" id="xd" style="color:var(--red);margin-right:auto">পরীক্ষা মুছুন</button>' : ''}<button type="button" class="btn ghost" id="xc">বাতিল</button><button class="btn" type="submit">${ex ? 'সংরক্ষণ' : 'তৈরি করে নম্বর তুলুন'}</button></div></form>`);
+  $('#xc').onclick = closeModal;
+  const f = $('#xf');
+  f.type.onchange = () => { if (['jlpt', 'nat'].includes(f.type.value)) { f.max_marks.value = 180; f.pass_marks.value = f.type.value === 'jlpt' ? 80 : 100; } };
+  const del = $('#xd'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox(`"${ex.title}" আর এর সব নম্বর মুছে যাবে।`))) return; try { await API.remove('exams', ex.id); S.exams = S.exams.filter(x => x.id !== ex.id); S.exam_results = S.exam_results.filter(r => r.exam_id !== ex.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/exams'; } catch (e) { toast(errMsg(e), true); } };
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(f); if (d.pass_marks != null && d.pass_marks > d.max_marks) return toast('পাস নম্বর পূর্ণ নম্বরের চেয়ে বেশি হতে পারে না', true);
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    try { const row = ex ? await API.update('exams', ex.id, d) : await API.insert('exams', d); putLocal('exams', row); closeModal(); toast('সংরক্ষণ হয়েছে'); if (ex) render(); else location.hash = '#/exam/' + row.id; }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+function examStats(ex) {
+  const rs = S.exam_results.filter(r => r.exam_id === ex.id); const sat = rs.filter(r => pctOf(r, ex) != null);
+  return { n: rs.length, sat: sat.length, avg: sat.length ? Math.round(sat.reduce((a, r) => a + pctOf(r, ex), 0) / sat.length) : null, pass: sat.filter(r => passed(r, ex)).length, hi: sat.length ? Math.max(...sat.map(r => num(r.marks))) : null, lo: sat.length ? Math.min(...sat.map(r => num(r.marks))) : null };
+}
+function viewExams(q) {
+  const lv = q.get('l') || '';
+  const list = S.exams.filter(e => !lv || e.level === lv).sort((a, b) => (b.exam_date || '').localeCompare(a.exam_date || ''));
+  mount('#/exams', `
+  <div class="top"><div><h1>পরীক্ষা ও রেজাল্ট</h1><p>কুইজ, টেস্ট, মক টেস্ট আর JLPT/NAT-এর ফলাফল</p></div><div class="row"><select id="lv"><option value="">সব লেভেল</option>${LEVELS.map(l => `<option ${lv === l ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn" id="nx">+ নতুন পরীক্ষা</button></div></div>
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>তারিখ</th><th>পরীক্ষা</th><th>লেভেল · ব্যাচ</th><th class="num">নম্বর তোলা</th><th class="num">গড়</th><th class="num">পাস</th></tr>${list.map(ex => { const st = examStats(ex); return `<tr class="click" data-go="#/exam/${ex.id}"><td class="mt" data-l=""><span><b>${esc(ex.title)}</b></span></td><td data-l="তারিখ">${fmtD(ex.exam_date)}</td><td class="dm"><b>${esc(ex.title)}</b><div class="small muted">${esc(EXAM_TYPE[ex.type] || ex.type)}</div></td><td data-l="লেভেল · ব্যাচ">${esc(ex.level)} · ${ex.batch === 'all' ? 'দুই ব্যাচ' : esc(BATCH[ex.batch] || '')}</td><td class="num" data-l="নম্বর তোলা">${st.n ? st.n + ' জন' : badge('due', 'বাকি')}</td><td class="num" data-l="গড়">${st.avg == null ? '—' : st.avg + '%'}</td><td class="num" data-l="পাস">${st.sat ? `${st.pass} / ${st.sat}` : '—'}</td></tr>`; }).join('')}</table>` : '<div class="empty">এখনো কোনো পরীক্ষা নেই। "+ নতুন পরীক্ষা" দিয়ে প্রথম কুইজটা যোগ করুন।</div>'}</div>`, () => {
+    $('#nx').onclick = () => examModal(null);
+    $('#lv').onchange = (e) => { location.hash = '#/exams' + (e.target.value ? '?l=' + e.target.value : ''); };
+    bindGo();
+  });
+}
+function viewExam(id) {
+  const ex = byId(S.exams, id);
+  if (!ex) return mount('#/exams', '<div class="empty">পরীক্ষা পাওয়া যায়নি</div>');
+  const res = new Map(S.exam_results.filter(r => r.exam_id === ex.id).map(r => [r.student_id, r]));
+  const roster = S.students.filter(s => res.has(s.id) || (s.current_level === ex.level && (ex.batch === 'all' || s.batch === ex.batch) && (s.status === 'active' || s.status === 'trial'))).sort((a, b) => (a.name_en || '').localeCompare(b.name_en || ''));
+  const st = examStats(ex); const pm = passMark(ex);
+  const ranked = [...res.values()].filter(r => pctOf(r, ex) != null).sort((a, b) => num(b.marks) - num(a.marks)); const rank = new Map(ranked.map((r, i) => [r.student_id, i + 1]));
+  mount('#/exams', `
+  <div class="top"><div><h1>${esc(ex.title)}</h1><p>${esc(EXAM_TYPE[ex.type] || ex.type)} · ${fmtD(ex.exam_date)} · ${esc(ex.level)} · ${ex.batch === 'all' ? 'দুই ব্যাচ' : esc(BATCH[ex.batch] || '')} · পূর্ণ নম্বর ${num(ex.max_marks)}, পাস ${pm}</p></div><div class="row"><button class="btn ghost" id="xe">পরীক্ষার তথ্য বদলান</button><button class="btn ghost" id="csv">CSV</button></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">পরীক্ষা দিয়েছে</div><div class="v">${st.sat} / ${roster.length}</div></div>
+    <div class="card stat ${st.avg != null && st.avg < 60 ? 'red' : 'green'}"><div class="l">গড়</div><div class="v">${st.avg == null ? '—' : st.avg + '%'}</div></div>
+    <div class="card stat green"><div class="l">পাস করেছে</div><div class="v">${st.sat ? st.pass + ' জন' : '—'}</div><div class="s">${st.sat ? Math.round(st.pass * 100 / st.sat) + '% পাসের হার' : ''}</div></div>
+    <div class="card stat"><div class="l">সর্বোচ্চ / সর্বনিম্ন</div><div class="v">${st.hi == null ? '—' : st.hi + ' / ' + st.lo}</div></div>
+  </div>
+  <form id="mf"><div class="tw">${roster.length ? `<table class="stack att-m"><tr><th>ছাত্র</th><th>নম্বর (${num(ex.max_marks)}-এর মধ্যে)</th><th>ফল</th><th></th></tr>${roster.map(s => { const r = res.get(s.id); const p = pctOf(r, ex); return `<tr data-sid="${s.id}"><td data-l=""><b>${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc(s.name_en)}</div></td><td data-l=""><div class="row" style="gap:10px;flex-wrap:nowrap"><input type="number" inputmode="decimal" min="0" max="${num(ex.max_marks)}" step="0.5" data-mk value="${r && !r.absent && r.marks != null ? num(r.marks) : ''}" style="width:96px" aria-label="নম্বর"><label class="small" style="display:flex;gap:4px;align-items:center;white-space:nowrap"><input type="checkbox" data-ab ${r && r.absent ? 'checked' : ''}> অনুপস্থিত</label></div></td><td data-l="">${!r ? '<span class="muted small">—</span>' : r.absent ? badge('dropped', 'অনুপস্থিত') : `${passed(r, ex) ? badge('active', 'পাস') : badge('due', 'পাস করেনি')} <span class="small">${p}%${rank.has(s.id) ? ' · ' + rank.get(s.id) + 'ম' : ''}</span>`}</td><td class="num" data-l="">${r ? waBtn(guardianPhone(s), resultMsg(s, ex, r), '') : ''}</td></tr>`; }).join('')}</table>` : `<div class="empty">${esc(ex.level)} লেভেলে কোনো চলমান ছাত্র নেই</div>`}</div>
+  ${roster.length ? '<div class="row" style="justify-content:flex-end;margin-top:14px"><span class="small muted" style="margin-right:auto">খালি ঘর বাদ যাবে। পরে এসে বাকিদের নম্বর তোলা যায়।</span><button class="btn" type="submit">নম্বর সংরক্ষণ</button></div>' : ''}</form>`, () => {
+    $('#xe').onclick = () => examModal(ex);
+    $('#csv').onclick = () => csvDownload(`sakura-exam-${ex.exam_date}.csv`, [['Exam', ex.title], ['Date', ex.exam_date], ['Max', ex.max_marks], ['Pass', pm], [], ['Admission no', 'Name', 'Marks', '%', 'Result'], ...roster.map(s => { const r = res.get(s.id); return [s.admission_no, s.name_en || s.name_bn, r ? (r.absent ? 'Absent' : r.marks) : '', pctOf(r, ex) ?? '', r ? (r.absent ? 'Absent' : passed(r, ex) ? 'Pass' : 'Fail') : '']; })]);
+    $$('[data-ab]').forEach(cb => cb.onchange = () => { const inp = $('[data-mk]', cb.closest('tr')); inp.disabled = cb.checked; if (cb.checked) inp.value = ''; });
+    $$('[data-ab]:checked').forEach(cb => { $('[data-mk]', cb.closest('tr')).disabled = true; });
+    bindGo();
+    const f = $('#mf'); if (!roster.length) return;
+    f.onsubmit = async (e) => {
+      e.preventDefault(); const rows = []; let bad = '';
+      for (const tr of $$('tr[data-sid]')) {
+        const ab = $('[data-ab]', tr).checked; const raw = $('[data-mk]', tr).value.trim();
+        if (ab) { rows.push({ exam_id: ex.id, student_id: tr.dataset.sid, marks: null, absent: true }); continue; }
+        if (raw === '') continue;
+        const m = Number(raw); if (!(m >= 0 && m <= num(ex.max_marks))) { bad = raw; break; }
+        rows.push({ exam_id: ex.id, student_id: tr.dataset.sid, marks: m, absent: false });
+      }
+      if (bad) return toast(`নম্বর ০ থেকে ${num(ex.max_marks)}-এর মধ্যে হতে হবে (${bad})`, true);
+      if (!rows.length) return toast('অন্তত একজনের নম্বর দিন', true);
+      const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+      try {
+        const saved = await API.upsertResults(rows);
+        saved.forEach(r => { const i = S.exam_results.findIndex(a => a.exam_id === r.exam_id && a.student_id === r.student_id); if (i >= 0) S.exam_results[i] = r; else S.exam_results.push(r); });
+        toast(`${rows.length} জনের নম্বর সংরক্ষণ হয়েছে`); render();
+      } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+    };
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -781,6 +895,7 @@ function viewSettings() {
     <p class="full small muted" style="margin:0">{name} = ছাত্র বা আগ্রহীর নাম, {due} = বকেয়া টাকা, {date} = তারিখ, {pct} = উপস্থিতি %, {institute} = প্রতিষ্ঠানের নাম, {phone} = অফিসের ফোন। এগুলো নিজে থেকে বসে যাবে।</p>
     <label class="f full">বকেয়ার রিমাইন্ডার<textarea name="wa_due" ${ro}>${esc(st.wa_due)}</textarea></label>
     <label class="f full">অনুপস্থিতির খবর<textarea name="wa_absent" ${ro}>${esc(st.wa_absent)}</textarea></label>
+    <label class="f full">পরীক্ষার রেজাল্ট ({exam} = পরীক্ষার নাম, {marks} = নম্বর, {result} = পাস/ফেল)<textarea name="wa_result" ${ro}>${esc(st.wa_result)}</textarea></label>
     <label class="f full">আগ্রহী ছাত্রকে প্রথম মেসেজ<textarea name="wa_lead" ${ro}>${esc(st.wa_lead)}</textarea></label>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
@@ -791,7 +906,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -816,6 +931,10 @@ async function seedDemo() {
   const mm = monthISO();
   for (const [cat, amt, to, note] of [['rent', 25000, 'ডেমো বাড়িওয়ালা', 'অফিস ভাড়া'], ['salary', 18000, 'ডেমো শিক্ষক', 'মাসিক বেতন'], ['utilities', 3200, 'বিদ্যুৎ অফিস', 'বিদ্যুৎ বিল'], ['internet', 1500, 'ডেমো ISP', 'ইন্টারনেট'], ['marketing', 5000, 'Facebook', 'বিজ্ঞাপন'], ['books', 7200, 'ডেমো বইয়ের দোকান', '৬টি みんなの日本語']]) await Local.insert('expenses', { spent_on: mm + '-05', category: cat, amount: amt, paid_to: to, note, method: 'cash' });
   for (const [nm, src, it, st, off] of [['ডেমো আগ্রহী এক', 'facebook', 'N5', 'new', 0], ['ডেমো আগ্রহী দুই', 'walkin', 'N5', 'trial', -2], ['ডেমো আগ্রহী তিন', 'referral', 'japan', 'contacted', 3], ['ডেমো আগ্রহী চার', 'facebook', 'N4', 'lost', null], ['ডেমো আগ্রহী পাঁচ', 'phone', 'N5', 'contacted', -1]]) await Local.insert('inquiries', { created_on: iso2(-6), name: nm, phone: '01900-00000' + nm.length % 10, source: src, interest: it, status: st, next_follow_up: off == null ? null : iso2(off), notes: 'ডেমো তথ্য' });
+  for (const [ti, ty, off, mx] of [['কুইজ ১ — হিরাগানা', 'quiz', -24, 20], ['টেস্ট ১ (পাঠ ১–৫)', 'test', -14, 100], ['কুইজ ৩ — পাঠ ৬–৭', 'quiz', -6, 20]]) {
+    const ex = await Local.insert('exams', { exam_date: iso2(off), title: 'ডেমো ' + ti, type: ty, level: 'N5', batch: 'all', max_marks: mx, pass_marks: null });
+    await Local.upsertResults(made.map((st, j) => ({ exam_id: ex.id, student_id: st.id, marks: j === 5 && off === -14 ? null : Math.round(mx * (0.45 + ((j * 7 + off * -3) % 50) / 100)), absent: j === 5 && off === -14, note: '' })));
+  }
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {
@@ -883,5 +1002,21 @@ function printCertificate(s) {
   <p style="font-size:11px;color:#6E665A;margin-top:24px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div>`);
 }
 
+function printTranscript(s) {
+  const res = studentResults(s.id); const a = attOf(s.id); const st = S.settings; const today = todayISO();
+  const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
+  const typeJa = { quiz: '小テスト', test: '定期試験', mock: '模擬試験', jlpt: '日本語能力試験 (JLPT)', nat: 'NAT-TEST', speaking: '会話・面接', other: 'その他' };
+  printWindow('Transcript ' + s.admission_no, `${headHtml()}
+  <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
+  <div style="text-align:center;margin-bottom:20px"><div style="font-size:26px;font-weight:800;letter-spacing:8px">成績証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">ACADEMIC TRANSCRIPT</div></div>
+  <table><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}</td></tr><tr><th>生年月日 / Date of Birth</th><td>${s.dob ? jd(s.dob) : ''}</td></tr><tr><th>国籍 / Nationality</th><td>バングラデシュ / Bangladesh</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no)}</td></tr>
+  <tr><th>総学習時間 / Study Hours</th><td>${a.hours} 時間 · 出席率 / Attendance ${a.pct == null ? '—' : a.pct + '%'}</td></tr></table>
+  <table style="margin-top:14px"><tr><th style="width:auto">日付 / Date</th><th style="width:auto">試験 / Examination</th><th style="width:auto">レベル</th><th style="width:auto;text-align:right">得点 / Score</th><th style="width:auto;text-align:right">%</th><th style="width:auto">合否 / Result</th></tr>
+  ${res.map(({ r, ex }) => `<tr><td>${fmtD(ex.exam_date)}</td><td>${esc(typeJa[ex.type] || '')}<br><span style="font-size:12px">${esc(ex.title)}</span></td><td>${esc(ex.level)}</td><td style="text-align:right">${r.absent ? '欠席' : num(r.marks) + ' / ' + num(ex.max_marks)}</td><td style="text-align:right">${pctOf(r, ex) == null ? '—' : pctOf(r, ex) + '%'}</td><td>${r.absent ? '欠席 / Absent' : passed(r, ex) ? '合格 / Pass' : '不合格 / Fail'}</td></tr>`).join('')}</table>
+  <p style="margin-top:20px;font-size:14px">上記の通り相違ないことを証明します。<br><span style="font-size:12px;color:#6E665A">We hereby certify that the above is a true record of the student's results at our institute.</span></p>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;font-size:13.5px;line-height:1.8">
+  <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
+  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div></div>`);
+}
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
