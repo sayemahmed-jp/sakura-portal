@@ -24,7 +24,10 @@ const DEFAULT_SETTINGS = {
   director_ja: 'サエム・アハメド',
   hours_per_class: 2,
   fees: { 'N5': 20000, 'N4': 20000, 'N3': 22000, 'N5+N4': 35000, 'N5+N4+N3': 45000 },
-  textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' }
+  textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' },
+  wa_due: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর কোর্স ফি বাবদ {due} বকেয়া আছে{date}। অনুগ্রহ করে সময়মতো পরিশোধ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_absent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} {date} তারিখে ক্লাসে উপস্থিত ছিল না। এখন পর্যন্ত উপস্থিতি {pct}। জাপানে আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_lead: 'আসসালামু আলাইকুম {name}, {institute} থেকে বলছি। জাপানি ভাষা কোর্স (N5–N3) ও জাপানে পড়াশোনা নিয়ে আগ্রহ দেখানোর জন্য ধন্যবাদ। প্রথম ৩টি ক্লাস ফ্রি, আর সব বই কোর্স ফি-র মধ্যেই। কবে একবার অফিসে আসতে পারবেন জানাবেন? যোগাযোগ: {phone}'
 };
 const BATCH = { morning: 'সকাল ১০–১২টা', evening: 'সন্ধ্যা ৬–৮টা' };
 const STATUS = { trial: 'ট্রায়াল', active: 'চলমান', completed: 'কোর্স শেষ', dropped: 'বাদ দিয়েছে', japan: 'জাপানে' };
@@ -37,6 +40,11 @@ const DOC_TYPES = [
   ['jlpt', 'JLPT / NAT সনদ'], ['study_hours', 'স্টাডি-আওয়ার সার্টিফিকেট'], ['sponsor', 'স্পনসরের আয়ের প্রমাণ'],
   ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ'], ['other', 'অন্যান্য']
 ];
+const EXP_CAT = { rent: 'ঘর ভাড়া', salary: 'বেতন (শিক্ষক/স্টাফ)', utilities: 'বিদ্যুৎ, পানি, গ্যাস', internet: 'ইন্টারনেট ও ফোন', books: 'বই ও উপকরণ', marketing: 'বিজ্ঞাপন ও প্রচার', office: 'অফিস সামগ্রী ও আসবাব', japan: 'জাপান প্রসেসিং খরচ', other: 'অন্যান্য' };
+const LEAD_SRC = { facebook: 'ফেসবুক', walkin: 'সরাসরি অফিসে', phone: 'ফোন কল', whatsapp: 'WhatsApp', referral: 'পরিচিতের মাধ্যমে', website: 'ওয়েবসাইট', other: 'অন্যান্য' };
+const LEAD_ST = { new: 'নতুন', contacted: 'কথা হয়েছে', trial: 'ট্রায়াল ক্লাসে', joined: 'ভর্তি হয়েছে', lost: 'আগ্রহ নেই' };
+const LEAD_ST_CLS = { new: 'trial', contacted: 'completed', trial: 'trial', joined: 'active', lost: 'dropped' };
+const LEAD_INT = { N5: 'N5 কোর্স', N4: 'N4 কোর্স', N3: 'N3 কোর্স', japan: 'শুধু জাপান প্রসেসিং', other: 'অন্যান্য' };
 const DOC_STATUS = { missing: 'জমা হয়নি', received: 'জমা হয়েছে', verified: 'যাচাই হয়েছে' };
 const JSTAGES = [
   ['none', 'শুরু হয়নি'], ['docs', 'কাগজ জোগাড়'], ['school', 'স্কুল বাছাই'], ['applied', 'আবেদন জমা'],
@@ -120,7 +128,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -175,8 +184,9 @@ const Remote = {
 const API = DEMO ? Local : Remote;
 
 async function loadAll() {
-  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t))]);
+  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
+  for (const k of ['wa_due', 'wa_absent', 'wa_lead']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
   TABLES.forEach((t, i) => { S[t] = rest[i]; });
   S.loaded = true;
@@ -208,6 +218,26 @@ function nextReceiptNo() {
   const max = S.payments.reduce((m, p) => Math.max(m, num((p.receipt_no || '').replace(/\D/g, ''))), 0);
   return 'SJI-R-' + pad(max + 1, 5);
 }
+function waNum(ph) {
+  let d = String(ph || '').replace(/\D/g, '');
+  if (d.startsWith('00')) d = d.slice(2);
+  if (d.length === 11 && d.startsWith('01')) d = '88' + d;
+  else if (d.length === 10 && d.startsWith('1')) d = '880' + d;
+  else if (d.length === 11 && /^0[789]0/.test(d)) d = '81' + d.slice(1);
+  return d.length >= 10 ? d : '';
+}
+const fillTpl = (t, vars) => String(t || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
+const tplBase = () => ({ institute: S.settings.institute_bn, phone: S.settings.phone });
+const WA_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.2 13.9c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .3-3.4-.7-2.9-1.2-4.7-4.1-4.8-4.3-.1-.2-1.2-1.5-1.2-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .5l-.3.5-.4.5c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l2 1c.3.1.5.2.5.3.1.2.1.7-.1 1.4z"/></svg>';
+function waBtn(ph, text, label = 'WhatsApp') {
+  const n = waNum(ph); if (!n) return '';
+  return `<a class="btn sm wa" href="https://wa.me/${n}?text=${encodeURIComponent(text)}" target="_blank" rel="noopener" data-stop title="WhatsApp-এ মেসেজ পাঠান">${WA_SVG}${label ? ' ' + esc(label) : ''}</a>`;
+}
+const guardianPhone = (s) => s.guardian_phone || s.phone;
+function dueMsg(s) { return fillTpl(S.settings.wa_due, { ...tplBase(), name: s.name_bn || s.name_en, due: tk(dueOf(s)), date: s.next_due_date ? ` (পরিশোধের তারিখ ${fmtD(s.next_due_date)})` : '' }); }
+function absentMsg(s, date, a) { return fillTpl(S.settings.wa_absent, { ...tplBase(), name: s.name_bn || s.name_en, date: fmtD(date), pct: a && a.pct != null ? a.pct + '%' : '—' }); }
+function leadMsg(l) { return fillTpl(S.settings.wa_lead, { ...tplBase(), name: l.name || '' }); }
+function monthSum(arr, field, m, amt = 'amount') { return arr.filter(x => (x[field] || '').startsWith(m)).reduce((a, x) => a + num(x[amt]), 0); }
 const badge = (cls, label) => `<span class="b ${esc(cls)}">${esc(label)}</span>`;
 const bar = (pct) => pct == null ? '<span class="muted small">—</span>' : `<div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar ${pct < 80 ? 'low' : ''}"><i style="width:${pct}%"></i></div><span class="small">${pct}%</span></div>`;
 
@@ -266,9 +296,11 @@ const ICON = {
   money: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 10v5M18 10v5"/>',
   check: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 15l3 3 5-6"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/attendance', 'হাজিরা', 'check'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b></div>
   <div class="shell"><aside class="side" id="side">
@@ -289,12 +321,14 @@ function render() {
   const [path, query] = h.split('?'); const q = new URLSearchParams(query || '');
   const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
-  if (p[0] === 'students' && p[1] === 'new') return viewStudentForm(null);
+  if (p[0] === 'students' && p[1] === 'new') return viewStudentForm(null, q.get('lead'));
   if (p[0] === 'students') return viewStudents(q);
   if (p[0] === 'student' && p[2] === 'edit') return viewStudentForm(p[1]);
   if (p[0] === 'student') return viewStudent(p[1], q.get('t') || 'info');
   if (p[0] === 'payments') return viewPayments(q);
   if (p[0] === 'attendance') return viewAttendance(q);
+  if (p[0] === 'expenses') return viewExpenses(q);
+  if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'settings') return viewSettings();
   return viewDashboard();
@@ -314,23 +348,29 @@ function viewDashboard() {
   const low = current.map(s => ({ s, a: attOf(s.id, smap) })).filter(x => x.a.total >= 5 && x.a.pct < 80).sort((a, b) => a.a.pct - b.a.pct);
   const recent = [...S.payments].sort((a, b) => (b.paid_on + b.created_at).localeCompare(a.paid_on + a.created_at)).slice(0, 6);
   const groups = {}; for (const s of current) { const k = s.current_level + '|' + s.batch; groups[k] = (groups[k] || 0) + 1; }
+  const monthExp = monthSum(S.expenses, 'spent_on', m); const profit = monthIncome - monthExp;
+  const follow = S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).sort((a, b) => a.next_follow_up.localeCompare(b.next_follow_up));
+  const lastAbsent = (sid) => { const r = S.attendance.filter(x => x.student_id === sid && x.status === 'absent' && smap.has(x.session_id)).map(x => smap.get(x.session_id).class_date).sort(); return r[r.length - 1] || today; };
+  const expByCat = {}; S.expenses.filter(e => (e.spent_on || '').startsWith(m)).forEach(e => { expByCat[e.category] = (expByCat[e.category] || 0) + num(e.amount); });
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a></div></div>
   <div class="grid g4">
     <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div><div class="s">মোট ভর্তি ${S.students.length} জন</div></div>
-    <div class="card stat green"><div class="l">এ মাসের আয়</div><div class="v">${tk(monthIncome)}</div><div class="s">${S.payments.filter(p => (p.paid_on || '').startsWith(m)).length}টি পরিশোধ</div></div>
+    <div class="card stat green"><div class="l">এ মাসের আয়</div><div class="v">${tk(monthIncome)}</div><div class="s">খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b></div></div>
     <div class="card stat red"><div class="l">মোট বকেয়া</div><div class="v">${tk(totalDue)}</div><div class="s">${dues.length} জনের কাছে</div></div>
     <div class="card stat"><div class="l">আজকের উপস্থিতি</div><div class="v">${todayRecs.length ? todayCame + ' / ' + todayRecs.length : '—'}</div><div class="s">${todaySessions.length ? todaySessions.length + 'টি ক্লাস' : 'আজ হাজিরা নেওয়া হয়নি'}</div></div>
   </div>
   <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>বকেয়া ফি</h2>${dues.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th class="num">বকেয়া</th><th>পরের কিস্তি</th></tr>${dues.slice(0, 8).map(({ s, due }) => `<tr class="click" data-go="#/student/${s.id}?t=fees"><td>${esc(studentName(s))}<div class="small muted">${esc(s.admission_no)}</div></td><td class="num">${tk(due)}</td><td>${s.next_due_date ? (s.next_due_date < today ? badge('due', fmtD(s.next_due_date) + ' পার হয়েছে') : fmtD(s.next_due_date)) : '<span class="muted">—</span>'}</td></tr>`).join('')}</table></div>` : '<div class="empty">কোনো বকেয়া নেই</div>'}</div>
-    <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>লেভেল</th><th>উপস্থিতি</th></tr>${low.slice(0, 8).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}<div class="small muted">${esc(s.guardian_phone || s.phone)}</div></td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td></tr>`).join('')}</table></div><p class="small muted">স্টাডি-আওয়ার সার্টিফিকেটের জন্য ৮০% উপস্থিতি লাগে। অভিভাবকের সাথে কথা বলুন।</p>` : '<div class="empty">সবার উপস্থিতি ঠিক আছে</div>'}</div>
+    <div class="card"><h2>বকেয়া ফি</h2>${dues.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th class="num">বকেয়া</th><th>পরের কিস্তি</th><th></th></tr>${dues.slice(0, 8).map(({ s, due }) => `<tr class="click" data-go="#/student/${s.id}?t=fees"><td>${esc(studentName(s))}<div class="small muted">${esc(s.admission_no)}</div></td><td class="num">${tk(due)}</td><td>${s.next_due_date ? (s.next_due_date < today ? badge('due', fmtD(s.next_due_date) + ' পার হয়েছে') : fmtD(s.next_due_date)) : '<span class="muted">—</span>'}</td><td class="num">${waBtn(guardianPhone(s), dueMsg(s), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">কোনো বকেয়া নেই</div>'}</div>
+    <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>লেভেল</th><th>উপস্থিতি</th><th></th></tr>${low.slice(0, 8).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}<div class="small muted">${esc(s.guardian_phone || s.phone)}</div></td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td><td class="num">${waBtn(guardianPhone(s), absentMsg(s, lastAbsent(s.id), a), '')}</td></tr>`).join('')}</table></div><p class="small muted">স্টাডি-আওয়ার সার্টিফিকেটের জন্য ৮০% উপস্থিতি লাগে। অভিভাবকের সাথে কথা বলুন।</p>` : '<div class="empty">সবার উপস্থিতি ঠিক আছে</div>'}</div>
     <div class="card"><h2>সাম্প্রতিক জমা</h2>${recent.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>ছাত্র</th><th class="num">টাকা</th></tr>${recent.map(p => { const s = byId(S.students, p.student_id); return `<tr class="click" data-go="#/student/${p.student_id}?t=fees"><td>${fmtD(p.paid_on)}</td><td>${esc(studentName(s))}</td><td class="num">${tk(p.amount)}</td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কোনো জমা নেই</div>'}</div>
     <div class="card"><h2>ব্যাচ অনুযায়ী ছাত্র</h2><div class="tw"><table><tr><th>লেভেল</th><th>${BATCH.morning}</th><th>${BATCH.evening}</th></tr>${LEVELS.map(l => `<tr><td><b>${l}</b></td><td>${groups[l + '|morning'] || 0} জন</td><td>${groups[l + '|evening'] || 0} জন</td></tr>`).join('')}</table></div></div>
+    <div class="card"><h2>আজকের ফলো-আপ</h2>${follow.length ? `<div class="tw"><table><tr><th>নাম</th><th>অবস্থা</th><th>তারিখ</th><th></th></tr>${follow.slice(0, 8).map(l => `<tr class="click" data-go="#/leads"><td>${esc(l.name)}<div class="small muted">${esc(l.phone)}</div></td><td>${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td>${l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : 'আজ'}</td><td class="num">${waBtn(l.phone, leadMsg(l), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">আজ কাউকে ফোন করার নেই</div>'}</div>
+    <div class="card"><h2>এ মাসের খরচ</h2>${Object.keys(expByCat).length ? `<div class="tw"><table><tr><th>খাত</th><th class="num">টাকা</th></tr>${Object.entries(expByCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr class="click" data-go="#/expenses"><td>${esc(EXP_CAT[k] || k)}</td><td class="num">${tk(v)}</td></tr>`).join('')}</table></div>` : '<div class="empty">এ মাসে কোনো খরচ লেখা হয়নি</div>'}</div>
   </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); });
 }
-function bindGo() { $$('[data-go]').forEach(el => el.onclick = () => { location.hash = el.dataset.go; }); }
+function bindGo() { $$('[data-go]').forEach(el => el.onclick = () => { location.hash = el.dataset.go; }); $$('[data-stop]').forEach(el => el.addEventListener('click', e => e.stopPropagation())); }
 
 // ------------------------------------------------------------------ students list
 function viewStudents(q) {
@@ -362,14 +402,16 @@ function viewStudents(q) {
 }
 
 // ------------------------------------------------------------------ student form
-function viewStudentForm(id) {
+function viewStudentForm(id, leadId) {
   const s = id ? byId(S.students, id) : null;
+  const lead = leadId ? byId(S.inquiries, leadId) : null;
   if (id && !s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const v = s || { admission_no: nextAdmissionNo(), admission_date: todayISO(), package: 'N5', current_level: 'N5', batch: 'morning', status: 'trial', total_fee: S.settings.fees.N5, discount: 0, japan_stage: 'none' };
+  if (!s && lead) { v.name_bn = lead.name; v.phone = lead.phone; if (LEVELS.includes(lead.interest)) { v.package = lead.interest; v.current_level = lead.interest; v.total_fee = S.settings.fees[lead.interest]; } v.notes = lead.notes ? 'আগ্রহী তালিকা থেকে: ' + lead.notes : ''; }
   const inp = (name, label, type = 'text', extra = '') => `<label class="f ${extra.includes('full') ? 'full' : ''}">${label}<input name="${name}" type="${type}" value="${esc(v[name] ?? '')}" ${extra.replace('full', '')}></label>`;
   const sel = (name, label, opts) => `<label class="f">${label}<select name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${String(v[name]) === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
   mount('#/students', `
-  <div class="top"><div><h1>${s ? 'তথ্য সম্পাদনা' : 'নতুন ছাত্র ভর্তি'}</h1><p>${esc(v.admission_no)}</p></div></div>
+  <div class="top"><div><h1>${s ? 'তথ্য সম্পাদনা' : 'নতুন ছাত্র ভর্তি'}</h1><p>${esc(v.admission_no)}${lead ? ' · আগ্রহী তালিকা থেকে: ' + esc(lead.name) : ''}</p></div></div>
   <form class="card form" id="sf">
     <h3>ভর্তি</h3>
     ${inp('admission_no', 'ভর্তি নম্বর', 'text', 'required')}${inp('admission_date', 'ভর্তির তারিখ', 'date')}
@@ -399,7 +441,9 @@ function viewStudentForm(id) {
       const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
       try {
         const row = s ? await API.update('students', s.id, d) : await API.insert('students', d);
-        putLocal('students', row); toast(s ? 'সংরক্ষণ হয়েছে' : 'ভর্তি সম্পন্ন'); location.hash = '#/student/' + row.id;
+        putLocal('students', row);
+        if (!s && lead) { try { putLocal('inquiries', await API.update('inquiries', lead.id, { status: 'joined', student_id: row.id })); } catch (err) { console.warn(err); } }
+        toast(s ? 'সংরক্ষণ হয়েছে' : 'ভর্তি সম্পন্ন'); location.hash = '#/student/' + row.id;
       } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
     };
   });
@@ -419,7 +463,7 @@ async function viewStudent(id, tab) {
   if (tab === 'fees') {
     const pays = S.payments.filter(p => p.student_id === s.id).sort((x, y) => (y.paid_on || '').localeCompare(x.paid_on || ''));
     body = `<div class="grid g4"><div class="card stat"><div class="l">মোট ফি</div><div class="v">${tk(s.total_fee)}</div></div><div class="card stat"><div class="l">ছাড়</div><div class="v">${tk(s.discount)}</div></div><div class="card stat green"><div class="l">পরিশোধিত</div><div class="v">${tk(paid)}</div></div><div class="card stat red"><div class="l">বকেয়া</div><div class="v">${tk(due)}</div><div class="s">${s.next_due_date ? 'পরের কিস্তি ' + fmtD(s.next_due_date) : ''}</div></div></div>
-    <div class="row" style="margin:14px 0"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">পরিশোধের তালিকা</h2><span class="spacer"></span><button class="btn gold" id="addpay">+ টাকা জমা</button></div>
+    <div class="row" style="margin:14px 0"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">পরিশোধের তালিকা</h2><span class="spacer"></span>${due ? waBtn(guardianPhone(s), dueMsg(s), 'বকেয়ার রিমাইন্ডার') : ''}<button class="btn gold" id="addpay">+ টাকা জমা</button></div>
     <div class="tw">${pays.length ? `<table class="stack"><tr><th>তারিখ</th><th>রশিদ নং</th><th>বাবদ</th><th>মাধ্যম</th><th class="num">টাকা</th><th></th></tr>${pays.map(p => `<tr><td data-l="তারিখ">${fmtD(p.paid_on)}</td><td data-l="রশিদ নং">${esc(p.receipt_no)}</td><td data-l="বাবদ">${esc(PURPOSE[p.purpose] || p.purpose)}</td><td data-l="মাধ্যম">${esc(METHOD[p.method] || p.method)}${p.trx_id ? ` · ${esc(p.trx_id)}` : ''}</td><td class="num" data-l="টাকা"><b>${tk(p.amount)}</b></td><td class="num" data-l=""><button class="btn sm ghost" data-rc="${p.id}">রশিদ প্রিন্ট</button></td></tr>`).join('')}</table>` : '<div class="empty">এখনো কোনো টাকা জমা হয়নি</div>'}</div>`;
   }
   if (tab === 'att') {
@@ -446,7 +490,7 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print"><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
+  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
@@ -556,7 +600,7 @@ function viewAttendance(q) {
     <label class="f">শিক্ষক<input name="teacher" value="${esc(session ? session.teacher : '')}"></label>
   </div>
   <div class="row" style="margin-bottom:10px"><b>${roster.length} জন</b><span class="spacer"></span><button type="button" class="btn sm ghost" id="allp">সবাই উপস্থিত</button></div>
-  <div class="tw">${roster.length ? `<table class="stack att-m"><tr><th>ছাত্র</th><th>হাজিরা</th></tr>${roster.map(s => { const st = marks.get(s.id) || ''; return `<tr data-sid="${s.id}"><td data-l=""><b>${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc(s.name_en)}</div></td><td data-l=""><div class="mk">${Object.entries(ATT).map(([k, l]) => `<button type="button" data-st="${k}" class="${k} ${st === k ? 'on' : ''}">${l}</button>`).join('')}</div></td></tr>`; }).join('')}</table>` : `<div class="empty">${level} · ${BATCH[batch]} ব্যাচে কোনো চলমান ছাত্র নেই</div>`}</div>
+  <div class="tw">${roster.length ? `<table class="stack att-m"><tr><th>ছাত্র</th><th>হাজিরা</th></tr>${roster.map(s => { const st = marks.get(s.id) || ''; return `<tr data-sid="${s.id}"><td data-l=""><b>${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc(s.name_en)}</div></td><td data-l=""><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="mk">${Object.entries(ATT).map(([k, l]) => `<button type="button" data-st="${k}" class="${k} ${st === k ? 'on' : ''}">${l}</button>`).join('')}</div>${st === 'absent' ? waBtn(guardianPhone(s), absentMsg(s, date, attOf(s.id)), '') : ''}</div></td></tr>`; }).join('')}</table>` : `<div class="empty">${level} · ${BATCH[batch]} ব্যাচে কোনো চলমান ছাত্র নেই</div>`}</div>
   ${roster.length ? '<div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" type="submit">হাজিরা সংরক্ষণ</button></div>' : ''}</form>
   <div class="card" style="margin-top:22px"><h2>সাম্প্রতিক ক্লাস</h2>${recent.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>লেভেল · ব্যাচ</th><th class="hide-m">বিষয়</th><th>উপস্থিত</th></tr>${recent.map(ss => { const r = S.attendance.filter(a => a.session_id === ss.id); const c = r.filter(a => a.status === 'present' || a.status === 'late').length; return `<tr class="click" data-go="#/attendance?d=${ss.class_date}&l=${ss.level}&b=${ss.batch}"><td>${fmtD(ss.class_date)}</td><td>${esc(ss.level)} · ${esc(BATCH[ss.batch])}</td><td class="hide-m">${esc(ss.topic || '—')}</td><td>${c} / ${r.length}</td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কোনো ক্লাস নেই</div>'}</div>`, () => {
     const go = () => { location.hash = `#/attendance?d=${$('#ad').value}&l=${$('#al').value}&b=${$('#ab').value}`; };
@@ -583,25 +627,136 @@ function viewAttendance(q) {
   });
 }
 
+// ------------------------------------------------------------------ expenses & profit
+function expenseModal() {
+  openModal(`<h2>খরচ যোগ করুন</h2><form class="form" id="ef">
+    <label class="f">তারিখ<input name="spent_on" type="date" required value="${todayISO()}"></label>
+    <label class="f">টাকার পরিমাণ (৳)<input name="amount" type="number" min="1" step="1" required></label>
+    <label class="f">খাত<select name="category">${Object.entries(EXP_CAT).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="f">মাধ্যম<select name="method">${Object.entries(METHOD).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="f full">কাকে দেওয়া হলো<input name="paid_to" placeholder="যেমন: বাড়িওয়ালা, শিক্ষকের নাম, দোকানের নাম"></label>
+    <label class="f full">বিবরণ<input name="note" placeholder="যেমন: নভেম্বরের ভাড়া"></label>
+    <p class="full small muted" style="margin:0">খরচ লেখার পর ভুল হলে শুধু অ্যাডমিন মুছতে পারবেন।</p>
+    <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="ec">বাতিল</button><button class="btn" type="submit">খরচ যোগ করুন</button></div></form>`);
+  $('#ec').onclick = closeModal;
+  $('#ef').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target);
+    if (!(d.amount > 0)) return toast('সঠিক টাকার পরিমাণ দিন', true);
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try { putLocal('expenses', await API.insert('expenses', d)); closeModal(); toast('খরচ যোগ হয়েছে'); render(); }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+function viewExpenses(q) {
+  const m = q.get('m') || monthISO();
+  const list = S.expenses.filter(x => (x.spent_on || '').startsWith(m)).sort((a, b) => (b.spent_on + (b.created_at || '')).localeCompare(a.spent_on + (a.created_at || '')));
+  const income = monthSum(S.payments, 'paid_on', m); const spent = list.reduce((a, x) => a + num(x.amount), 0); const profit = income - spent;
+  const byCat = {}; list.forEach(x => { byCat[x.category] = (byCat[x.category] || 0) + num(x.amount); });
+  const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]); const maxCat = Math.max(1, ...cats.map(c => c[1]));
+  mount('#/expenses', `
+  <div class="top"><div><h1>খরচ ও লাভ</h1><p>মাস অনুযায়ী আয়, খরচ আর লাভ-ক্ষতি</p></div><div class="row"><input type="month" id="mon" value="${esc(m)}"><button class="btn ghost" id="csv">CSV ডাউনলোড</button><button class="btn" id="ne">+ খরচ যোগ</button></div></div>
+  <div class="grid g3" style="margin-bottom:16px">
+    <div class="card stat green"><div class="l">আয় (ফি জমা)</div><div class="v">${tk(income)}</div><div class="s">${S.payments.filter(p => (p.paid_on || '').startsWith(m)).length}টি রশিদ</div></div>
+    <div class="card stat red"><div class="l">খরচ</div><div class="v">${tk(spent)}</div><div class="s">${list.length}টি খরচ</div></div>
+    <div class="card stat ${profit < 0 ? 'red' : 'green'}"><div class="l">${profit < 0 ? 'ক্ষতি' : 'লাভ'}</div><div class="v">${tk(Math.abs(profit))}</div><div class="s">আয় − খরচ</div></div>
+  </div>
+  ${cats.length ? `<div class="card" style="margin-bottom:16px"><h2>খাত অনুযায়ী খরচ</h2><div class="catbars">${cats.map(([k, v]) => `<div class="cb"><span>${esc(EXP_CAT[k] || k)}</span><div class="bar"><i style="width:${Math.round(v * 100 / maxCat)}%;background:var(--red)"></i></div><b>${tk(v)}</b></div>`).join('')}</div></div>` : ''}
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>তারিখ</th><th>খাত</th><th>বিবরণ</th><th>মাধ্যম</th><th class="num">টাকা</th><th></th></tr>${list.map(x => `<tr><td data-l="তারিখ">${fmtD(x.spent_on)}</td><td data-l="খাত">${esc(EXP_CAT[x.category] || x.category)}</td><td data-l="বিবরণ">${esc([x.paid_to, x.note].filter(Boolean).join(' · ') || '—')}</td><td data-l="মাধ্যম">${esc(METHOD[x.method] || x.method)}</td><td class="num" data-l="টাকা"><b>${tk(x.amount)}</b></td><td class="num" data-l="">${isAdmin() ? `<button class="btn sm ghost" data-de="${x.id}" style="color:var(--red)">মুছুন</button>` : ''}</td></tr>`).join('')}</table>` : '<div class="empty">এই মাসে কোনো খরচ লেখা হয়নি। উপরের "+ খরচ যোগ" দিয়ে শুরু করুন।</div>'}</div>`, () => {
+    $('#mon').onchange = (e) => { location.hash = '#/expenses?m=' + e.target.value; };
+    $('#ne').onclick = expenseModal;
+    $('#csv').onclick = () => csvDownload(`sakura-expenses-${m}.csv`, [['Date', 'Category', 'Paid to', 'Note', 'Method', 'Amount'], ...list.map(x => [x.spent_on, EXP_CAT[x.category] || x.category, x.paid_to, x.note, METHOD[x.method] || x.method, x.amount]), [], ['Income (fees)', '', '', '', '', income], ['Expenses', '', '', '', '', spent], ['Profit', '', '', '', '', profit]]);
+    $$('[data-de]').forEach(b => b.onclick = async () => { const x = byId(S.expenses, b.dataset.de); if (!(await confirmBox(`${EXP_CAT[x.category] || ''} ${tk(x.amount)} খরচটা মুছে যাবে।`))) return; try { await API.remove('expenses', x.id); S.expenses = S.expenses.filter(y => y.id !== x.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } });
+  });
+}
+
+// ------------------------------------------------------------------ inquiries (leads)
+function leadModal(l) {
+  const v = l || { created_on: todayISO(), source: 'facebook', interest: 'N5', status: 'new', next_follow_up: todayISO() };
+  const sel = (name, opts) => `<select name="${name}">${Object.entries(opts).map(([k, t]) => `<option value="${k}" ${v[name] === k ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+  openModal(`<h2>${l ? 'আগ্রহী ছাত্রের তথ্য' : 'নতুন আগ্রহী ছাত্র'}</h2><form class="form" id="lf2">
+    <label class="f">নাম<input name="name" required value="${esc(v.name || '')}"></label>
+    <label class="f">মোবাইল / WhatsApp<input name="phone" type="tel" required value="${esc(v.phone || '')}"></label>
+    <label class="f">কোথা থেকে জেনেছে${sel('source', LEAD_SRC)}</label>
+    <label class="f">কী চায়${sel('interest', LEAD_INT)}</label>
+    <label class="f">অবস্থা${sel('status', LEAD_ST)}</label>
+    <label class="f">আবার কবে যোগাযোগ করবেন<input name="next_follow_up" type="date" value="${esc(v.next_follow_up || '')}"></label>
+    <label class="f">প্রথম যোগাযোগের তারিখ<input name="created_on" type="date" value="${esc(v.created_on || todayISO())}"></label>
+    <label class="f full">নোট<textarea name="notes" placeholder="যেমন: HSC পাস ২০২৫, এপ্রিল সেশনে জাপান যেতে চায়, বাবা স্পনসর">${esc(v.notes || '')}</textarea></label>
+    <div class="full row" style="justify-content:flex-end">${l && isAdmin() ? '<button type="button" class="btn ghost" id="ld" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="lc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#lc').onclick = closeModal;
+  const del = $('#ld'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox(`${l.name}-এর তথ্য মুছে যাবে।`))) return; try { await API.remove('inquiries', l.id); S.inquiries = S.inquiries.filter(x => x.id !== l.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  $('#lf2').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target); const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try { putLocal('inquiries', l ? await API.update('inquiries', l.id, d) : await API.insert('inquiries', d)); closeModal(); toast('সংরক্ষণ হয়েছে'); render(); }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+function viewLeads(q) {
+  const f = { st: q.get('st') || 'open', s: q.get('s') || '' }; const today = todayISO(); const m = monthISO();
+  const open = (l) => ['new', 'contacted', 'trial'].includes(l.status);
+  const list = S.inquiries.filter(l => {
+    if (f.st === 'open' && !open(l)) return false;
+    if (f.st !== 'open' && f.st !== 'all' && l.status !== f.st) return false;
+    if (f.s) { const t = f.s.toLowerCase(); if (![l.name, l.phone, l.notes].some(x => (x || '').toLowerCase().includes(t))) return false; }
+    return true;
+  }).sort((a, b) => (open(a) === open(b) ? (a.next_follow_up || '9999').localeCompare(b.next_follow_up || '9999') : open(a) ? -1 : 1));
+  const thisMonth = S.inquiries.filter(l => (l.created_on || '').startsWith(m));
+  const joined = S.inquiries.filter(l => l.status === 'joined').length; const decided = S.inquiries.filter(l => l.status === 'joined' || l.status === 'lost').length;
+  const dueToday = S.inquiries.filter(l => open(l) && l.next_follow_up && l.next_follow_up <= today).length;
+  const bySrc = {}; S.inquiries.forEach(l => { const k = l.source || 'other'; bySrc[k] = bySrc[k] || { n: 0, j: 0 }; bySrc[k].n++; if (l.status === 'joined') bySrc[k].j++; });
+  mount('#/leads', `
+  <div class="top"><div><h1>আগ্রহী ছাত্র</h1><p>যারা জিজ্ঞেস করেছে, তাদের ফলো-আপ আর ভর্তি</p></div><button class="btn" id="nl">+ নতুন আগ্রহী</button></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">এ মাসে নতুন জিজ্ঞাসা</div><div class="v">${thisMonth.length}</div><div class="s">মোট ${S.inquiries.length} জন</div></div>
+    <div class="card stat green"><div class="l">ভর্তি হয়েছে</div><div class="v">${joined}</div><div class="s">এ মাসে ${thisMonth.filter(l => l.status === 'joined').length} জন</div></div>
+    <div class="card stat"><div class="l">ভর্তির হার</div><div class="v">${decided ? Math.round(joined * 100 / decided) + '%' : '—'}</div><div class="s">ভর্তি ÷ (ভর্তি + আগ্রহ নেই)</div></div>
+    <div class="card stat ${dueToday ? 'red' : ''}"><div class="l">আজ ফোন করতে হবে</div><div class="v">${dueToday}</div><div class="s">তারিখ পার হওয়াসহ</div></div>
+  </div>
+  <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
+    <input class="search" name="s" placeholder="নাম, ফোন বা নোট দিয়ে খুঁজুন" value="${esc(f.s)}">
+    <select name="st"><option value="open" ${f.st === 'open' ? 'selected' : ''}>চলমান (নতুন, কথা হয়েছে, ট্রায়াল)</option><option value="all" ${f.st === 'all' ? 'selected' : ''}>সবাই</option>${Object.entries(LEAD_ST).map(([k, v]) => `<option value="${k}" ${f.st === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <button class="btn ghost">খুঁজুন</button></form>
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>নাম</th><th>কী চায়</th><th>উৎস</th><th>অবস্থা</th><th>ফলো-আপ</th><th></th></tr>${list.map(l => `<tr class="click" data-lead="${l.id}"><td class="mt" data-l=""><span><b>${esc(l.name)}</b><span class="small muted"> · ${esc(l.phone)}</span></span></td><td class="dm"><b>${esc(l.name)}</b><div class="small muted">${esc(l.phone)}</div></td><td data-l="কী চায়">${esc(LEAD_INT[l.interest] || l.interest)}</td><td data-l="উৎস">${esc(LEAD_SRC[l.source] || l.source)}</td><td data-l="অবস্থা">${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td data-l="ফলো-আপ">${!open(l) || !l.next_follow_up ? '<span class="muted">—</span>' : l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : l.next_follow_up === today ? badge('trial', 'আজ') : fmtD(l.next_follow_up)}</td><td class="num" data-l=""><div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:nowrap">${waBtn(l.phone, leadMsg(l), '')}${l.status === 'joined' && l.student_id ? `<a class="btn sm ghost" href="#/student/${l.student_id}" data-stop>প্রোফাইল</a>` : l.status !== 'lost' ? `<a class="btn sm gold" href="#/students/new?lead=${l.id}" data-stop>ভর্তি করুন</a>` : ''}</div></td></tr>`).join('')}</table>` : '<div class="empty">এই তালিকায় কেউ নেই। কেউ ফোন করলে বা ফেসবুকে মেসেজ দিলে "+ নতুন আগ্রহী" দিয়ে লিখে রাখুন।</div>'}</div>
+  ${Object.keys(bySrc).length ? `<div class="card" style="margin-top:16px"><h2>কোথা থেকে ছাত্র আসছে</h2><div class="tw"><table><tr><th>উৎস</th><th class="num">জিজ্ঞাসা</th><th class="num">ভর্তি</th></tr>${Object.entries(bySrc).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `<tr><td>${esc(LEAD_SRC[k] || k)}</td><td class="num">${v.n}</td><td class="num">${v.j}</td></tr>`).join('')}</table></div><p class="small muted">যে উৎস থেকে বেশি ভর্তি হয়, বিজ্ঞাপনের টাকা সেখানে বেশি দিন।</p></div>` : ''}`, () => {
+    $('#nl').onclick = () => leadModal(null);
+    $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); location.hash = '#/leads?' + new URLSearchParams(Object.entries(d).filter(([, v]) => v)); };
+    $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
+    $$('[data-lead]').forEach(tr => tr.onclick = () => leadModal(byId(S.inquiries, tr.dataset.lead)));
+    bindGo();
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
   const months = []; const d = new Date(); d.setDate(1);
   for (let i = 11; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(`${x.getFullYear()}-${pad(x.getMonth() + 1, 2)}`); }
   const inc = months.map(m => S.payments.filter(p => (p.paid_on || '').startsWith(m)).reduce((a, p) => a + num(p.amount), 0));
-  const max = Math.max(1, ...inc);
-  const W = 720, H = 220, bw = W / months.length;
-  const chart = `<svg viewBox="0 0 ${W} ${H + 40}" width="100%" role="img" aria-label="মাসিক আয়">${inc.map((v, i) => { const h = Math.round(v / max * H); return `<rect x="${i * bw + 8}" y="${H - h}" width="${bw - 16}" height="${h}" rx="4" fill="${i === inc.length - 1 ? '#C8372B' : '#1B2945'}"><title>${months[i]}: ${tk(v)}</title></rect>${v ? `<text x="${i * bw + bw / 2}" y="${H - h - 6}" text-anchor="middle" font-size="11" fill="#26231E">${Math.round(v / 1000)}k</text>` : ''}<text x="${i * bw + bw / 2}" y="${H + 18}" text-anchor="middle" font-size="11" fill="#6E665A">${months[i].slice(5)}/${months[i].slice(2, 4)}</text>`; }).join('')}<line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="#C9A95C"/></svg>`;
+  const exp = months.map(m => monthSum(S.expenses, 'spent_on', m));
+  const max = Math.max(1, ...inc, ...exp);
+  const W = 760, H = 220, L = 46, bw = (W - L) / months.length, bar = Math.max(6, (bw - 14) / 2);
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(max * f));
+  const kfmt = (v) => v >= 100000 ? (v / 100000).toFixed(1).replace('.0', '') + 'L' : Math.round(v / 1000) + 'k';
+  const chart = `<svg viewBox="0 -12 ${W} ${H + 58}" width="100%" role="img" aria-label="মাসিক আয় ও খরচ">
+    ${ticks.map(t => { const y = H - t / max * H; return `<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="#E3D8C3" stroke-dasharray="${t ? '3 4' : ''}"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="10.5" fill="#6E665A">${t ? kfmt(t) : '0'}</text>`; }).join('')}
+    ${months.map((m, i) => { const x = L + i * bw + 7; const hi = inc[i] / max * H, he = exp[i] / max * H; return `<rect x="${x}" y="${H - hi}" width="${bar}" height="${hi}" rx="2" fill="#1B2945"><title>${m} আয়: ${tk(inc[i])}</title></rect><rect x="${x + bar + 2}" y="${H - he}" width="${bar}" height="${he}" rx="2" fill="#C8372B"><title>${m} খরচ: ${tk(exp[i])}</title></rect><text x="${L + i * bw + bw / 2}" y="${H + 16}" text-anchor="middle" font-size="10.5" fill="${i === months.length - 1 ? '#C8372B' : '#6E665A'}" font-weight="${i === months.length - 1 ? 700 : 400}">${m.slice(5)}/${m.slice(2, 4)}</text>`; }).join('')}
+    <g transform="translate(${L},${H + 36})" font-size="11.5" fill="#26231E"><rect width="11" height="11" fill="#1B2945" rx="2" y="-9"/><text x="16">আয়</text><rect x="62" width="11" height="11" fill="#C8372B" rx="2" y="-9"/><text x="78">খরচ</text></g></svg>`;
+  const pl = months.map((m, i) => ({ m, inc: inc[i], exp: exp[i], pr: inc[i] - exp[i] })).reverse();
+  const tInc = inc.reduce((a, b) => a + b, 0), tExp = exp.reduce((a, b) => a + b, 0);
   const studs = S.students.filter(s => s.status !== 'dropped');
   mount('#/reports', `
   <div class="top"><div><h1>রিপোর্ট</h1><p>হিসাব, বকেয়া আর হাজিরার সারসংক্ষেপ</p></div></div>
-  <div class="card"><h2>গত ১২ মাসের আয় (৳)</h2>${chart}<p class="small muted">মোট ${tk(inc.reduce((a, b) => a + b, 0))} · লাল দাগ = চলতি মাস</p></div>
+  <div class="card"><h2>গত ১২ মাসের আয় ও খরচ (৳)</h2>${chart}<p class="small muted">১২ মাসে আয় ${tk(tInc)} · খরচ ${tk(tExp)} · ${tInc - tExp < 0 ? 'ক্ষতি' : 'লাভ'} <b>${tk(Math.abs(tInc - tExp))}</b></p></div>
+  <div class="card" style="margin-top:16px"><div class="row" style="margin-bottom:10px"><h2 style="margin:0">মাসিক লাভ-ক্ষতি</h2><span class="spacer"></span><button class="btn ghost sm" id="r5">CSV ডাউনলোড</button></div>
+  <div class="tw"><table class="stack"><tr><th>মাস</th><th class="num">আয়</th><th class="num">খরচ</th><th class="num">লাভ / ক্ষতি</th></tr>${pl.map(r => `<tr class="click" data-go="#/expenses?m=${r.m}"><td data-l="মাস"><b>${r.m.slice(5)}/${r.m.slice(0, 4)}</b></td><td class="num" data-l="আয়">${tk(r.inc)}</td><td class="num" data-l="খরচ">${tk(r.exp)}</td><td class="num" data-l="লাভ / ক্ষতি"><b style="color:${r.pr < 0 ? 'var(--red)' : r.pr > 0 ? 'var(--green)' : 'inherit'}">${r.pr < 0 ? '−' : ''}${tk(Math.abs(r.pr))}</b></td></tr>`).join('')}</table></div></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>বকেয়ার তালিকা</h2><p class="muted small">যাদের কাছে টাকা বাকি, অভিভাবকের ফোন নম্বরসহ।</p><button class="btn ghost" id="r1">CSV ডাউনলোড</button></div>
     <div class="card"><h2>হাজিরা ও শিক্ষার ঘণ্টা</h2><p class="muted small">প্রত্যেক ছাত্রের মোট ঘণ্টা, উপস্থিতি % আর লেভেল অনুযায়ী ভাগ।</p><button class="btn ghost" id="r2">CSV ডাউনলোড</button></div>
     <div class="card"><h2>ছাত্রদের পূর্ণ তালিকা</h2><p class="muted small">সব তথ্যসহ, জাপানের স্কুলে পাঠানোর প্রস্তুতির জন্য।</p><button class="btn ghost" id="r3">CSV ডাউনলোড</button></div>
     <div class="card"><h2>পুরো ব্যাকআপ</h2><p class="muted small">সব তথ্য একটা JSON ফাইলে। মাসে একবার নামিয়ে রাখুন।</p><button class="btn ghost" id="r4" ${isAdmin() ? '' : 'disabled'}>ব্যাকআপ ডাউনলোড</button></div>
   </div>`, () => {
+    bindGo();
+    $('#r5').onclick = () => csvDownload(`sakura-profit-loss-${todayISO()}.csv`, [['Month', 'Income', 'Expenses', 'Profit'], ...pl.map(r => [r.m, r.inc, r.exp, r.pr])]);
     $('#r1').onclick = () => csvDownload(`sakura-dues-${todayISO()}.csv`, [['Admission no', 'Name', 'Level', 'Batch', 'Total fee', 'Discount', 'Paid', 'Due', 'Next due date', 'Phone', 'Guardian phone'], ...studs.map(s => [s.admission_no, s.name_en || s.name_bn, s.current_level, s.batch, s.total_fee, s.discount, paidOf(s.id), dueOf(s), s.next_due_date, s.phone, s.guardian_phone]).filter(r => r[7] > 0)]);
     $('#r2').onclick = () => csvDownload(`sakura-attendance-${todayISO()}.csv`, [['Admission no', 'Name', 'Level', 'Classes marked', 'Attended', 'Attendance %', 'Total hours', 'N5 hours', 'N4 hours', 'N3 hours', 'First class', 'Last class'], ...studs.map(s => { const a = attOf(s.id, smap); return [s.admission_no, s.name_en || s.name_bn, s.current_level, a.total, a.came, a.pct ?? '', a.hours, a.byLevel.N5 || 0, a.byLevel.N4 || 0, a.byLevel.N3 || 0, a.first || '', a.last || '']; })]);
     $('#r3').onclick = () => { const cols = ['admission_no', 'admission_date', 'name_bn', 'name_en', 'dob', 'gender', 'nid', 'passport_no', 'phone', 'email', 'address_present', 'address_permanent', 'education', 'guardian_name', 'guardian_relation', 'guardian_phone', 'package', 'current_level', 'batch', 'start_date', 'total_fee', 'discount', 'status', 'japan_stage', 'target_school', 'intake', 'notes']; csvDownload(`sakura-students-${todayISO()}.csv`, [cols, ...S.students.map(s => cols.map(c => s[c]))]); };
@@ -622,6 +777,11 @@ function viewSettings() {
     <label class="f">ডিরেক্টরের নাম (ইংরেজি)<input name="director_en" value="${esc(st.director_en)}" ${ro}></label><label class="f">ডিরেক্টরের নাম (জাপানি)<input name="director_ja" value="${esc(st.director_ja)}" ${ro}></label>
     <h3>কোর্স ফি (৳)</h3>
     ${PACKAGES.map(p => `<label class="f">${p}<input name="fee_${p}" type="number" min="0" value="${esc(st.fees[p])}" ${ro}></label>`).join('')}
+    <h3>WhatsApp মেসেজের লেখা</h3>
+    <p class="full small muted" style="margin:0">{name} = ছাত্র বা আগ্রহীর নাম, {due} = বকেয়া টাকা, {date} = তারিখ, {pct} = উপস্থিতি %, {institute} = প্রতিষ্ঠানের নাম, {phone} = অফিসের ফোন। এগুলো নিজে থেকে বসে যাবে।</p>
+    <label class="f full">বকেয়ার রিমাইন্ডার<textarea name="wa_due" ${ro}>${esc(st.wa_due)}</textarea></label>
+    <label class="f full">অনুপস্থিতির খবর<textarea name="wa_absent" ${ro}>${esc(st.wa_absent)}</textarea></label>
+    <label class="f full">আগ্রহী ছাত্রকে প্রথম মেসেজ<textarea name="wa_lead" ${ro}>${esc(st.wa_lead)}</textarea></label>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
     ${isAdmin() ? '<div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div>' : ''}
@@ -631,7 +791,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])) };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -652,6 +812,10 @@ async function seedDemo() {
   }
   let r = S.payments.reduce((m, p) => Math.max(m, num((p.receipt_no || '').replace(/\D/g, ''))), 0);
   for (const [i, s] of made.entries()) await Local.insert('payments', { student_id: s.id, receipt_no: 'SJI-R-' + pad(++r, 5), paid_on: iso(base), amount: i % 2 ? s.total_fee : 10000, method: ['cash', 'bkash', 'nagad'][i % 3], purpose: 'course_fee' });
+  const iso2 = (off) => { const x = new Date(); x.setDate(x.getDate() + off); return iso(x); };
+  const mm = monthISO();
+  for (const [cat, amt, to, note] of [['rent', 25000, 'ডেমো বাড়িওয়ালা', 'অফিস ভাড়া'], ['salary', 18000, 'ডেমো শিক্ষক', 'মাসিক বেতন'], ['utilities', 3200, 'বিদ্যুৎ অফিস', 'বিদ্যুৎ বিল'], ['internet', 1500, 'ডেমো ISP', 'ইন্টারনেট'], ['marketing', 5000, 'Facebook', 'বিজ্ঞাপন'], ['books', 7200, 'ডেমো বইয়ের দোকান', '৬টি みんなの日本語']]) await Local.insert('expenses', { spent_on: mm + '-05', category: cat, amount: amt, paid_to: to, note, method: 'cash' });
+  for (const [nm, src, it, st, off] of [['ডেমো আগ্রহী এক', 'facebook', 'N5', 'new', 0], ['ডেমো আগ্রহী দুই', 'walkin', 'N5', 'trial', -2], ['ডেমো আগ্রহী তিন', 'referral', 'japan', 'contacted', 3], ['ডেমো আগ্রহী চার', 'facebook', 'N4', 'lost', null], ['ডেমো আগ্রহী পাঁচ', 'phone', 'N5', 'contacted', -1]]) await Local.insert('inquiries', { created_on: iso2(-6), name: nm, phone: '01900-00000' + nm.length % 10, source: src, interest: it, status: st, next_follow_up: off == null ? null : iso2(off), notes: 'ডেমো তথ্য' });
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {

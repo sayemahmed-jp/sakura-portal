@@ -46,6 +46,11 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.red{background:var(--red);border-color:var(--red)}
 .btn.gold{background:var(--gold);border-color:var(--gold)}
 .btn.sm{padding:4px 10px;font-size:13px}
+.btn.wa{background:#1FA855;border-color:#1FA855;color:#fff}.btn.wa:hover{background:#178A45}
+.btn.wa svg{flex:none}
+.catbars{display:grid;gap:10px}
+.cb{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;font-size:14px}
+.cb .bar{height:10px}.cb b{font-variant-numeric:tabular-nums;min-width:90px;text-align:right}
 .btn[disabled]{opacity:.5;cursor:not-allowed}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
@@ -121,6 +126,7 @@ td.mt,td.mt2{display:none}
   .main{padding:16px 14px 60px}
   .g4{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}
   .form{grid-template-columns:1fr}
+  .cb{grid-template-columns:1fr auto}.cb .bar{grid-column:1/-1;grid-row:2}
   .kv{grid-template-columns:120px 1fr}
   .hide-m{display:none}
   table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
