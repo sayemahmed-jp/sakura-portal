@@ -733,7 +733,11 @@ begin
     if new.processing_fee is distinct from old.processing_fee then raise exception 'প্রসেসিং ফি বদলাতে পারেন শুধু পরিচালক (only the director can change the processing fee)'; end if;
     if new.total_fee is not distinct from old.total_fee then return new; end if;
   end if;
+  -- package price from Settings; if Settings were never saved, the portal's built-in prices
   select nullif(data -> 'fees' ->> new.package, '')::integer into list_price from public.settings where id = 1;
+  if list_price is null then
+    list_price := ('{"N5":20000,"N4":20000,"N3":22000,"N5+N4":35000,"N5+N4+N3":45000}'::jsonb ->> new.package)::integer;
+  end if;
   if list_price is not null and coalesce(new.total_fee, 0) < list_price then
     raise exception 'মোট ফি প্যাকেজের দামের (৳%) চেয়ে কম রাখতে পারেন শুধু পরিচালক (only the director can lower the fee)', list_price;
   end if;
