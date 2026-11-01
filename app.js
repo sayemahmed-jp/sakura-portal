@@ -23,11 +23,15 @@ const DEFAULT_SETTINGS = {
   director_en: 'SAYEM AHMED',
   director_ja: 'サエム・アハメド',
   hours_per_class: 2,
+  alert_passport_months: 6,
+  alert_fresh_days: 90,
+  alert_deadline_days: 14,
   fees: { 'N5': 20000, 'N4': 20000, 'N3': 22000, 'N5+N4': 35000, 'N5+N4+N3': 45000 },
   textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' },
   wa_due: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর কোর্স ফি বাবদ {due} বকেয়া আছে{date}। অনুগ্রহ করে সময়মতো পরিশোধ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_absent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} {date} তারিখে ক্লাসে উপস্থিত ছিল না। এখন পর্যন্ত উপস্থিতি {pct}। জাপানে আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_result: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} "{exam}" পরীক্ষায় {marks} নম্বর পেয়েছে ({pct}, {result})। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_doc: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর {doc}: {issue}। জাপানের আবেদনের জন্য যত দ্রুত সম্ভব অফিসে যোগাযোগ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_japan: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর জাপানের আবেদনের খবর: {school} ({intake} সেশন) — {status}। কিছু জানার থাকলে যোগাযোগ করবেন: {phone}',
   wa_lead: 'আসসালামু আলাইকুম {name}, {institute} থেকে বলছি। জাপানি ভাষা কোর্স (N5–N3) ও জাপানে পড়াশোনা নিয়ে আগ্রহ দেখানোর জন্য ধন্যবাদ। প্রথম ৩টি ক্লাস ফ্রি, আর সব বই কোর্স ফি-র মধ্যেই। কবে একবার অফিসে আসতে পারবেন জানাবেন? যোগাযোগ: {phone}'
 };
@@ -205,7 +209,7 @@ const API = DEMO ? Local : Remote;
 async function loadAll() {
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
-  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
+  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
   TABLES.forEach((t, i) => { S[t] = rest[i]; });
   S.loaded = true;
@@ -322,16 +326,17 @@ const ICON = {
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
+  bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
   plane: '<path d="M2.5 13.5l19-8-5 15-4.5-5.5z"/><path d="M12 15l-2.5 5-1-6.5"/>',
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
-  return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b></div>
+  return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
-    <nav class="nav">${NAV.map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}</a>`).join('')}</nav>
+    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
     <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div>
   </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
 }
@@ -357,6 +362,7 @@ function render() {
   if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
+  if (p[0] === 'alerts') return viewAlerts(q);
   if (p[0] === 'japan') return viewJapan(q);
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
@@ -386,6 +392,7 @@ function viewDashboard() {
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a></div></div>
+  ${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red'); if (!al.length) return ''; return `<a class="alertbar ${red.length ? 'red' : ''}" href="#/alerts"><b>${red.length ? red.length + 'টি জরুরি সতর্কতা' : al.length + 'টি সতর্কতা'}</b><span>${esc(al.slice(0, 2).map(a => { const t = studentName(byId(S.students, a.sid)) + ': ' + a.what + ' — ' + a.issue; return t.length > 110 ? t.slice(0, 108) + '…' : t; }).join(' · '))}${al.length > 2 ? ` · আরও ${al.length - 2}টি` : ''}</span><span class="go">দেখুন →</span></a>`; })()}
   <div class="grid g4">
     <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div><div class="s">মোট ভর্তি ${S.students.length} জন</div></div>
     <div class="card stat green"><div class="l">এ মাসের আয়</div><div class="v">${tk(monthIncome)}</div><div class="s">খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b></div></div>
@@ -508,7 +515,7 @@ async function viewStudent(id, tab) {
     const docs = new Map(S.documents.filter(d => d.student_id === s.id).map(d => [d.doc_type, d]));
     const done = DOC_TYPES.filter(([k]) => docs.get(k) && docs.get(k).status !== 'missing').length;
     body = `<div class="card" style="margin-bottom:14px"><div class="row"><b>${done} / ${DOC_TYPES.length}</b> <span class="muted">কাগজ জমা হয়েছে</span><span class="spacer"></span><div class="bar" style="width:200px"><i style="width:${Math.round(done * 100 / DOC_TYPES.length)}%"></i></div></div></div>
-    <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; return `<tr data-doc="${k}"><td><b>${l}</b></td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
+    <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; const al = docAlertFor(s, k); const dd = DOC_DATE[k]; return `<tr data-doc="${k}"><td><b>${l}</b>${dd ? `<label class="small muted ddt">${dd[1]} <input type="date" data-dt="${dd[0]}" value="${esc(d[dd[0]] || '')}"></label>` : ''}${al ? `<div style="margin-top:4px">${badge(al.level === 'red' ? 'due' : 'trial', al.issue)}</div>` : ''}</td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
     <p class="small muted">ছবি বা PDF আপলোড করা যায়। ফাইল সুরক্ষিত থাকে, শুধু স্টাফরা লগইন করে দেখতে পারেন।</p>`;
   }
   if (tab === 'exams') {
@@ -558,6 +565,7 @@ async function viewStudent(id, tab) {
       $$('tr[data-doc]').forEach(tr => {
         const k = tr.dataset.doc;
         $('[data-dst]', tr).onchange = async (e) => { try { await saveDoc(k, { status: e.target.value }); toast('আপডেট হয়েছে'); } catch (err) { toast(errMsg(err), true); } };
+        const dt = $('[data-dt]', tr); if (dt) dt.onchange = async (e) => { try { await saveDoc(k, { [dt.dataset.dt]: e.target.value || null }); toast('তারিখ সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
         $('[data-note]', tr).onchange = async (e) => { try { await saveDoc(k, { note: e.target.value.trim() }); toast('নোট সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); } };
         $('[data-up]', tr).onchange = async (e) => {
           const file = e.target.files[0]; if (!file) return;
@@ -1063,6 +1071,78 @@ function viewSchool(id) {
   });
 }
 
+// ------------------------------------------------------------------ alerts (document expiry & deadlines)
+const DOC_DATE = { passport: ['expires_on', 'মেয়াদ শেষ'], bank: ['issued_on', 'ইস্যুর তারিখ'], sponsor: ['issued_on', 'ইস্যুর তারিখ'] };
+const REQUIRED_DOCS = ['photo', 'passport', 'nid', 'ssc', 'hsc', 'study_hours', 'sponsor', 'bank', 'relation'];
+const docLabel = (k) => (DOC_TYPES.find(([x]) => x === k) || [k, k])[1];
+const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+const addMonthsISO = (iso, m) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + m); return d.toISOString().slice(0, 10); };
+function missingDocs(sid) { const got = new Set(S.documents.filter(d => d.student_id === sid && d.status !== 'missing').map(d => d.doc_type)); return REQUIRED_DOCS.filter(k => !got.has(k)); }
+function docAlertFor(s, k) { return computeAlerts().find(a => a.sid === s.id && a.doc === k); }
+
+let _alertsCache = null, _alertsKey = '';
+function computeAlerts() {
+  const key = [S.students.length, S.documents.length, S.applications.length, todayISO(), JSON.stringify([S.settings.alert_passport_months, S.settings.alert_fresh_days, S.settings.alert_deadline_days]), S.documents.map(d => d.expires_on + d.issued_on + d.status).join(), S.applications.map(a => a.status + a.deadline_on + a.interview_on).join(), S.students.map(s => s.status).join()].join('|');
+  if (_alertsCache && key === _alertsKey) return _alertsCache;
+  const t = todayISO(); const out = [];
+  const pm = num(S.settings.alert_passport_months) || 6, fresh = num(S.settings.alert_fresh_days) || 90, dl = num(S.settings.alert_deadline_days) || 14;
+  const openApps = (sid) => S.applications.filter(a => a.student_id === sid && appOpen(a) && APP_FLOW.indexOf(a.status) <= APP_FLOW.indexOf('coe_applied'));
+  for (const s of S.students) {
+    if (['dropped', 'japan'].includes(s.status)) continue;
+    const docs = new Map(S.documents.filter(d => d.student_id === s.id).map(d => [d.doc_type, d]));
+    const apps = openApps(s.id); const inProcess = apps.length > 0 || !['none', undefined, ''].includes(s.japan_stage);
+    // passport validity
+    const pp = docs.get('passport');
+    if (pp && pp.expires_on) {
+      const left = daysBetween(t, pp.expires_on);
+      if (pp.expires_on < addMonthsISO(t, pm)) out.push({ level: left < 0 || pp.expires_on < addMonthsISO(t, 3) ? 'red' : 'amber', sid: s.id, doc: 'passport', what: 'পাসপোর্ট', issue: left < 0 ? `মেয়াদ শেষ হয়ে গেছে (${fmtD(pp.expires_on)})` : `মেয়াদ শেষ হবে ${fmtD(pp.expires_on)} (${left} দিন বাকি)`, date: pp.expires_on, go: `#/student/${s.id}?t=docs` });
+    } else if (inProcess) out.push({ level: 'amber', sid: s.id, doc: 'passport', what: 'পাসপোর্ট', issue: pp && pp.status !== 'missing' ? 'মেয়াদ শেষের তারিখ লেখা নেই' : 'পাসপোর্ট জমা হয়নি', date: null, go: `#/student/${s.id}?t=docs` });
+    // bank statement & sponsor income proof must be recent
+    if (inProcess) for (const k of ['bank', 'sponsor']) {
+      const d = docs.get(k); if (!d || d.status === 'missing' || !d.issued_on) continue;
+      const age = daysBetween(d.issued_on, t);
+      if (age > fresh - 21) out.push({ level: age > fresh ? 'red' : 'amber', sid: s.id, doc: k, what: docLabel(k), issue: age > fresh ? `${age} দিন পুরোনো, নতুন করে তুলতে হবে` : `${age} দিন পুরোনো, ${fresh - age} দিনের মধ্যে পুরোনো হয়ে যাবে`, date: isoAdd(d.issued_on, fresh), go: `#/student/${s.id}?t=docs` });
+    }
+    // application deadlines and interviews
+    for (const a of apps) {
+      const sc = byId(S.jp_schools, a.school_id);
+      if (a.status === 'preparing' && a.deadline_on) {
+        const left = daysBetween(t, a.deadline_on);
+        if (left <= dl) { const miss = missingDocs(s.id); out.push({ level: left <= 3 ? 'red' : 'amber', sid: s.id, app: a.id, what: `আবেদনের শেষ তারিখ · ${schoolName(sc)}`, issue: (left < 0 ? `শেষ তারিখ পার হয়ে গেছে (${fmtD(a.deadline_on)})` : left === 0 ? 'আজই শেষ তারিখ' : `${left} দিন বাকি (${fmtD(a.deadline_on)})`) + (miss.length ? ` · ${miss.length}টি কাগজ বাকি: ${miss.map(docLabel).join(', ')}` : ' · সব কাগজ জমা হয়েছে'), date: a.deadline_on, go: `#/student/${s.id}?t=${miss.length ? 'docs' : 'japan'}` }); }
+      }
+      if (['submitted', 'interview'].includes(a.status) && a.interview_on) {
+        const left = daysBetween(t, a.interview_on);
+        if (left >= 0 && left <= 3) out.push({ level: 'amber', sid: s.id, app: a.id, what: `ইন্টারভিউ · ${schoolName(sc)}`, issue: left === 0 ? 'আজ ইন্টারভিউ' : `${left} দিন পর (${fmtD(a.interview_on)})`, date: a.interview_on, go: `#/student/${s.id}?t=japan` });
+      }
+    }
+  }
+  out.sort((x, y) => (x.level === y.level ? (x.date || '0000').localeCompare(y.date || '0000') : x.level === 'red' ? -1 : 1));
+  _alertsCache = out; _alertsKey = key; return out;
+}
+const isoAdd = (iso, days) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); };
+function docMsg(s, a) { return fillTpl(S.settings.wa_doc, { ...tplBase(), name: s.name_bn || s.name_en, doc: a.what, issue: a.issue }); }
+
+function alertRows(list) {
+  return `<table class="stack"><tr><th></th><th>ছাত্র</th><th>কী</th><th>সমস্যা</th><th></th></tr>${list.map(a => { const s = byId(S.students, a.sid); return `<tr class="click" data-go="${a.go}"><td class="mt" data-l=""><span>${a.level === 'red' ? badge('due', 'জরুরি') : badge('trial', 'শিগগির')} <b>${esc(studentName(s))}</b></span></td><td class="dm">${a.level === 'red' ? badge('due', 'জরুরি') : badge('trial', 'শিগগির')}</td><td class="dm" style="min-width:150px"><b>${esc(studentName(s))}</b><div class="small muted">${esc(s.admission_no)}</div></td><td data-l="কী" style="min-width:150px">${esc(a.what)}</td><td data-l="সমস্যা"><span class="cell">${esc(a.issue)}</span></td><td class="num" data-l="">${waBtn(guardianPhone(s), docMsg(s, a), '')}</td></tr>`; }).join('')}</table>`;
+}
+function viewAlerts(q) {
+  const all = computeAlerts(); const f = q.get('l') || '';
+  const list = all.filter(a => !f || a.level === f);
+  const red = all.filter(a => a.level === 'red').length;
+  const pm = num(S.settings.alert_passport_months) || 6, fresh = num(S.settings.alert_fresh_days) || 90, dl = num(S.settings.alert_deadline_days) || 14;
+  mount('#/alerts', `
+  <div class="top"><div><h1>সতর্কতা</h1><p>পাসপোর্টের মেয়াদ, পুরোনো ব্যাংক কাগজ, আবেদনের শেষ তারিখ আর ইন্টারভিউ</p></div><select id="al"><option value="">সব (${all.length})</option><option value="red" ${f === 'red' ? 'selected' : ''}>শুধু জরুরি (${red})</option><option value="amber" ${f === 'amber' ? 'selected' : ''}>শুধু শিগগির (${all.length - red})</option></select></div>
+  <div class="grid g3" style="margin-bottom:16px">
+    <div class="card stat ${red ? 'red' : 'green'}"><div class="l">জরুরি</div><div class="v">${red}</div><div class="s">মেয়াদ শেষ বা তারিখ পার, এখনই দেখুন</div></div>
+    <div class="card stat"><div class="l">শিগগির</div><div class="v">${all.length - red}</div><div class="s">সামনে আসছে, প্রস্তুতি নিন</div></div>
+    <div class="card stat"><div class="l">কাগজ বাকি</div><div class="v">${S.students.filter(s => S.applications.some(a => a.student_id === s.id && appOpen(a)) && missingDocs(s.id).length).length}</div><div class="s">চলমান আবেদনের ছাত্র যাদের কাগজ অসম্পূর্ণ</div></div>
+  </div>
+  <div class="tw">${list.length ? alertRows(list) : '<div class="empty">কোনো সতর্কতা নেই। সব ঠিক আছে।</div>'}</div>
+  <p class="small muted" style="margin-top:12px">নিয়ম: পাসপোর্টের মেয়াদ ${pm} মাসের কম থাকলে সতর্কতা (৩ মাসের কম হলে জরুরি)। ব্যাংক স্টেটমেন্ট আর আয়ের প্রমাণ ${fresh} দিনের বেশি পুরোনো হলে জরুরি। আবেদনের শেষ তারিখের ${dl} দিন আগে থেকে সতর্কতা। সংখ্যাগুলো সেটিংসে বদলানো যায়। তারিখগুলো ছাত্রের "কাগজপত্র" ট্যাবে লিখুন।</p>`, () => {
+    bindGo(); $('#al').onchange = (e) => { location.hash = '#/alerts' + (e.target.value ? '?l=' + e.target.value : ''); };
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -1112,6 +1192,10 @@ function viewSettings() {
     <label class="f">ফোন<input name="phone" value="${esc(st.phone)}" ${ro}></label><label class="f">WhatsApp<input name="whatsapp" value="${esc(st.whatsapp)}" ${ro}></label>
     <label class="f">ইমেইল<input name="email" value="${esc(st.email)}" ${ro}></label><label class="f">প্রতি ক্লাসের ঘণ্টা<input name="hours_per_class" type="number" step="0.5" min="0.5" value="${esc(st.hours_per_class)}" ${ro}></label>
     <label class="f">ডিরেক্টরের নাম (ইংরেজি)<input name="director_en" value="${esc(st.director_en)}" ${ro}></label><label class="f">ডিরেক্টরের নাম (জাপানি)<input name="director_ja" value="${esc(st.director_ja)}" ${ro}></label>
+    <h3>সতর্কতার নিয়ম</h3>
+    <label class="f">পাসপোর্টের মেয়াদ কত মাসের কম হলে সতর্কতা<input name="alert_passport_months" type="number" min="1" max="24" value="${esc(st.alert_passport_months)}" ${ro}></label>
+    <label class="f">ব্যাংক / আয়ের কাগজ কত দিন পর পুরোনো<input name="alert_fresh_days" type="number" min="30" max="365" value="${esc(st.alert_fresh_days)}" ${ro}></label>
+    <label class="f">আবেদনের শেষ তারিখের কত দিন আগে সতর্কতা<input name="alert_deadline_days" type="number" min="1" max="90" value="${esc(st.alert_deadline_days)}" ${ro}></label>
     <h3>কোর্স ফি (৳)</h3>
     ${PACKAGES.map(p => `<label class="f">${p}<input name="fee_${p}" type="number" min="0" value="${esc(st.fees[p])}" ${ro}></label>`).join('')}
     <h3>WhatsApp মেসেজের লেখা</h3>
@@ -1120,6 +1204,7 @@ function viewSettings() {
     <label class="f full">অনুপস্থিতির খবর<textarea name="wa_absent" ${ro}>${esc(st.wa_absent)}</textarea></label>
     <label class="f full">পরীক্ষার রেজাল্ট ({exam} = পরীক্ষার নাম, {marks} = নম্বর, {result} = পাস/ফেল)<textarea name="wa_result" ${ro}>${esc(st.wa_result)}</textarea></label>
     <label class="f full">জাপানের আবেদনের খবর ({school} = স্কুল, {intake} = সেশন, {status} = অবস্থা)<textarea name="wa_japan" ${ro}>${esc(st.wa_japan)}</textarea></label>
+    <label class="f full">কাগজের সতর্কতা ({doc} = কোন কাগজ, {issue} = সমস্যা)<textarea name="wa_doc" ${ro}>${esc(st.wa_doc)}</textarea></label>
     <label class="f full">আগ্রহী ছাত্রকে প্রথম মেসেজ<textarea name="wa_lead" ${ro}>${esc(st.wa_lead)}</textarea></label>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
@@ -1130,7 +1215,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14 };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -1162,6 +1247,10 @@ async function seedDemo() {
   const scs = []; for (const [name_ja, city, address, capacity, tuition_yen, website, notes] of KOBE_SCHOOLS.slice(0, 3)) scs.push(await Local.insert('jp_schools', { name_ja: name_ja + '（ডেমো）', prefecture: '兵庫県', city, address, capacity, tuition_yen, website, notes, intakes: '1, 4, 7, 10', active: true }));
   const nx = intakeOptions()[1] || intakeOptions()[0];
   for (const [j, sc, st, dl, iv] of [[0, 0, 'interview', null, 5], [0, 1, 'submitted', null, 12], [1, 0, 'preparing', 4, null], [2, 2, 'coe_applied', null, null], [3, 1, 'coe_granted', null, null]]) await Local.insert('applications', { student_id: made[j].id, school_id: scs[sc].id, intake: nx, status: st, deadline_on: dl == null ? null : iso2(dl), submitted_on: st === 'preparing' ? null : iso2(-20), interview_on: iv == null ? null : iso2(iv), result_on: st === 'coe_applied' ? iso2(30) : st === 'coe_granted' ? iso2(-2) : null, school_fee: st === 'coe_granted' ? 'partial' : 'none', note: 'ডেমো তথ্য' });
+  await Local.insert('documents', { student_id: made[0].id, doc_type: 'passport', status: 'verified', expires_on: iso2(70), note: '' });
+  await Local.insert('documents', { student_id: made[0].id, doc_type: 'bank', status: 'received', issued_on: iso2(-95), note: '' });
+  await Local.insert('documents', { student_id: made[2].id, doc_type: 'passport', status: 'received', expires_on: iso2(1500), note: '' });
+  await Local.insert('documents', { student_id: made[2].id, doc_type: 'sponsor', status: 'received', issued_on: iso2(-80), note: '' });
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {

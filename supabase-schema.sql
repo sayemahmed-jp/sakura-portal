@@ -112,6 +112,8 @@ create table if not exists public.documents (
   status text not null default 'missing' check (status in ('missing','received','verified')),
   file_path text default '',
   note text default '',
+  expires_on date,
+  issued_on date,
   updated_at timestamptz not null default now(),
   unique (student_id, doc_type)
 );
@@ -345,6 +347,10 @@ begin
   end loop;
 end $$;
 
+
+-- v5: document dates (also safe on older databases)
+alter table public.documents add column if not exists expires_on date;
+alter table public.documents add column if not exists issued_on date;
 
 -- =====================================================================
 -- AFTER creating your login (Authentication → Users → Add user),
