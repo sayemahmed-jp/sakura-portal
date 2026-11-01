@@ -155,9 +155,23 @@ const Local = {
   check(t, rows, row) {
     for (const cols of this.unique[t] || []) if (rows.some(r => r.id !== row.id && cols.every(c => r[c] === row[c]))) throw new Error('duplicate key');
   },
-  async insert(t, row) { const rows = this.read(t); const r = { id: uuid(), created_at: new Date().toISOString(), ...row }; this.check(t, rows, r); rows.push(r); this.write(t, rows); return r; },
-  async update(t, id, patch) { const rows = this.read(t); const i = rows.findIndex(r => r.id === id); if (i < 0) throw new Error('not found'); const r = { ...rows[i], ...patch }; this.check(t, rows, r); rows[i] = r; this.write(t, rows); return r; },
+  log(action, t, o, n) {
+    if (['attendance', 'exam_results'].includes(t) && action === 'insert') return;
+    let od = o, nd = n;
+    if (action === 'update') { od = {}; nd = {}; for (const k of Object.keys(n)) if (k !== 'updated_at' && JSON.stringify(o[k]) !== JSON.stringify(n[k])) { od[k] = o[k] ?? null; nd[k] = n[k]; } if (!Object.keys(nd).length) return; }
+    const x = n || o; const all = this.read('audit_log');
+    all.push({ id: all.length + 1, at: new Date().toISOString(), user_id: 'demo', user_name: 'ডেমো অ্যাডমিন', action, table_name: t, row_id: x.id, student_id: x.student_id || (t === 'students' ? x.id : null), old_data: action === 'insert' ? null : od, new_data: action === 'delete' ? null : nd });
+    this.write('audit_log', all.slice(-2000));
+  },
+  async auditList({ from, to, t, a, u, student, limit = 300 }) {
+    const lo = new Date(from + 'T00:00:00').toISOString(), hi = new Date(to + 'T23:59:59.999').toISOString();
+    const rows = this.read('audit_log').filter(e => e.at >= lo && e.at <= hi && (!student || e.student_id === student) && (!a || e.action === a) && (!u || e.user_name === u) && (!t || (t === 'money' ? MONEY_TABLES.includes(e.table_name) && e.action !== 'insert' : e.table_name === t))).sort((x, y) => y.at.localeCompare(x.at));
+    return { rows: rows.slice(0, limit), more: rows.length > limit };
+  },
+  async insert(t, row) { const rows = this.read(t); const r = { id: uuid(), created_at: new Date().toISOString(), ...row }; this.check(t, rows, r); rows.push(r); this.write(t, rows); this.log('insert', t, null, r); return r; },
+  async update(t, id, patch) { const rows = this.read(t); const i = rows.findIndex(r => r.id === id); if (i < 0) throw new Error('not found'); const old = rows[i]; const r = { ...rows[i], ...patch }; this.check(t, rows, r); rows[i] = r; this.write(t, rows); this.log('update', t, old, r); return r; },
   async remove(t, id) {
+    const gone = this.read(t).find(r => r.id === id); if (gone) this.log('delete', t, gone, null);
     let rows = this.read(t).filter(r => r.id !== id); this.write(t, rows);
     if (t === 'students') for (const c of ['attendance', 'documents']) this.write(c, this.read(c).filter(r => r.student_id !== id));
     if (t === 'sessions') this.write('attendance', this.read('attendance').filter(r => r.session_id !== id));
@@ -166,12 +180,12 @@ const Local = {
   },
   async upsertResults(rows) {
     const all = this.read('exam_results');
-    for (const r of rows) { const i = all.findIndex(x => x.exam_id === r.exam_id && x.student_id === r.student_id); if (i >= 0) all[i] = { ...all[i], ...r }; else all.push({ id: uuid(), ...r }); }
+    for (const r of rows) { const i = all.findIndex(x => x.exam_id === r.exam_id && x.student_id === r.student_id); if (i >= 0) { this.log('update', 'exam_results', all[i], { ...all[i], ...r }); all[i] = { ...all[i], ...r }; } else all.push({ id: uuid(), ...r }); }
     this.write('exam_results', all); return all.filter(a => rows.some(r => r.exam_id === a.exam_id && r.student_id === a.student_id));
   },
   async upsertAttendance(rows) {
     const all = this.read('attendance');
-    for (const r of rows) { const i = all.findIndex(x => x.session_id === r.session_id && x.student_id === r.student_id); if (i >= 0) all[i] = { ...all[i], status: r.status }; else all.push({ id: uuid(), ...r }); }
+    for (const r of rows) { const i = all.findIndex(x => x.session_id === r.session_id && x.student_id === r.student_id); if (i >= 0) { this.log('update', 'attendance', all[i], { ...all[i], status: r.status }); all[i] = { ...all[i], status: r.status }; } else all.push({ id: uuid(), ...r }); }
     this.write('attendance', all); return all.filter(a => rows.some(r => r.session_id === a.session_id && r.student_id === a.student_id));
   },
   async upload(path, file) {
@@ -203,6 +217,14 @@ const Remote = {
   async fileUrl(path) { const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
   async getSettings() { const { data, error } = await sb.from('settings').select('data').eq('id', 1).maybeSingle(); if (error) throw error; return (data && data.data) || {}; },
   async saveSettings(d) { const { error } = await sb.from('settings').update({ data: d, updated_at: new Date().toISOString() }).eq('id', 1); if (error) throw error; },
+  async auditList({ from, to, t, a, u, student, limit = 300 }) {
+    let qy = sb.from('audit_log').select('*').gte('at', new Date(from + 'T00:00:00').toISOString()).lte('at', new Date(to + 'T23:59:59.999').toISOString()).order('at', { ascending: false }).limit(limit + 1);
+    if (student) qy = qy.eq('student_id', student);
+    if (a) qy = qy.eq('action', a);
+    if (u) qy = qy.eq('user_name', u);
+    if (t === 'money') qy = qy.in('table_name', MONEY_TABLES).neq('action', 'insert'); else if (t) qy = qy.eq('table_name', t);
+    const { data, error } = await qy; if (error) throw error; return { rows: data.slice(0, limit), more: data.length > limit };
+  },
   async profiles() { const { data, error } = await sb.from('profiles').select('*').order('created_at'); if (error) throw error; return data; }
 };
 const API = DEMO ? Local : Remote;
@@ -329,16 +351,17 @@ const ICON = {
   wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.3A8 8 0 1 1 21 12z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/>',
   bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  log: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
   plane: '<path d="M2.5 13.5l19-8-5 15-4.5-5.5z"/><path d="M12 15l-2.5 5-1-6.5"/>',
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
-    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
+    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => h !== '#/audit' || isAdmin()).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
     <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div>
   </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
 }
@@ -364,6 +387,7 @@ function render() {
   if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
+  if (p[0] === 'audit') return viewAudit(q);
   if (p[0] === 'alerts') return viewAlerts(q);
   if (p[0] === 'teachers') return viewTeachers(q);
   if (p[0] === 'teacher') return viewTeacher(p[1], q);
@@ -498,7 +522,7 @@ async function viewStudent(id, tab) {
   const s = byId(S.students, id);
   if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const smap = sessionMap(); const a = attOf(s.id, smap); const paid = paidOf(s.id); const due = dueOf(s);
-  const TABS = [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস']];
+  const TABS = [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
   let body = '';
   if (tab === 'info') {
     const kv = [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
@@ -544,6 +568,7 @@ async function viewStudent(id, tab) {
     <div class="row" style="margin:16px 0 10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">স্কুলে আবেদন</h2><span class="spacer"></span><button class="btn gold" id="napp">+ নতুন আবেদন</button></div>
     <div class="tw">${(() => { const ap = S.applications.filter(x => x.student_id === s.id).sort((x, y) => (y.intake || '').localeCompare(x.intake || '')); return ap.length ? appRows(ap, { showStudent: false }) : '<div class="empty">এখনো কোনো স্কুলে আবেদন হয়নি</div>'; })()}</div>`;
   }
+  if (tab === 'hist') body = '<div id="histbox"><div class="empty">লোড হচ্ছে…</div></div>';
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
@@ -551,6 +576,7 @@ async function viewStudent(id, tab) {
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     $('#idc').onclick = () => printIdCards([s]);
+    if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
       if (S.payments.some(p => p.student_id === s.id)) return toast('এই ছাত্রের টাকা জমার রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "বাদ দিয়েছে" করে দিন।', true);
@@ -1288,6 +1314,101 @@ function printSalarySlip(x) {
   <div style="display:flex;justify-content:space-between;margin-top:40px;font-size:12.5px"><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px">গ্রহণকারীর স্বাক্ষর (শিক্ষক)</div><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px;text-align:right">প্রদানকারীর স্বাক্ষর ও সিল</div></div></div></div>`);
 }
 
+// ------------------------------------------------------------------ activity log (admin only)
+const AUD_TABLE = { students: 'ছাত্র', payments: 'টাকা জমা', sessions: 'ক্লাস', attendance: 'হাজিরা', documents: 'কাগজপত্র', expenses: 'খরচ', inquiries: 'আগ্রহী ছাত্র', exams: 'পরীক্ষা', exam_results: 'নম্বর', jp_schools: 'জাপানি স্কুল', applications: 'জাপান আবেদন', teachers: 'শিক্ষক', settings: 'সেটিংস', profiles: 'স্টাফ' };
+const AUD_ACT = { insert: ['যোগ', 'active'], update: ['বদল', 'trial'], delete: ['মুছেছে', 'due'] };
+const MONEY_TABLES = ['payments', 'expenses'];
+const AUD_FIELD = { name_bn: 'বাংলা নাম', name_en: 'ইংরেজি নাম', phone: 'ফোন', guardian_phone: 'অভিভাবকের ফোন', guardian_name: 'অভিভাবক', total_fee: 'মোট ফি', discount: 'ছাড়', next_due_date: 'পরের কিস্তি', status: 'অবস্থা', current_level: 'লেভেল', batch: 'ব্যাচ', package: 'প্যাকেজ', amount: 'টাকা', paid_on: 'তারিখ', spent_on: 'তারিখ', method: 'মাধ্যম', receipt_no: 'রশিদ নং', purpose: 'বাবদ', category: 'খাত', paid_to: 'কাকে', note: 'নোট', notes: 'নোট', japan_stage: 'জাপান ধাপ', target_school: 'স্কুল', intake: 'সেশন', passport_no: 'পাসপোর্ট নং', nid: 'NID', address_present: 'ঠিকানা', marks: 'নম্বর', absent: 'অনুপস্থিত', doc_type: 'কাগজ', file_path: 'ফাইল', expires_on: 'মেয়াদ', issued_on: 'ইস্যুর তারিখ', rate: 'বেতনের হার', pay_type: 'বেতনের ধরন', hours: 'ঘণ্টা', topic: 'বিষয়', teacher_id: 'শিক্ষক', deadline_on: 'শেষ তারিখ', interview_on: 'ইন্টারভিউ', result_on: 'COE-র ফল', title: 'নাম', max_marks: 'পূর্ণ নম্বর', role: 'ভূমিকা', data: 'সেটিংস', active: 'কাজ চলছে', school_id: 'স্কুল' };
+const AUD_HIDE = ['id', 'created_at', 'created_by', 'updated_at'];
+
+function audValue(k, v) {
+  if (v == null || v === '') return '—';
+  if (k === 'amount' || k === 'total_fee' || k === 'discount' || k === 'rate') return tk(v);
+  if (/_on$|_date$|^dob$/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v))) return fmtD(String(v).slice(0, 10));
+  if (k === 'status') return STATUS[v] || APP_ST[v] || ATT[v] || DOC_STATUS[v] || LEAD_ST[v] || v;
+  if (k === 'method') return METHOD[v] || v; if (k === 'purpose') return PURPOSE[v] || v; if (k === 'pay_type') return PAY_TYPE[v] || v; if (k === 'role') return v === 'admin' ? 'অ্যাডমিন' : 'স্টাফ'; if (k === 'category') return EXP_CAT[v] || v; if (k === 'batch') return BATCH[v] || v;
+  if (k === 'teacher_id') { const t = byId(S.teachers, v); return t ? t.name : 'শিক্ষক'; }
+  if (k === 'school_id') { const t = byId(S.jp_schools, v); return t ? schoolName(t) : 'স্কুল'; }
+  if (k === 'doc_type') return docLabel(v);
+  if (typeof v === 'boolean') return v ? 'হ্যাঁ' : 'না';
+  if (typeof v === 'object') return 'বদলেছে';
+  const sv = String(v); return sv.length > 60 ? sv.slice(0, 58) + '…' : sv;
+}
+function audSubject(e) {
+  const r = e.new_data || e.old_data || {}; const cur = S[e.table_name] && e.row_id ? byId(S[e.table_name], e.row_id) : null; const x = { ...(cur || {}), ...r };
+  const st = byId(S.students, e.student_id || x.student_id);
+  switch (e.table_name) {
+    case 'students': return `${x.name_bn || x.name_en || ''} ${x.admission_no ? '· ' + x.admission_no : ''}`;
+    case 'payments': return `${x.receipt_no || ''} · ${tk(x.amount)}${st ? ' · ' + studentName(st) : ''}`;
+    case 'expenses': return `${EXP_CAT[x.category] || x.category || ''} · ${tk(x.amount)}${x.paid_to ? ' · ' + x.paid_to : ''}`;
+    case 'sessions': return `${fmtD(x.class_date)} · ${x.level || ''} ${BATCH[x.batch] || ''}`;
+    case 'attendance': { const ss = byId(S.sessions, x.session_id); return `${st ? studentName(st) : ''}${ss ? ' · ' + fmtD(ss.class_date) : ''}`; }
+    case 'documents': return `${st ? studentName(st) + ' · ' : ''}${docLabel(x.doc_type || '')}`;
+    case 'inquiries': return x.name || '';
+    case 'exams': return x.title || '';
+    case 'exam_results': { const ex = byId(S.exams, x.exam_id); return `${st ? studentName(st) : ''}${ex ? ' · ' + ex.title : ''}`; }
+    case 'jp_schools': return x.name_ja || x.name_en || '';
+    case 'applications': return `${st ? studentName(st) : ''}${x.school_id ? ' · ' + schoolName(byId(S.jp_schools, x.school_id)) : ''}`;
+    case 'teachers': return x.name || '';
+    case 'profiles': return x.name || '';
+    default: return '';
+  }
+}
+function audLink(e) {
+  const x = { ...(e.old_data || {}), ...(e.new_data || {}) };
+  if (e.action === 'delete' && ['students', 'teachers', 'exams', 'jp_schools'].includes(e.table_name)) return '';
+  if (e.table_name === 'students') return `#/student/${e.row_id}`;
+  if (e.student_id && byId(S.students, e.student_id)) return `#/student/${e.student_id}${e.table_name === 'payments' ? '?t=fees' : e.table_name === 'documents' ? '?t=docs' : e.table_name === 'applications' ? '?t=japan' : e.table_name === 'exam_results' ? '?t=exams' : ''}`;
+  if (e.table_name === 'teachers') return `#/teacher/${e.row_id}`;
+  if (e.table_name === 'exams') return `#/exam/${e.row_id}`;
+  if (e.table_name === 'jp_schools') return `#/school/${e.row_id}`;
+  if (e.table_name === 'expenses') return `#/expenses?m=${(x.spent_on || '').slice(0, 7)}`;
+  if (e.table_name === 'inquiries') return '#/leads?st=all';
+  return '';
+}
+function audDetail(e) {
+  if (e.action === 'update') return Object.keys(e.new_data || {}).filter(k => !AUD_HIDE.includes(k) && audValue(k, (e.old_data || {})[k]) !== audValue(k, e.new_data[k])).map(k => `<div><span class="muted">${esc(AUD_FIELD[k] || k)}:</span> <s>${esc(audValue(k, (e.old_data || {})[k]))}</s> → <b>${esc(audValue(k, e.new_data[k]))}</b></div>`).join('');
+  const d = e.new_data || e.old_data || {};
+  const keys = Object.keys(d).filter(k => !AUD_HIDE.includes(k) && d[k] != null && d[k] !== '' && AUD_FIELD[k] && !['student_id'].includes(k)).slice(0, 5);
+  return keys.map(k => `<span class="muted">${esc(AUD_FIELD[k])}:</span> ${esc(audValue(k, d[k]))}`).join(' · ');
+}
+const fmtDT = (iso) => { if (!iso) return '—'; const d = new Date(iso); return `${pad(d.getDate(), 2)}-${pad(d.getMonth() + 1, 2)}-${d.getFullYear()} ${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}`; };
+function audRows(list, { showWhere = true } = {}) {
+  return `<table class="stack"><tr><th>সময়</th><th>কে</th><th>কাজ</th>${showWhere ? '<th>কোথায়</th>' : ''}<th>কী</th><th>বিবরণ</th></tr>${list.map(e => { const [al, ac] = AUD_ACT[e.action] || [e.action, '']; const link = audLink(e); const money = MONEY_TABLES.includes(e.table_name) && e.action !== 'insert'; return `<tr class="${money ? 'audmoney' : ''}"><td data-l="সময়" style="white-space:nowrap">${fmtDT(e.at)}</td><td data-l="কে">${esc(e.user_name || (e.user_id ? 'স্টাফ' : 'সিস্টেম'))}</td><td data-l="কাজ">${badge(ac, al)}${money ? ' ' + badge('due', 'টাকার রেকর্ড') : ''}</td>${showWhere ? `<td data-l="কোথায়">${esc(AUD_TABLE[e.table_name] || e.table_name)}</td>` : ''}<td data-l="কী">${link ? `<a href="${link}">${esc(audSubject(e) || '—')}</a>` : esc(audSubject(e) || '—')}</td><td data-l="বিবরণ"><span class="cell small">${audDetail(e) || '—'}</span></td></tr>`; }).join('')}</table>`;
+}
+
+async function viewAudit(q) {
+  if (!isAdmin()) return mount('#/audit', '<div class="empty">কাজের রেকর্ড শুধু অ্যাডমিন দেখতে পারেন।</div>');
+  const f = { from: q.get('from') || isoAdd(todayISO(), -30), to: q.get('to') || todayISO(), t: q.get('t') || '', a: q.get('a') || '', u: q.get('u') || '' };
+  mount('#/audit', '<div class="top"><div><h1>কাজের রেকর্ড</h1><p>লোড হচ্ছে…</p></div></div>');
+  const h0 = location.hash; let list = [], more = false;
+  try { const r = await API.auditList({ ...f, limit: 300 }); list = r.rows; more = r.more; }
+  catch (e) { return mount('#/audit', `<div class="top"><div><h1>কাজের রেকর্ড</h1></div></div><div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি (supabase-migration-v7.sql চালাতে হবে)।' : esc(errMsg(e))}</div>`); }
+  if (location.hash !== h0) return;
+  const dels = list.filter(e => e.action === 'delete').length; const moneyCh = list.filter(e => MONEY_TABLES.includes(e.table_name) && e.action !== 'insert').length;
+  const users = [...new Set([...S.profiles.map(p => p.name).filter(Boolean), ...list.map(e => e.user_name).filter(Boolean)])];
+  mount('#/audit', `
+  <div class="top"><div><h1>কাজের রেকর্ড</h1><p>কে কখন কী যোগ করেছে, বদলেছে বা মুছেছে · শুধু আপনি দেখতে পান</p></div><button class="btn ghost" id="acsv">CSV</button></div>
+  <div class="grid g3" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">মোট কাজ</div><div class="v">${list.length}${more ? '+' : ''}</div><div class="s">${fmtD(f.from)} থেকে ${fmtD(f.to)}</div></div>
+    <div class="card stat ${dels ? 'red' : ''}"><div class="l">মোছা হয়েছে</div><div class="v">${dels}</div></div>
+    <div class="card stat ${moneyCh ? 'red' : ''}"><div class="l">টাকার রেকর্ড বদল / মোছা</div><div class="v">${moneyCh}</div><div class="s">টাকা জমা আর খরচ</div></div>
+  </div>
+  <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
+    <label class="small">থেকে <input type="date" name="from" value="${esc(f.from)}"></label><label class="small">পর্যন্ত <input type="date" name="to" value="${esc(f.to)}"></label>
+    <select name="t"><option value="">সব জায়গা</option>${Object.entries(AUD_TABLE).map(([k, l]) => `<option value="${k}" ${f.t === k ? 'selected' : ''}>${l}</option>`).join('')}<option value="money" ${f.t === 'money' ? 'selected' : ''}>শুধু টাকার রেকর্ড</option></select>
+    <select name="a"><option value="">সব কাজ</option>${Object.entries(AUD_ACT).map(([k, [l]]) => `<option value="${k}" ${f.a === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select name="u"><option value="">সবাই</option>${users.map(u => `<option ${f.u === u ? 'selected' : ''}>${esc(u)}</option>`).join('')}</select>
+    <button class="btn ghost">খুঁজুন</button></form>
+  <div class="tw">${list.length ? audRows(list) : '<div class="empty">এই সময়ে কোনো কাজের রেকর্ড নেই</div>'}</div>
+  ${more ? '<p class="small muted" style="margin-top:10px">সর্বশেষ ৩০০টি দেখানো হচ্ছে। পুরোনোগুলো দেখতে তারিখ ছোট করে খুঁজুন।</p>' : ''}
+  <p class="small muted" style="margin-top:10px">রেকর্ড ডেটাবেস নিজেই লেখে, তাই পোর্টাল থেকে কেউ (আপনিও না) এটা বদলাতে বা মুছতে পারে না। প্রতিদিনের হাজিরা আর নম্বর তোলা লেখা হয় না, শুধু পরে বদলালে বা মুছলে লেখা হয়।</p>`, () => {
+    $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); location.hash = '#/audit?' + new URLSearchParams(Object.entries(d).filter(([, v]) => v)); };
+    $$('#flt select').forEach(s => s.onchange = () => $('#flt').requestSubmit());
+    $('#acsv').onclick = () => csvDownload(`sakura-activity-${f.from}-to-${f.to}.csv`, [['Time', 'User', 'Action', 'Where', 'Record', 'Changes (old → new)'], ...list.map(e => [fmtDT(e.at), e.user_name, e.action, e.table_name, audSubject(e), e.action === 'update' ? Object.keys(e.new_data || {}).map(k => `${k}: ${JSON.stringify((e.old_data || {})[k])} → ${JSON.stringify(e.new_data[k])}`).join('; ') : JSON.stringify(e.new_data || e.old_data)])]);
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -1366,7 +1487,7 @@ function viewSettings() {
     };
     if (DEMO) {
       $('#seed').onclick = async () => { await seedDemo(); await loadAll(); toast('ডেমো তথ্য যোগ হয়েছে'); location.hash = '#/'; };
-      $('#wipe').onclick = async () => { if (!(await confirmBox('এই ব্রাউজারের সব ডেমো তথ্য মুছে যাবে।'))) return; [...TABLES, 'files', 'settings'].forEach(t => localStorage.removeItem('sakura_demo_' + t)); await loadAll(); toast('মুছে ফেলা হয়েছে'); render(); };
+      $('#wipe').onclick = async () => { if (!(await confirmBox('এই ব্রাউজারের সব ডেমো তথ্য মুছে যাবে।'))) return; [...TABLES, 'files', 'settings', 'audit_log'].forEach(t => localStorage.removeItem('sakura_demo_' + t)); await loadAll(); toast('মুছে ফেলা হয়েছে'); render(); };
     }
   });
 }

@@ -159,3 +159,5 @@ td.mt,td.mt2{display:none}
 .ddt{display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap}.ddt input{padding:4px 6px;font-size:13px}
 .alertbar span{overflow-wrap:anywhere}
 @media (max-width:860px){.alertbar{flex-direction:column;align-items:flex-start;gap:4px}.alertbar span{min-width:0}}
+tr.audmoney td{background:#FFF6F4}
+.cell s{color:var(--muted)}
