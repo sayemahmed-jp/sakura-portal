@@ -172,3 +172,6 @@ table.jt td{padding:6px}table.jt input,table.jt select{width:100%;min-width:90px
 .cd.off{background:#F6F1E6}.cd.today{box-shadow:inset 0 0 0 2px var(--red)}.cd .dn{font-weight:700;font-size:14px}
 .cd .hl{color:#8E6A12;font-weight:600;line-height:1.3}.cd .hl.sm{font-weight:500}.cd .ok{color:var(--green)}.cd .miss{color:var(--red);font-weight:600}.cd .ev{color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cd .ev.jp{color:#6B3FA0}
 @media (max-width:860px){.cd{min-height:64px;padding:3px;font-size:10px}.cd .dn{font-size:12px}.cw div{font-size:11px;padding:6px 0}.cd .ev,.cd .hl.sm{display:none}}
+
+/* v17: fields only the director may change */
+input[readonly]{background:#F1ECE2;color:#6E665A;cursor:not-allowed}
