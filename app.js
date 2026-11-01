@@ -364,12 +364,12 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
-    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => h !== '#/audit' || isAdmin()).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
+    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => !['#/audit', '#/weekly'].includes(h) || isAdmin()).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
     <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${isStandalone() ? '' : '<br><button id="inst" style="margin-top:6px">📱 অ্যাপ হিসেবে ইনস্টল</button>'}</div>
   </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
 }
@@ -397,6 +397,7 @@ function render() {
   if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
+  if (p[0] === 'weekly') return viewWeekly(q);
   if (p[0] === 'calendar') return viewCalendar(q);
   if (p[0] === 'audit') return viewAudit(q);
   if (p[0] === 'alerts') return viewAlerts(q);
@@ -431,7 +432,7 @@ function viewDashboard() {
   const expByCat = {}; S.expenses.filter(e => (e.spent_on || '').startsWith(m)).forEach(e => { expByCat[e.category] = (expByCat[e.category] || 0) + num(e.amount); });
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
-    <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a></div></div>
+    <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a>${isAdmin() ? '<a class="btn ghost" href="#/weekly">সাপ্তাহিক সারাংশ</a>' : ''}</div></div>
   ${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red'); if (!al.length) return ''; return `<a class="alertbar ${red.length ? 'red' : ''}" href="#/alerts"><b>${red.length ? red.length + 'টি জরুরি সতর্কতা' : al.length + 'টি সতর্কতা'}</b><span>${esc(al.slice(0, 2).map(a => { const t = studentName(byId(S.students, a.sid)) + ': ' + a.what + ' — ' + a.issue; return t.length > 110 ? t.slice(0, 108) + '…' : t; }).join(' · '))}${al.length > 2 ? ` · আরও ${al.length - 2}টি` : ''}</span><span class="go">দেখুন →</span></a>`; })()}
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''} — ছুটি থাকলে ক্যালেন্ডারে ছুটি দিন</span><span class="go">হাজিরা নিন →</span></a>` : ''}
@@ -1806,6 +1807,65 @@ function viewCalendar(q) {
       ${(() => { const up = (S.holidays || []).filter(h => h.on_date >= todayISO()).sort((a, b) => a.on_date.localeCompare(b.on_date)).slice(0, 12); return up.length ? `<div style="margin-top:16px;font-weight:700">সামনের ছুটি</div><table style="margin-top:6px">${up.map(h => `<tr><td style="width:30%">${fmtD(h.on_date)} (${WDAY[dow(h.on_date)]})</td><td>${esc(h.title)}${h.batch !== 'all' ? ' — ' + esc(BATCH[h.batch]) : ''}</td></tr>`).join('')}</table>` : ''; })()}
       <p style="margin-top:18px;font-size:13px">ক্লাসে নিয়মিত আসুন — জাপানের আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার।</p></div>`);
   });
+}
+
+// ------------------------------------------------------------------ weekly summary (for watching the office from Japan)
+function weekStats(from, to) {
+  const inR = (d) => d && d >= from && d <= to;
+  const pays = S.payments.filter(p => inR(p.paid_on));
+  const course = pays.filter(p => p.purpose !== 'processing').reduce((a, p) => a + num(p.amount), 0);
+  const proc = pays.filter(p => p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0);
+  const comm = (S.commissions || []).filter(c => c.status === 'received' && inR(c.received_on)).reduce((a, c) => a + num(c.amount_bdt), 0);
+  const exp = S.expenses.filter(x => inR(x.spent_on)).reduce((a, x) => a + num(x.amount), 0);
+  const sess = S.sessions.filter(x => inR(x.class_date)); const sids = new Set(sess.map(x => x.id));
+  const att = S.attendance.filter(a => sids.has(a.session_id)); const came = att.filter(a => a.status === 'present' || a.status === 'late').length;
+  const newStu = S.students.filter(s => inR(s.admission_date));
+  const leads = S.inquiries.filter(l => inR(l.created_on));
+  const exams = S.exams.filter(e => inR(e.exam_date));
+  const apps = S.applications.filter(a => inR((a.updated_at || a.created_at || '').slice(0, 10)));
+  return { pays, course, proc, comm, income: course + proc + comm, exp, profit: course + proc + comm - exp, sess, attPct: att.length ? Math.round(came * 100 / att.length) : null, attN: att.length, newStu, leads, web: leads.filter(l => (l.notes || '').startsWith('ওয়েবসাইট')), exams, apps };
+}
+function viewWeekly(q) {
+  if (!isAdmin()) return mount('#/weekly', '<div class="empty">সাপ্তাহিক সারাংশ শুধু অ্যাডমিন দেখতে পারেন।</div>');
+  const to = q.get('to') || todayISO(); const from = isoAdd(to, -6); const pTo = isoAdd(from, -1); const pFrom = isoAdd(pTo, -6);
+  const w = weekStats(from, to), pw = weekStats(pFrom, pTo);
+  const missing = missingAttendance(Math.max(7, daysBetween(from, todayISO()))).filter(x => x.date >= from && x.date <= to);
+  const dues = S.students.filter(s => s.status !== 'dropped').map(s => ({ s, due: dueOf(s) })).filter(x => x.due > 0);
+  const overdue = dues.filter(x => x.s.next_due_date && x.s.next_due_date < todayISO());
+  const al = computeAlerts(); const red = al.filter(a => a.level === 'red');
+  const nTo = isoAdd(todayISO(), 7); const upcoming = [
+    ...(S.holidays || []).filter(h => h.on_date >= todayISO() && h.on_date <= nTo).map(h => [h.on_date, `ছুটি: ${h.title}`]),
+    ...S.exams.filter(e => e.exam_date >= todayISO() && e.exam_date <= nTo).map(e => [e.exam_date, `পরীক্ষা: ${e.title}`]),
+    ...S.applications.filter(a => appOpen(a)).flatMap(a => { const s = studentName(byId(S.students, a.student_id)), sc = schoolName(byId(S.jp_schools, a.school_id)); return [a.interview_on && a.interview_on >= todayISO() && a.interview_on <= nTo && [a.interview_on, `ইন্টারভিউ: ${s} · ${sc}`], a.status === 'preparing' && a.deadline_on && a.deadline_on >= todayISO() && a.deadline_on <= nTo && [a.deadline_on, `আবেদনের শেষ তারিখ: ${s} · ${sc}`]].filter(Boolean); })
+  ].sort((a, b) => a[0].localeCompare(b[0]));
+  const cmp = (a, b, money = true) => { if (b === a) return '<span class="small muted">আগের সপ্তাহের মতো</span>'; const up = a > b; const d = Math.abs(a - b); return `<span class="small" style="color:${up ? 'var(--green)' : 'var(--red)'}">${up ? '▲' : '▼'} ${money ? tk(d) : d} আগের সপ্তাহের চেয়ে</span>`; };
+  const range = `${fmtD(from)} – ${fmtD(to)}`;
+  const text = [`📊 ${S.settings.institute_bn} — সাপ্তাহিক সারাংশ`, range, '',
+    `💰 আয় ${tk(w.income)} (কোর্স ${tk(w.course)}${w.proc ? `, প্রসেসিং ${tk(w.proc)}` : ''}${w.comm ? `, কমিশন ${tk(w.comm)}` : ''})`, `💸 খরচ ${tk(w.exp)} · ${w.profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(w.profit))}`,
+    `🎓 নতুন ভর্তি ${w.newStu.length} জন · নতুন আগ্রহী ${w.leads.length} জন${w.web.length ? ` (ওয়েবসাইট থেকে ${w.web.length})` : ''}`,
+    `📅 ক্লাস ${w.sess.length}টি · উপস্থিতি ${w.attPct == null ? '—' : w.attPct + '%'}${missing.length ? ` · হাজিরা বাকি ${missing.length}টি ক্লাস` : ''}`,
+    `🧾 মোট বকেয়া ${tk(dues.reduce((a, x) => a + x.due, 0))} (${dues.length} জন${overdue.length ? `, তারিখ পার ${overdue.length} জন` : ''})`,
+    red.length ? `⚠️ জরুরি সতর্কতা ${red.length}টি` : '✅ কোনো জরুরি সতর্কতা নেই',
+    upcoming.length ? '\n🗓 সামনের ৭ দিন:\n' + upcoming.slice(0, 8).map(([d, t]) => `• ${fmtD(d)} ${t}`).join('\n') : ''].filter(x => x !== '').join('\n');
+  mount('#/weekly', `
+  <div class="top"><div><h1>সাপ্তাহিক সারাংশ</h1><p>${range} · জাপান থেকে এক নজরে অফিসের অবস্থা</p></div><div class="row"><a class="btn ghost" href="#/weekly?to=${pTo}">‹ আগের সপ্তাহ</a>${to < todayISO() ? `<a class="btn ghost" href="#/weekly?to=${isoAdd(to, 7) > todayISO() ? todayISO() : isoAdd(to, 7)}">পরের সপ্তাহ ›</a>` : ''}<a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${WA_SVG} WhatsApp-এ পাঠান</a></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat green"><div class="l">আয়</div><div class="v">${tk(w.income)}</div><div class="s">${cmp(w.income, pw.income)}</div></div>
+    <div class="card stat red"><div class="l">খরচ</div><div class="v">${tk(w.exp)}</div><div class="s">${cmp(w.exp, pw.exp)}</div></div>
+    <div class="card stat ${w.profit < 0 ? 'red' : 'green'}"><div class="l">${w.profit < 0 ? 'ক্ষতি' : 'লাভ'}</div><div class="v">${tk(Math.abs(w.profit))}</div><div class="s">${cmp(w.profit, pw.profit)}</div></div>
+    <div class="card stat"><div class="l">নতুন ভর্তি</div><div class="v">${w.newStu.length}</div><div class="s">${cmp(w.newStu.length, pw.newStu.length, false)}</div></div>
+    <div class="card stat"><div class="l">নতুন আগ্রহী</div><div class="v">${w.leads.length}</div><div class="s">${w.web.length ? `ওয়েবসাইট থেকে ${w.web.length} · ` : ''}${cmp(w.leads.length, pw.leads.length, false)}</div></div>
+    <div class="card stat ${w.attPct != null && w.attPct < 80 ? 'red' : 'green'}"><div class="l">উপস্থিতি</div><div class="v">${w.attPct == null ? '—' : w.attPct + '%'}</div><div class="s">${w.sess.length}টি ক্লাস${pw.attPct != null ? ` · আগের সপ্তাহে ${pw.attPct}%` : ''}</div></div>
+    <div class="card stat ${missing.length ? 'red' : ''}"><div class="l">হাজিরা নেওয়া হয়নি</div><div class="v">${missing.length}</div><div class="s">ক্লাসের দিন কিন্তু রেকর্ড নেই</div></div>
+    <div class="card stat ${overdue.length ? 'red' : ''}"><div class="l">মোট বকেয়া</div><div class="v">${tk(dues.reduce((a, x) => a + x.due, 0))}</div><div class="s">${dues.length} জন · তারিখ পার ${overdue.length} জন</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h2>এই সপ্তাহের টাকা জমা</h2>${w.pays.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>ছাত্র</th><th class="num">টাকা</th></tr>${[...w.pays].sort((a, b) => b.paid_on.localeCompare(a.paid_on)).map(p => `<tr class="click" data-go="#/student/${p.student_id}?t=fees"><td>${fmtD(p.paid_on)}</td><td>${esc(studentName(byId(S.students, p.student_id)))}<div class="small muted">${esc(PURPOSE[p.purpose] || '')} · ${esc(p.receipt_no)}</div></td><td class="num">${tk(p.amount)}</td></tr>`).join('')}</table></div>` : '<div class="empty">এই সপ্তাহে কোনো টাকা জমা হয়নি</div>'}</div>
+    <div class="card"><h2>সামনের ৭ দিন</h2>${upcoming.length ? `<div class="tw"><table>${upcoming.map(([d, t]) => `<tr><td style="white-space:nowrap">${fmtD(d)} <span class="small muted">${WDAY[dow(d)]}</span></td><td>${esc(t)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনের ৭ দিনে বিশেষ কিছু নেই</div>'}</div>
+    <div class="card"><h2>জরুরি সতর্কতা</h2>${red.length ? `<div class="tw"><table>${red.slice(0, 8).map(a => `<tr class="click" data-go="${a.go}"><td>${esc(studentName(byId(S.students, a.sid)))}</td><td>${esc(a.what)}<div class="small muted">${esc(a.issue)}</div></td></tr>`).join('')}</table></div>` : '<div class="empty">কোনো জরুরি সতর্কতা নেই</div>'}</div>
+    <div class="card"><h2>নতুন ভর্তি ও আগ্রহী</h2>${w.newStu.length || w.leads.length ? `<div class="tw"><table>${w.newStu.map(s => `<tr class="click" data-go="#/student/${s.id}"><td>${badge('active', 'ভর্তি')}</td><td>${esc(studentName(s))} <span class="small muted">${esc(s.package)}</span></td></tr>`).join('')}${w.leads.map(l => `<tr class="click" data-go="#/leads"><td>${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td>${esc(l.name)} <span class="small muted">${esc(LEAD_SRC[l.source] || '')}</span></td></tr>`).join('')}</table></div>` : '<div class="empty">এই সপ্তাহে নতুন কেউ নেই</div>'}</div>
+  </div>
+  <p class="small muted" style="margin-top:12px">"WhatsApp-এ পাঠান" চাপলে উপরের সংখ্যাগুলোর ছোট একটা সারাংশ তৈরি হয় — নিজের নম্বরে বা অফিসের কাউকে পাঠাতে পারেন। প্রতি সোমবার সকালে ফোনের "সাকুরা" অ্যাপ থেকে এই পাতা খুললেই আগের সপ্তাহের হিসাব পাবেন।</p>`, () => bindGo());
 }
 
 // ------------------------------------------------------------------ reports
