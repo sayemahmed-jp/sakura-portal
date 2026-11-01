@@ -383,6 +383,7 @@ function render() {
   if (p[0] === 'students' && p[1] === 'new') return viewStudentForm(null, q.get('lead'));
   if (p[0] === 'students') return viewStudents(q);
   if (p[0] === 'student' && p[2] === 'edit') return viewStudentForm(p[1]);
+  if (p[0] === 'student' && p[2] === 'jp') return viewJapanForm(p[1]);
   if (p[0] === 'student') return viewStudent(p[1], q.get('t') || 'info');
   if (p[0] === 'payments') return viewPayments(q);
   if (p[0] === 'attendance') return viewAttendance(q);
@@ -563,7 +564,9 @@ async function viewStudent(id, tab) {
   }
   if (tab === 'japan') {
     const idx = JSTAGES.findIndex(([k]) => k === (s.japan_stage || 'none'));
-    body = `<div class="card"><h2>জাপানে আবেদনের ধাপ</h2><div class="steps">${JSTAGES.slice(1).map(([k, l], i) => `<span class="${i + 1 < idx ? 'done' : i + 1 === idx ? 'cur' : ''}">${i + 1}. ${l}</span>`).join('')}</div>
+    const jmiss = jpInfoChecklist(s, s.japan_info || {});
+    body = `<div class="card" style="margin-bottom:14px"><div class="row"><div><h2 style="margin:0">আবেদনের কাগজ</h2><p class="small muted" style="margin:4px 0 0">入学願書 · 履歴書 · 経費支弁書 — ${jmiss.length ? `<span style="color:var(--red)">${jmiss.length}টি তথ্য বাকি</span>` : '<span style="color:var(--green)">তথ্য সম্পূর্ণ</span>'}</p></div><span class="spacer"></span><a class="btn gold" href="#/student/${s.id}/jp">তথ্য পূরণ ও প্রিন্ট</a></div></div>
+    <div class="card"><h2>জাপানে আবেদনের ধাপ</h2><div class="steps">${JSTAGES.slice(1).map(([k, l], i) => `<span class="${i + 1 < idx ? 'done' : i + 1 === idx ? 'cur' : ''}">${i + 1}. ${l}</span>`).join('')}</div>
     <form class="form" id="jf" style="margin-top:16px"><label class="f">বর্তমান ধাপ<select name="japan_stage">${JSTAGES.map(([k, l]) => `<option value="${k}" ${k === (s.japan_stage || 'none') ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f">লক্ষ্য সেশন (যেমন 2027-04)<input name="intake" value="${esc(s.intake || '')}" placeholder="2027-04"></label>
     <label class="f full">জাপানের স্কুল<input name="target_school" value="${esc(s.target_school || '')}" placeholder="যেমন 春日日本語学院"></label>
@@ -1411,6 +1414,188 @@ async function viewAudit(q) {
     $$('#flt select').forEach(s => s.onchange = () => $('#flt').requestSubmit());
     $('#acsv').onclick = () => csvDownload(`sakura-activity-${f.from}-to-${f.to}.csv`, [['Time', 'User', 'Action', 'Where', 'Record', 'Changes (old → new)'], ...list.map(e => [fmtDT(e.at), e.user_name, e.action, e.table_name, audSubject(e), e.action === 'update' ? Object.keys(e.new_data || {}).map(k => `${k}: ${JSON.stringify((e.old_data || {})[k])} → ${JSON.stringify(e.new_data[k])}`).join('; ') : JSON.stringify(e.new_data || e.old_data)])]);
   });
+}
+
+// ------------------------------------------------------------------ Japan application documents (入学願書 · 履歴書 · 経費支弁書)
+const EDU_LVL = { primary: ['প্রাথমিক (১ম–৫ম)', '小学校', 'Primary School'], secondary: ['মাধ্যমিক (৬ষ্ঠ–১০ম, SSC)', '中学校・高等学校(前期)', 'Secondary School (SSC)'], higher: ['উচ্চ মাধ্যমিক (HSC)', '高等学校(後期)', 'Higher Secondary (HSC)'], diploma: ['ডিপ্লোমা', '専門学校', 'Diploma'], bachelor: ['স্নাতক', '大学', 'Bachelor'], master: ['স্নাতকোত্তর', '大学院', 'Master'], japanese: ['জাপানি ভাষা', '日本語学校', 'Japanese language'], other: ['অন্যান্য', 'その他', 'Other'] };
+const REL = { father: ['বাবা', '父', 'Father'], mother: ['মা', '母', 'Mother'], elder_brother: ['বড় ভাই', '兄', 'Elder brother'], younger_brother: ['ছোট ভাই', '弟', 'Younger brother'], elder_sister: ['বড় বোন', '姉', 'Elder sister'], younger_sister: ['ছোট বোন', '妹', 'Younger sister'], spouse: ['স্বামী/স্ত্রী', '配偶者', 'Spouse'], uncle: ['চাচা/মামা', '叔父', 'Uncle'], aunt: ['ফুফু/খালা', '叔母', 'Aunt'], grandfather: ['দাদা/নানা', '祖父', 'Grandfather'], grandmother: ['দাদি/নানি', '祖母', 'Grandmother'], other: ['অন্যান্য', 'その他', 'Other'] };
+const JOB = { student: ['ছাত্র', '学生', 'Student'], company: ['চাকরি (প্রাইভেট)', '会社員', 'Company employee'], government: ['সরকারি চাকরি', '公務員', 'Government employee'], business: ['ব্যবসা', '自営業', 'Business owner'], farmer: ['কৃষি', '農業', 'Farmer'], teacher: ['শিক্ষক', '教師', 'Teacher'], housewife: ['গৃহিণী', '主婦', 'Housewife'], retired: ['অবসরপ্রাপ্ত', '退職', 'Retired'], none: ['বেকার', '無職', 'Unemployed'], other: ['অন্যান্য', 'その他', 'Other'] };
+const PLAN = { shingaku: ['জাপানে আরও পড়াশোনা (বিশ্ববিদ্যালয়/স্পেশাল স্কুল)', '日本で進学', 'Further study in Japan'], shushoku: ['জাপানে চাকরি', '日本で就職', 'Employment in Japan'], kikoku: ['দেশে ফিরে কাজ', '帰国して就職', 'Return home and work'], undecided: ['এখনো ঠিক হয়নি', '未定', 'Undecided'] };
+const jdate = (iso) => { if (!iso) return ''; const [y, m, d] = String(iso).split('-'); return d ? `${y}年${num(m)}月${num(d)}日` : m ? `${y}年${num(m)}月` : `${y}年`; };
+const jdateEn = (iso) => { if (!iso) return ''; const [y, m, d] = String(iso).split('-'); const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][num(m) - 1] || ''; return d ? `${num(d)} ${M} ${y}` : m ? `${M} ${y}` : y; };
+const ageOn = (dob, on = todayISO()) => { if (!dob) return ''; let a = num(on.slice(0, 4)) - num(dob.slice(0, 4)); if (on.slice(5) < dob.slice(5, 10)) a--; return a; };
+const monthsBetween = (a, b) => (a && b) ? Math.max(0, (num(b.slice(0, 4)) - num(a.slice(0, 4))) * 12 + num(b.slice(5, 7)) - num(a.slice(5, 7)) + 1) : 0; // inclusive: Jan–Dec = 12
+const lbl3 = (map, k, i) => !k ? '' : (map[k] || map.other || [k, k, k])[i] || '';
+
+function jpInfoChecklist(s, j) {
+  const miss = [];
+  if (!j.name_kana) miss.push('নামের কাতাকানা'); if (!s.dob) miss.push('জন্ম তারিখ'); if (!s.passport_no) miss.push('পাসপোর্ট নম্বর'); if (!j.birthplace) miss.push('জন্মস্থান');
+  if (!(j.edu || []).some(e => e.name)) miss.push('শিক্ষাগত যোগ্যতা'); if (!(j.family || []).some(f => f.name)) miss.push('পরিবারের সদস্য');
+  if (!j.sponsor || !j.sponsor.name) miss.push('স্পনসর'); if (!j.purpose_ja) miss.push('পড়ার উদ্দেশ্য (জাপানি)');
+  return miss;
+}
+
+function viewJapanForm(id) {
+  const s = byId(S.students, id); if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
+  const j = { edu: [], work: [], family: [], jlpt: [], sponsor: {}, marital: 'single', occupation: 'student', plan: 'shingaku', prev_coe: 'no', jp_visit: 'no', method: '銀行送金 (Bank transfer)', ...(s.japan_info || {}) };
+  if (!j.edu.length) j.edu = [{ lvl: 'primary' }, { lvl: 'secondary' }, { lvl: 'higher' }];
+  if (!j.family.length) j.family = [{ rel: 'father' }, { rel: 'mother' }];
+  const apps = S.applications.filter(a => a.student_id === s.id).sort((a, b) => (b.intake || '').localeCompare(a.intake || ''));
+  const att = attOf(s.id);
+  const opt = (map, cur, i = 0) => Object.entries(map).map(([k, v]) => `<option value="${k}" ${cur === k ? 'selected' : ''}>${esc(Array.isArray(v) ? v[i] : v)}</option>`).join('');
+  const sp = j.sponsor || {};
+  const eduRow = (e = {}) => `<tr data-row="edu"><td><select data-k="lvl">${opt(EDU_LVL, e.lvl)}</select></td><td><input data-k="name" value="${esc(e.name || '')}" placeholder="School name (English)"></td><td><input data-k="city" value="${esc(e.city || '')}" placeholder="Narayanganj"></td><td><input data-k="from" type="month" value="${esc(e.from || '')}"></td><td><input data-k="to" type="month" value="${esc(e.to || '')}"></td><td><button type="button" class="btn sm ghost" data-del>✕</button></td></tr>`;
+  const workRow = (w = {}) => `<tr data-row="work"><td><input data-k="company" value="${esc(w.company || '')}" placeholder="Company name"></td><td><input data-k="job" value="${esc(w.job || '')}" placeholder="Position"></td><td><input data-k="from" type="month" value="${esc(w.from || '')}"></td><td><input data-k="to" type="month" value="${esc(w.to || '')}"></td><td><button type="button" class="btn sm ghost" data-del>✕</button></td></tr>`;
+  const famRow = (f = {}) => `<tr data-row="family"><td><select data-k="rel">${opt(REL, f.rel)}</select></td><td><input data-k="name" value="${esc(f.name || '')}" placeholder="Name (English)"></td><td><input data-k="dob" type="date" value="${esc(f.dob || '')}"></td><td><select data-k="job"><option value="">—</option>${opt(JOB, f.job)}</select></td><td><select data-k="together"><option value="yes" ${f.together !== 'no' ? 'selected' : ''}>একসাথে থাকে</option><option value="no" ${f.together === 'no' ? 'selected' : ''}>আলাদা</option></select></td><td><button type="button" class="btn sm ghost" data-del>✕</button></td></tr>`;
+  const jlptRow = (x = {}) => `<tr data-row="jlpt"><td><select data-k="test">${opt({ jlpt: 'JLPT', nat: 'NAT-TEST', jtest: 'J.TEST', topj: 'TOP J', other: 'অন্যান্য' }, x.test)}</select></td><td><input data-k="level" value="${esc(x.level || '')}" placeholder="N5 / 5級"></td><td><input data-k="date" type="month" value="${esc(x.date || '')}"></td><td><input data-k="score" value="${esc(x.score || '')}" placeholder="95/180"></td><td><select data-k="result">${opt({ pass: 'পাস', fail: 'ফেল', waiting: 'ফলের অপেক্ষা' }, x.result)}</select></td><td><button type="button" class="btn sm ghost" data-del>✕</button></td></tr>`;
+  const autoJ = S.exam_results.filter(r => r.student_id === s.id).map(r => ({ r, e: byId(S.exams, r.exam_id) })).filter(x => x.e && ['jlpt', 'nat'].includes(x.e.type) && !x.r.absent);
+  const miss = jpInfoChecklist(s, j);
+  mount('#/students', `
+  <div class="top"><div><h1>জাপান আবেদনের তথ্য</h1><p>${esc(studentName(s))} · ${esc(s.admission_no)} — এখান থেকে 入学願書, 履歴書 আর 経費支弁書 তৈরি হবে</p></div><a class="btn ghost" href="#/student/${s.id}?t=japan">ফিরে যান</a></div>
+  <div class="card" style="margin-bottom:14px"><h2>কাগজ প্রিন্ট</h2>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><label class="small">কোন স্কুলের জন্য <select id="jpapp"><option value="">— স্কুলের নাম ছাড়া —</option>${apps.map(a => `<option value="${a.id}">${esc(schoolName(byId(S.jp_schools, a.school_id)))} · ${esc(intakeLabel(a.intake))}</option>`).join('')}</select></label>
+    <button class="btn gold" data-doc="gansho">入学願書</button><button class="btn gold" data-doc="rireki">履歴書</button><button class="btn gold" data-doc="shiben">経費支弁書</button></div>
+    ${miss.length ? `<p class="small" style="margin:10px 0 0;color:var(--red)">এখনো বাকি: ${miss.join(', ')}। খালি থাকলে কাগজে ঘর ফাঁকা থাকবে।</p>` : '<p class="small" style="margin:10px 0 0;color:var(--green)">মূল তথ্য সব আছে।</p>'}
+    <p class="small muted" style="margin:6px 0 0">প্রথমে নিচের তথ্য পূরণ করে "সংরক্ষণ" চাপুন, তারপর প্রিন্ট। ইংরেজি নাম আর বানান পাসপোর্টের সাথে হুবহু মিলিয়ে লিখুন।</p></div>
+  <form id="jf2">
+  <div class="card form" style="margin-bottom:14px"><h3>ব্যক্তিগত তথ্য</h3>
+    <p class="full small muted" style="margin:0">ইংরেজি নাম: <b>${esc(s.name_en || '—')}</b> · জন্ম তারিখ: <b>${fmtD(s.dob)}</b> · পাসপোর্ট: <b>${esc(s.passport_no || '—')}</b> · <a href="#/student/${s.id}/edit">এগুলো বদলাতে ছাত্রের তথ্য সম্পাদনা করুন</a></p>
+    <label class="f">নাম কাতাকানায় (フリガナ)<input name="name_kana" value="${esc(j.name_kana || '')}" placeholder="例: モハメド ラヒム"></label>
+    <label class="f">জন্মস্থান (ইংরেজিতে)<input name="birthplace" value="${esc(j.birthplace || '')}" placeholder="Narayanganj, Bangladesh"></label>
+    <label class="f">বৈবাহিক অবস্থা<select name="marital">${opt({ single: 'অবিবাহিত (未婚)', married: 'বিবাহিত (既婚)' }, j.marital)}</select></label>
+    <label class="f">বর্তমান পেশা<select name="occupation">${opt(JOB, j.occupation)}</select></label>
+    <label class="f full">স্থায়ী ঠিকানা (ইংরেজিতে, পাসপোর্টের মতো)<input name="address_en" value="${esc(j.address_en || '')}" placeholder="House, Road, Area, Upazila, District, Bangladesh"></label>
+    <label class="f">পাসপোর্ট ইস্যুর তারিখ<input name="passport_issued" type="date" value="${esc(j.passport_issued || '')}"></label>
+    <label class="f">পাসপোর্টের মেয়াদ শেষ<input name="passport_expires" type="date" value="${esc(j.passport_expires || (S.documents.find(d => d.student_id === s.id && d.doc_type === 'passport') || {}).expires_on || '')}"></label>
+    <label class="f">আগে জাপানে গেছে?<select name="jp_visit">${opt({ no: 'না (無)', yes: 'হ্যাঁ (有)' }, j.jp_visit)}</select></label>
+    <label class="f">আগে COE-র আবেদন করেছে?<select name="prev_coe">${opt({ no: 'না (無)', yes: 'হ্যাঁ (有)' }, j.prev_coe)}</select></label>
+    <label class="f full">জাপান সফর / আগের আবেদনের বিবরণ (থাকলে)<input name="jp_detail" value="${esc(j.jp_detail || '')}" placeholder="例: 2024年4月 ○○日本語学校 不交付"></label>
+  </div>
+  <div class="card" style="margin-bottom:14px"><h2>শিক্ষাগত যোগ্যতা (学歴)</h2><div class="tw"><table class="jt"><tr><th>স্তর</th><th>প্রতিষ্ঠানের নাম</th><th>জেলা/শহর</th><th>শুরু</th><th>শেষ</th><th></th></tr>${j.edu.map(eduRow).join('')}</table></div><button type="button" class="btn sm ghost" data-add="edu" style="margin-top:8px">+ আরেকটা</button>
+    <p class="small muted" style="margin:6px 0 0">জাপানের স্কুলে আবেদনে সাধারণত মোট ১২ বছরের পড়াশোনা লাগে। শুরু আর শেষের মাস সার্টিফিকেট দেখে লিখুন।</p></div>
+  <div class="card" style="margin-bottom:14px"><h2>চাকরির অভিজ্ঞতা (職歴) — থাকলে</h2><div class="tw"><table class="jt"><tr><th>প্রতিষ্ঠান</th><th>পদ</th><th>শুরু</th><th>শেষ</th><th></th></tr>${(j.work || []).map(workRow).join('')}</table></div><button type="button" class="btn sm ghost" data-add="work" style="margin-top:8px">+ যোগ করুন</button></div>
+  <div class="card" style="margin-bottom:14px"><h2>জাপানি ভাষার পরীক্ষা (JLPT / NAT)</h2>
+    ${autoJ.length ? `<p class="small muted" style="margin:0 0 6px">পোর্টালের রেজাল্ট থেকে: ${autoJ.map(x => `${esc(x.e.title)} ${num(x.r.marks)}/${num(x.e.max_marks)}`).join(' · ')}</p>` : ''}
+    <div class="tw"><table class="jt"><tr><th>পরীক্ষা</th><th>লেভেল</th><th>মাস</th><th>নম্বর</th><th>ফল</th><th></th></tr>${(j.jlpt || []).map(jlptRow).join('')}</table></div><button type="button" class="btn sm ghost" data-add="jlpt" style="margin-top:8px">+ যোগ করুন</button>
+    <p class="small muted" style="margin:6px 0 0">সাকুরায় পড়াশোনা: ${att.first ? `${fmtD(att.first)} থেকে ${fmtD(att.last)}, ${att.hours} ঘণ্টা` : 'এখনো হাজিরা নেই'} — এটা কাগজে নিজে থেকে বসবে।</p></div>
+  <div class="card" style="margin-bottom:14px"><h2>পরিবার (家族構成)</h2><div class="tw"><table class="jt"><tr><th>সম্পর্ক</th><th>নাম</th><th>জন্ম তারিখ</th><th>পেশা</th><th>একসাথে?</th><th></th></tr>${j.family.map(famRow).join('')}</table></div><button type="button" class="btn sm ghost" data-add="family" style="margin-top:8px">+ সদস্য যোগ</button></div>
+  <div class="card form" style="margin-bottom:14px"><h3>স্পনসর (経費支弁者)</h3>
+    <label class="f">নাম (ইংরেজি)<input data-sp="name" value="${esc(sp.name || '')}"></label>
+    <label class="f">ছাত্রের সাথে সম্পর্ক<select data-sp="rel">${opt(REL, sp.rel || 'father')}</select></label>
+    <label class="f">জন্ম তারিখ<input data-sp="dob" type="date" value="${esc(sp.dob || '')}"></label>
+    <label class="f">পেশা<select data-sp="job">${opt(JOB, sp.job || 'business')}</select></label>
+    <label class="f">প্রতিষ্ঠান / ব্যবসার নাম<input data-sp="employer" value="${esc(sp.employer || '')}"></label>
+    <label class="f">বার্ষিক আয় (৳)<input data-sp="income" type="number" min="0" value="${esc(sp.income ?? '')}"></label>
+    <label class="f full">ঠিকানা (ইংরেজিতে)<input data-sp="address" value="${esc(sp.address || '')}"></label>
+    <label class="f">ফোন<input data-sp="phone" value="${esc(sp.phone || '')}"></label>
+    <label class="f">মাসিক থাকা-খাওয়ার খরচ (¥)<input name="living_yen" type="number" min="0" step="1000" value="${esc(j.living_yen ?? 80000)}"></label>
+    <label class="f full">টাকা পাঠানোর পদ্ধতি<input name="method" value="${esc(j.method || '')}"></label>
+    <label class="f full">স্পনসর হওয়ার কারণ (経費支弁の引受け経緯) — জাপানিতে বা ইংরেজিতে<textarea name="support_reason" placeholder="例: 私は申請者の父であり、申請者の日本での勉学を強く希望しているため、学費及び生活費の全てを負担します。">${esc(j.support_reason || '')}</textarea></label></div>
+  <div class="card form" style="margin-bottom:14px"><h3>পড়ার উদ্দেশ্য ও পরিকল্পনা</h3>
+    <label class="f">পড়া শেষে পরিকল্পনা<select name="plan">${opt(PLAN, j.plan)}</select></label>
+    <label class="f">বিস্তারিত (যেমন কোন বিষয়ে পড়বে)<input name="plan_detail" value="${esc(j.plan_detail || '')}" placeholder="例: 日本の大学で情報工学を学ぶ"></label>
+    <label class="f full">জাপানে পড়ার উদ্দেশ্য (志望動機) — ছাত্র নিজে জাপানিতে লিখবে<textarea name="purpose_ja" rows="6" placeholder="ছাত্রের নিজের ভাষায়, জাপানিতে। স্কুল আর ইমিগ্রেশন এটা মন দিয়ে পড়ে।">${esc(j.purpose_ja || '')}</textarea></label></div>
+  <div class="row" style="justify-content:flex-end;margin-bottom:30px"><button class="btn" type="submit">সংরক্ষণ</button></div></form>`, () => {
+    const tpl = { edu: eduRow, work: workRow, family: famRow, jlpt: jlptRow };
+    const bindDel = () => $$('[data-del]').forEach(b => b.onclick = () => b.closest('tr').remove());
+    $$('[data-add]').forEach(b => b.onclick = () => { const t = b.previousElementSibling.querySelector('table'); t.insertAdjacentHTML('beforeend', tpl[b.dataset.add]()); bindDel(); }); bindDel();
+    const collect = () => {
+      const f = $('#jf2'); const d = formData(f); for (const el of $$('[data-sp]', f)) el.removeAttribute('name');
+      const rows = (k) => $$(`tr[data-row="${k}"]`).map(tr => Object.fromEntries($$('[data-k]', tr).map(el => [el.dataset.k, el.value.trim()]))).filter(r => Object.entries(r).some(([kk, v]) => v && !['lvl', 'rel', 'test', 'job', 'together', 'result'].includes(kk)));
+      const sponsor = Object.fromEntries($$('[data-sp]').map(el => [el.dataset.sp, el.type === 'number' ? (el.value === '' ? null : num(el.value)) : el.value.trim()]));
+      delete d.undefined; return { ...(s.japan_info || {}), ...d, edu: rows('edu'), work: rows('work'), family: rows('family'), jlpt: rows('jlpt'), sponsor };
+    };
+    $('#jf2').onsubmit = async (e) => {
+      e.preventDefault(); const info = collect(); const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+      try { putLocal('students', await API.update('students', s.id, { japan_info: info })); toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+    };
+    $$('[data-doc]').forEach(b => b.onclick = async () => {
+      const info = collect(); const cur = byId(S.students, s.id);
+      if (JSON.stringify(info) !== JSON.stringify(cur.japan_info || {})) { try { putLocal('students', await API.update('students', s.id, { japan_info: info })); } catch (err) { return toast(errMsg(err), true); } }
+      const a = byId(S.applications, $('#jpapp').value); printJpDoc(b.dataset.doc, byId(S.students, s.id), a);
+    });
+  });
+}
+
+async function printJpDoc(kind, s, a) {
+  const j = s.japan_info || {}; const sp = j.sponsor || {}; const st = S.settings; const today = todayISO();
+  const sc = a ? byId(S.jp_schools, a.school_id) : null; const school = sc ? schoolName(sc) : '';
+  const att = attOf(s.id); const intake = a && a.intake ? `${a.intake.slice(0, 4)}年${num(a.intake.slice(5))}月` : '';
+  let photo = ''; const ph = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path); if (ph) try { photo = await API.fileUrl(ph.file_path); } catch { /* no photo */ }
+  const edu = (j.edu || []).filter(e => e.name || e.from); const years = Math.round(edu.filter(e => e.lvl !== 'japanese').reduce((t, e) => t + monthsBetween(e.from, e.to), 0) / 12 * 10) / 10;
+  const jl = (j.jlpt || []).filter(x => x.level || x.score);
+  const sex = { male: '男 Male', female: '女 Female' }[s.gender] || '';
+  const css = `<style>.jd{font-family:'Shippori Mincho B1','Hind Siliguri',serif;font-size:11.5px;color:#111}.jd h1{text-align:center;font-size:24px;letter-spacing:8px;margin:0}.jd .en{text-align:center;font-size:11px;letter-spacing:2px;color:#444;margin-bottom:10px}
+  .jd table{width:100%;border-collapse:collapse;margin-top:6px}.jd td,.jd th{border:1px solid #333;padding:4px 6px;vertical-align:top;font-size:11px}.jd th{background:#F2F2F2;font-weight:700;text-align:left;width:22%}.jd th small,.jd td small{display:block;font-weight:400;color:#555;font-size:9px}
+  .jd .sec{margin-top:10px;font-weight:800;font-size:12.5px;border-left:4px solid #333;padding-left:6px}.jd .ph{width:30mm;height:40mm;border:1px solid #333;display:grid;place-items:center;font-size:10px;color:#666;text-align:center;overflow:hidden}.jd .ph img{width:100%;height:100%;object-fit:cover}
+  .jd .sig{margin-top:18px;display:flex;justify-content:space-between;gap:20px}.jd .sig div{flex:1;border-bottom:1px solid #333;padding-bottom:20px}.jd .muted{color:#666;font-size:9.5px}</style>`;
+  const eduTable = `<table><tr><th style="width:auto">学校名 / School<small>所在地 / Location</small></th><th style="width:auto">区分</th><th style="width:auto">入学年月<small>Entered</small></th><th style="width:auto">卒業年月<small>Graduated</small></th><th style="width:auto">年数</th></tr>${edu.map(e => `<tr><td>${esc(e.name || '')}<small>${esc(e.city || '')}</small></td><td>${lbl3(EDU_LVL, e.lvl, 1)}<small>${lbl3(EDU_LVL, e.lvl, 2)}</small></td><td>${jdate(e.from)}</td><td>${jdate(e.to)}</td><td>${monthsBetween(e.from, e.to) ? Math.round(monthsBetween(e.from, e.to) / 12 * 10) / 10 + '年' : ''}</td></tr>`).join('') || '<tr><td colspan="5">&nbsp;</td></tr>'}<tr><td colspan="4" style="text-align:right">修学年数合計 / Total years of education</td><td><b>${years || ''}年</b></td></tr></table>`;
+  const jpStudy = `<table><tr><th>日本語学習歴<small>Japanese study</small></th><td>${esc(st.institute_ja)} (${esc(st.institute_en)})<br>${att.first ? `${jdate(att.first)} 〜 ${jdate(att.last)} · 学習時間 ${att.hours}時間 · 出席率 ${att.pct}%` : ''}</td></tr>
+    <tr><th>日本語能力試験等<small>Japanese tests</small></th><td>${jl.map(x => `${{ jlpt: 'JLPT', nat: 'NAT-TEST', jtest: 'J.TEST', topj: 'TOP J' }[x.test] || ''} ${esc(x.level || '')} ${x.date ? '(' + jdate(x.date) + ')' : ''} ${esc(x.score || '')} ${{ pass: '合格', fail: '不合格', waiting: '結果待ち' }[x.result] || ''}`).join('<br>') || 'なし / None'}</td></tr></table>`;
+  if (kind === 'gansho') printWindow('入学願書 ' + s.admission_no, `${css}<div class="jd">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="font-size:13px">${school ? esc(school) + ' 御中' : '　　　　　　　　　御中'}<br><span class="muted">To: ${esc(sc ? sc.name_en || school : '')}</span></div><div class="ph">${photo ? `<img src="${esc(photo)}" alt="">` : '写真<br>Photo<br>3cm × 4cm'}</div></div>
+    <h1>入 学 願 書</h1><div class="en">APPLICATION FOR ADMISSION</div>
+    <table><tr><th>入学希望時期<small>Intended enrollment</small></th><td>${intake}</td><th>記入日<small>Date</small></th><td>${jdate(today)}</td></tr></table>
+    <div class="sec">1. 本人 / Applicant</div>
+    <table><tr><th>氏名<small>Name (as in passport)</small></th><td colspan="3"><b style="font-size:14px">${esc((s.name_en || '').toUpperCase())}</b></td></tr>
+    <tr><th>フリガナ</th><td colspan="3">${esc(j.name_kana || '')}</td></tr>
+    <tr><th>性別<small>Sex</small></th><td>${sex}</td><th>生年月日<small>Date of birth</small></th><td>${jdate(s.dob)} (${ageOn(s.dob)}歳)</td></tr>
+    <tr><th>国籍<small>Nationality</small></th><td>バングラデシュ Bangladesh</td><th>出生地<small>Place of birth</small></th><td>${esc(j.birthplace || '')}</td></tr>
+    <tr><th>配偶者<small>Marital status</small></th><td>${j.marital === 'married' ? '既婚 Married' : '未婚 Single'}</td><th>職業<small>Occupation</small></th><td>${lbl3(JOB, j.occupation, 1)} ${lbl3(JOB, j.occupation, 2)}</td></tr>
+    <tr><th>本国住所<small>Home address</small></th><td colspan="3">${esc(j.address_en || s.address_permanent || '')}</td></tr>
+    <tr><th>電話<small>Phone</small></th><td>${esc(s.phone || '')}</td><th>Eメール<small>E-mail</small></th><td>${esc(s.email || '')}</td></tr>
+    <tr><th>旅券番号<small>Passport No.</small></th><td>${esc(s.passport_no || '')}</td><th>発行日 / 有効期限<small>Issued / Expires</small></th><td>${jdate(j.passport_issued)} / ${jdate(j.passport_expires)}</td></tr>
+    <tr><th>出入国歴<small>Past entry to Japan</small></th><td>${j.jp_visit === 'yes' ? '有 Yes' : '無 No'}</td><th>在留資格認定証明書申請歴<small>Past COE application</small></th><td>${j.prev_coe === 'yes' ? '有 Yes' : '無 No'}</td></tr>
+    ${j.jp_detail ? `<tr><th>詳細<small>Details</small></th><td colspan="3">${esc(j.jp_detail)}</td></tr>` : ''}</table>
+    <div class="sec">2. 学歴 / Education</div>${eduTable}
+    ${(j.work || []).length ? `<div class="sec">3. 職歴 / Employment</div><table><tr><th style="width:auto">勤務先 / Company</th><th style="width:auto">職種 / Position</th><th style="width:auto">期間 / Period</th></tr>${j.work.map(w => `<tr><td>${esc(w.company || '')}</td><td>${esc(w.job || '')}</td><td>${jdate(w.from)} 〜 ${jdate(w.to) || '現在'}</td></tr>`).join('')}</table>` : ''}
+    <div class="sec">${(j.work || []).length ? 4 : 3}. 日本語学習歴 / Japanese language</div>${jpStudy}
+    <div class="sec">${(j.work || []).length ? 5 : 4}. 経費支弁者 / Financial sponsor</div>
+    <table><tr><th>氏名<small>Name</small></th><td>${esc(sp.name || '')}</td><th>関係<small>Relationship</small></th><td>${lbl3(REL, sp.rel, 1)} ${lbl3(REL, sp.rel, 2)}</td></tr>
+    <tr><th>職業<small>Occupation</small></th><td>${lbl3(JOB, sp.job, 1)} ${esc(sp.employer || '')}</td><th>年収<small>Annual income</small></th><td>${sp.income ? `BDT ${num(sp.income).toLocaleString('en-US')}` : ''}</td></tr></table>
+    <div class="sec">${(j.work || []).length ? 6 : 5}. 卒業後の予定 / Plan after graduation</div>
+    <table><tr><td>${lbl3(PLAN, j.plan, 1)} / ${lbl3(PLAN, j.plan, 2)}${j.plan_detail ? '<br>' + esc(j.plan_detail) : ''}</td></tr></table>
+    <p style="margin-top:12px">上記の記載事項は事実と相違ありません。 / I hereby certify that the above statements are true and correct.</p>
+    <div class="sig"><div>日付 / Date</div><div>本人署名 / Signature of applicant</div></div>
+    <p class="muted" style="margin-top:10px">取次機関 / Agent: ${esc(st.institute_ja)} ${esc(st.institute_en)} · ${esc(st.phone)}</p></div>`);
+  if (kind === 'rireki') {
+    const hist = [...edu.flatMap(e => [e.from && [e.from, `${esc(e.name || '')} ${lbl3(EDU_LVL, e.lvl, 1)} 入学`], e.to && [e.to, `${esc(e.name || '')} ${lbl3(EDU_LVL, e.lvl, 1)} 卒業`]]), ...(j.work || []).flatMap(w => [w.from && [w.from, `${esc(w.company || '')} 入社 (${esc(w.job || '')})`], w.to && [w.to, `${esc(w.company || '')} 退社`]]), att.first && [att.first.slice(0, 7), `${esc(st.institute_ja)} 入学 (日本語学習)`]].filter(Boolean).sort((x, y) => x[0].localeCompare(y[0]));
+    printWindow('履歴書 ' + s.admission_no, `${css}<div class="jd">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end"><div><h1 style="text-align:left">履 歴 書</h1><div class="en" style="text-align:left">PERSONAL HISTORY</div></div><div style="text-align:right">${jdate(today)} 現在</div></div>
+    <div style="display:flex;gap:10px"><table style="flex:1"><tr><th>フリガナ</th><td>${esc(j.name_kana || '')}</td></tr><tr><th>氏名<small>Name</small></th><td><b style="font-size:15px">${esc((s.name_en || '').toUpperCase())}</b></td></tr>
+    <tr><th>生年月日<small>Date of birth</small></th><td>${jdate(s.dob)} (満${ageOn(s.dob)}歳) · ${sex}</td></tr><tr><th>国籍・出生地<small>Nationality / Birthplace</small></th><td>バングラデシュ · ${esc(j.birthplace || '')}</td></tr>
+    <tr><th>現住所<small>Address</small></th><td>${esc(j.address_en || s.address_permanent || '')}</td></tr><tr><th>連絡先<small>Contact</small></th><td>${esc(s.phone || '')} ${s.email ? '· ' + esc(s.email) : ''}</td></tr></table>
+    <div class="ph" style="margin-top:6px">${photo ? `<img src="${esc(photo)}" alt="">` : '写真<br>Photo'}</div></div>
+    <div class="sec">学歴・職歴 / Education and employment</div>
+    <table><tr><th style="width:18%">年</th><th style="width:10%">月</th><th style="width:auto">事項</th></tr>${hist.map(([d, t]) => `<tr><td>${d.slice(0, 4)}</td><td>${num(d.slice(5, 7)) || ''}</td><td>${t}</td></tr>`).join('')}<tr><td></td><td></td><td style="text-align:right">以上</td></tr></table>
+    <div class="sec">日本語能力 / Japanese ability</div>${jpStudy}
+    <div class="sec">家族構成 / Family</div>
+    <table><tr><th style="width:auto">続柄</th><th style="width:auto">氏名 / Name</th><th style="width:auto">生年月日</th><th style="width:auto">職業</th><th style="width:auto">同居</th></tr>${(j.family || []).map(f => `<tr><td>${lbl3(REL, f.rel, 1)}</td><td>${esc(f.name || '')}</td><td>${jdate(f.dob)}</td><td>${lbl3(JOB, f.job, 1)}</td><td>${f.together === 'no' ? '別居' : '同居'}</td></tr>`).join('')}</table>
+    <div class="sec">志望動機 / Purpose of study</div><table><tr><td style="height:120px;white-space:pre-wrap;font-size:12px">${esc(j.purpose_ja || '')}</td></tr></table>
+    <div class="sec">卒業後の予定 / Plan after graduation</div><table><tr><td>${lbl3(PLAN, j.plan, 1)}${j.plan_detail ? ' — ' + esc(j.plan_detail) : ''}</td></tr></table>
+    <div class="sig"><div>本人署名 / Signature</div></div></div>`);
+  }
+  if (kind === 'shiben') {
+    const tuition = sc && sc.tuition_yen ? num(sc.tuition_yen) : null; const living = num(j.living_yen) || null;
+    printWindow('経費支弁書 ' + s.admission_no, `${css}<div class="jd" style="font-size:12.5px">
+    <div>${school ? esc(school) : '　　　　　　　　　'} 校長 殿<br><span class="muted">To the Principal of ${esc(sc ? sc.name_en || school : '')}</span></div>
+    <h1 style="margin-top:14px">経 費 支 弁 書</h1><div class="en">LETTER OF FINANCIAL SUPPORT</div>
+    <table><tr><th>国籍<small>Nationality</small></th><td>バングラデシュ Bangladesh</td><th>性別<small>Sex</small></th><td>${sex}</td></tr>
+    <tr><th>申請者氏名<small>Applicant</small></th><td>${esc((s.name_en || '').toUpperCase())}</td><th>生年月日<small>Date of birth</small></th><td>${jdate(s.dob)}</td></tr></table>
+    <p style="margin:14px 0 6px">私は、この度上記の者が日本国に在留中の経費支弁者になりましたので、下記のとおり経費支弁の引受け経緯を説明するとともに経費支弁について証明します。</p>
+    <p class="muted" style="margin:0 0 8px">I, the undersigned, hereby certify that I will bear the expenses of the above applicant during the stay in Japan, and explain the circumstances as follows.</p>
+    <div class="sec">1. 経費支弁の引受け経緯 / Reason for financial support</div><table><tr><td style="height:90px;white-space:pre-wrap">${esc(j.support_reason || '')}<br><span class="muted">申請者との関係 / Relationship: ${lbl3(REL, sp.rel, 1)} (${lbl3(REL, sp.rel, 2)})</span></td></tr></table>
+    <div class="sec">2. 経費支弁内容 / Details of support</div>
+    <table><tr><th>学費<small>Tuition</small></th><td>年額 ${tuition ? '¥' + tuition.toLocaleString('en-US') : '¥　　　　　　'} / per year</td></tr>
+    <tr><th>生活費<small>Living expenses</small></th><td>月額 ${living ? '¥' + living.toLocaleString('en-US') : '¥　　　　　　'} / per month</td></tr>
+    <tr><th>支弁方法<small>Method of payment</small></th><td>${esc(j.method || '')}</td></tr></table>
+    <div class="sec">3. 経費支弁者 / Sponsor</div>
+    <table><tr><th>氏名<small>Name</small></th><td>${esc(sp.name || '')}</td><th>生年月日<small>Date of birth</small></th><td>${jdate(sp.dob)}</td></tr>
+    <tr><th>職業<small>Occupation</small></th><td>${lbl3(JOB, sp.job, 1)} ${lbl3(JOB, sp.job, 2)}<br>${esc(sp.employer || '')}</td><th>年収<small>Annual income</small></th><td>${sp.income ? 'BDT ' + num(sp.income).toLocaleString('en-US') : ''}</td></tr>
+    <tr><th>住所<small>Address</small></th><td colspan="3">${esc(sp.address || '')}</td></tr><tr><th>電話<small>Phone</small></th><td colspan="3">${esc(sp.phone || '')}</td></tr></table>
+    <div class="sig" style="margin-top:28px"><div>日付 / Date</div><div>経費支弁者署名 / Signature of sponsor</div></div>
+    <p class="muted" style="margin-top:12px">※ 学校によっては経費支弁者の自筆での記入を求められます。収入証明書・預金残高証明書を添付してください。 / Some schools require this letter handwritten by the sponsor. Attach proof of income and bank balance.</p></div>`);
+  }
 }
 
 // ------------------------------------------------------------------ reports

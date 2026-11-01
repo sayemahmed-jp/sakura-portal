@@ -522,6 +522,9 @@ revoke all on function public.parent_view(text) from public;
 grant execute on function public.parent_view(text) to anon, authenticated;
 
 
+-- v9: Japan application details
+alter table public.students add column if not exists japan_info jsonb not null default '{}'::jsonb;
+
 -- =====================================================================
 -- AFTER creating your login (Authentication → Users → Add user),
 -- make yourself admin. Replace the email and run:
