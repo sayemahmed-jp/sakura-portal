@@ -33,6 +33,7 @@ const DEFAULT_SETTINGS = {
   wa_absent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} {date} তারিখে ক্লাসে উপস্থিত ছিল না। এখন পর্যন্ত উপস্থিতি {pct}। জাপানে আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_result: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name} "{exam}" পরীক্ষায় {marks} নম্বর পেয়েছে ({pct}, {result})। ধন্যবাদ। যোগাযোগ: {phone}',
   wa_doc: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর {doc}: {issue}। জাপানের আবেদনের জন্য যত দ্রুত সম্ভব অফিসে যোগাযোগ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
+  wa_parent: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর হাজিরা, ফি, পরীক্ষার রেজাল্ট আর জাপানের আবেদনের অবস্থা এই লিংকে যেকোনো সময় দেখতে পারবেন: {link} — লিংকটি শুধু আপনার জন্য, কাউকে দেবেন না। যোগাযোগ: {phone}',
   wa_japan: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর জাপানের আবেদনের খবর: {school} ({intake} সেশন) — {status}। কিছু জানার থাকলে যোগাযোগ করবেন: {phone}',
   wa_lead: 'আসসালামু আলাইকুম {name}, {institute} থেকে বলছি। জাপানি ভাষা কোর্স (N5–N3) ও জাপানে পড়াশোনা নিয়ে আগ্রহ দেখানোর জন্য ধন্যবাদ। প্রথম ৩টি ক্লাস ফ্রি, আর সব বই কোর্স ফি-র মধ্যেই। কবে একবার অফিসে আসতে পারবেন জানাবেন? যোগাযোগ: {phone}'
 };
@@ -232,7 +233,7 @@ const API = DEMO ? Local : Remote;
 async function loadAll() {
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => API.fetchAll(t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
-  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
+  for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc', 'wa_parent']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
   TABLES.forEach((t, i) => { S[t] = rest[i]; });
   S.loaded = true;
@@ -294,6 +295,8 @@ const bar = (pct) => pct == null ? '<span class="muted small">—</span>' : `<di
 
 // ------------------------------------------------------------------ auth
 async function boot() {
+  const pm = location.hash.match(/^#\/p\/([A-Za-z0-9_-]{24,})/);
+  if (pm) return renderParent(pm[1]);
   if (DEMO) { renderLogin(); return; }
   const { data } = await sb.auth.getSession();
   if (data.session) await afterLogin(data.session.user); else renderLogin();
@@ -572,10 +575,11 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
+  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     $('#idc').onclick = () => printIdCards([s]);
+    $('#plink').onclick = () => parentLinkModal(s);
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
@@ -1472,6 +1476,7 @@ function viewSettings() {
     <label class="f full">পরীক্ষার রেজাল্ট ({exam} = পরীক্ষার নাম, {marks} = নম্বর, {result} = পাস/ফেল)<textarea name="wa_result" ${ro}>${esc(st.wa_result)}</textarea></label>
     <label class="f full">জাপানের আবেদনের খবর ({school} = স্কুল, {intake} = সেশন, {status} = অবস্থা)<textarea name="wa_japan" ${ro}>${esc(st.wa_japan)}</textarea></label>
     <label class="f full">কাগজের সতর্কতা ({doc} = কোন কাগজ, {issue} = সমস্যা)<textarea name="wa_doc" ${ro}>${esc(st.wa_doc)}</textarea></label>
+    <label class="f full">অভিভাবকের লিংক পাঠানো ({link} = লিংক)<textarea name="wa_parent" ${ro}>${esc(st.wa_parent)}</textarea></label>
     <label class="f full">আগ্রহী ছাত্রকে প্রথম মেসেজ<textarea name="wa_lead" ${ro}>${esc(st.wa_lead)}</textarea></label>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
@@ -1482,7 +1487,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12 };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12 };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -1671,5 +1676,80 @@ async function printIdCards(list) {
   const imgs = [...w.document.images]; await Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
   setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* user can press the button */ } }, 900);
 }
+// ------------------------------------------------------------------ parent page (secret link, no login)
+const newParentToken = () => { const b = new Uint8Array(24); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const parentLink = (tok) => `${location.origin}${location.pathname}#/p/${tok}`;
+function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(), name: s.name_bn || s.name_en, link }); }
+
+function parentLinkModal(s) {
+  const tok = s.parent_token; const link = tok ? parentLink(tok) : '';
+  openModal(`<h2>অভিভাবকের লিংক — ${esc(studentName(s))}</h2>
+    <p class="small muted">এই লিংক খুললে লগইন ছাড়াই শুধু এই ছাত্রের হাজিরা, ফি, রেজাল্ট আর জাপানের আবেদনের অবস্থা দেখা যায়। NID, পাসপোর্ট, ফোন নম্বর, ঠিকানা বা কাগজের ফাইল দেখা যায় না। লিংক শুধু অভিভাবককে দিন।</p>
+    ${tok ? `<div class="card" style="padding:10px;margin:10px 0;word-break:break-all;font-size:13px" id="plk">${esc(link)}</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap">${waBtn(guardianPhone(s), parentMsg(s, link), 'WhatsApp-এ পাঠান')}<button class="btn ghost" id="pcp">কপি</button><a class="btn ghost" href="${esc(link)}" target="_blank" rel="noopener">খুলে দেখুন</a></div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px;gap:8px"><button class="btn ghost" id="pnew">নতুন লিংক (পুরোনোটা বন্ধ)</button><button class="btn ghost" id="poff" style="color:var(--red)">লিংক বন্ধ করুন</button><button class="btn" id="pcl">ঠিক আছে</button></div>`
+    : `<div class="row" style="justify-content:flex-end;margin-top:16px;gap:8px"><button class="btn ghost" id="pcl">বাতিল</button><button class="btn" id="pnew">লিংক তৈরি করুন</button></div>`}`);
+  $('#pcl').onclick = closeModal;
+  const save = async (val, msg) => { try { putLocal('students', await API.update('students', s.id, { parent_token: val })); toast(msg); parentLinkModal(byId(S.students, s.id)); } catch (e) { toast(errMsg(e), true); } };
+  $('#pnew').onclick = () => save(newParentToken(), tok ? 'নতুন লিংক তৈরি হয়েছে, পুরোনোটা আর কাজ করবে না' : 'লিংক তৈরি হয়েছে');
+  const off = $('#poff'); if (off) off.onclick = () => save(null, 'লিংক বন্ধ করা হয়েছে');
+  const cp = $('#pcp'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(link); toast('লিংক কপি হয়েছে'); } catch { const r = document.createRange(); r.selectNodeContents($('#plk')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('লিংকটা সিলেক্ট করা হয়েছে, কপি করে নিন'); } };
+}
+
+function localParentView(tok) { // demo mode: same shape as the database function
+  const read = (t) => Local.read(t); const s = read('students').find(x => x.parent_token && x.parent_token === tok); if (!s) return null;
+  const st = { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}') };
+  const ss = new Map(read('sessions').map(x => [x.id, x])); const ex = new Map(read('exams').map(x => [x.id, x])); const sc = new Map(read('jp_schools').map(x => [x.id, x]));
+  const by = (k) => (a, b) => String(b[k] || '').localeCompare(String(a[k] || ''));
+  return {
+    institute: { bn: st.institute_bn, en: st.institute_en, ja: st.institute_ja, phone: st.phone, whatsapp: st.whatsapp, address: st.address },
+    student: s,
+    payments: read('payments').filter(p => p.student_id === s.id).map(p => ({ paid_on: p.paid_on, receipt_no: p.receipt_no, amount: p.amount, method: p.method })).sort(by('paid_on')),
+    attendance: read('attendance').filter(a => a.student_id === s.id && ss.has(a.session_id)).map(a => { const x = ss.get(a.session_id); return { date: x.class_date, level: x.level, hours: x.hours, topic: x.topic, status: a.status }; }).sort(by('date')),
+    exams: read('exam_results').filter(r => r.student_id === s.id && ex.has(r.exam_id)).map(r => { const e = ex.get(r.exam_id); return { date: e.exam_date, title: e.title, type: e.type, level: e.level, max_marks: e.max_marks, pass_marks: e.pass_marks, marks: r.marks, absent: r.absent }; }).sort(by('date')),
+    documents: read('documents').filter(d => d.student_id === s.id).map(d => ({ doc_type: d.doc_type, status: d.status, expires_on: d.expires_on })),
+    applications: read('applications').filter(a => a.student_id === s.id && sc.has(a.school_id)).map(a => { const j = sc.get(a.school_id); return { school: j.name_ja || j.name_en, city: j.city, intake: a.intake, status: a.status, interview_on: a.interview_on, deadline_on: a.deadline_on }; }).sort(by('intake')),
+    generated_at: new Date().toISOString()
+  };
+}
+
+async function renderParent(tok) {
+  document.title = 'অভিভাবকের পাতা · Sakura';
+  const app = $('#app'); app.innerHTML = '<div class="boot">লোড হচ্ছে…</div>';
+  let d = null;
+  try { if (DEMO) d = localParentView(tok); else { const { data, error } = await sb.rpc('parent_view', { p_token: tok }); if (error) throw error; d = data; } }
+  catch (e) { app.innerHTML = `<div class="login"><div class="card"><h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">আবার চেষ্টা</button></div></div>`; return; }
+  if (!d) { app.innerHTML = `<div class="login"><div class="card"><span class="kamon" style="width:56px;height:56px;display:grid;place-items:center;margin-bottom:10px">${KAMON}</span><h1>লিংকটি কাজ করছে না</h1><p>লিংকটি ভুল, অথবা প্রতিষ্ঠান থেকে বন্ধ করে নতুন লিংক দেওয়া হয়েছে। নতুন লিংকের জন্য অফিসে যোগাযোগ করুন।</p></div></div>`; return; }
+  const I = d.institute || {}; const s = d.student || {};
+  const net = Math.max(0, num(s.total_fee) - num(s.discount)); const paid = (d.payments || []).reduce((a, p) => a + num(p.amount), 0); const due = Math.max(0, net - paid);
+  const att = d.attendance || []; const came = att.filter(a => a.status === 'present' || a.status === 'late').length; const pct = att.length ? Math.round(came * 100 / att.length) : null;
+  const hours = att.filter(a => a.status === 'present' || a.status === 'late').reduce((a, x) => a + num(x.hours), 0);
+  const exams = (d.exams || []).map(e => { const p = e.absent || e.marks == null || !num(e.max_marks) ? null : Math.round(num(e.marks) * 100 / num(e.max_marks)); const pm = e.pass_marks != null ? num(e.pass_marks) : Math.ceil(num(e.max_marks) * 0.6); return { ...e, p, ok: !e.absent && e.marks != null && num(e.marks) >= pm }; });
+  const taken = exams.filter(e => e.p != null); const avg = taken.length ? Math.round(taken.reduce((a, e) => a + e.p, 0) / taken.length) : null;
+  const stageIdx = JSTAGES.findIndex(([k]) => k === (s.japan_stage || 'none'));
+  const docs = new Map((d.documents || []).map(x => [x.doc_type, x])); const docsDone = DOC_TYPES.filter(([k]) => docs.get(k) && docs.get(k).status !== 'missing').length;
+  const wa = waNum(I.whatsapp || I.phone);
+  app.innerHTML = `<div class="parent">
+  <div class="phd"><span class="kamon">${KAMON}</span><div><b>${esc(I.en || '')}</b><small>${esc(I.bn || '')} · ${esc(I.ja || '')}</small></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="small muted">অভিভাবকের পাতা</div><h1 style="margin:2px 0">${esc(s.name_bn || s.name_en || '')}</h1><div class="muted">${esc(s.name_en || '')} · ভর্তি নং ${esc(s.admission_no || '')}</div>
+    <div class="row" style="margin-top:8px;gap:6px">${badge(s.status, STATUS[s.status] || s.status || '')}<span class="b completed">${esc(s.current_level || '')} · ${esc(BATCH[s.batch] || '')}</span>${s.start_date ? `<span class="b completed">ক্লাস শুরু ${fmtD(s.start_date)}</span>` : ''}</div></div>
+  <div class="grid g4" style="margin-bottom:14px">
+    <div class="card stat ${pct != null && pct < 80 ? 'red' : 'green'}"><div class="l">উপস্থিতি</div><div class="v">${pct == null ? '—' : pct + '%'}</div><div class="s">${came} / ${att.length} ক্লাস · ${hours} ঘণ্টা</div></div>
+    <div class="card stat ${due ? 'red' : 'green'}"><div class="l">বকেয়া ফি</div><div class="v">${tk(due)}</div><div class="s">${due && s.next_due_date ? 'পরের কিস্তি ' + fmtD(s.next_due_date) : `মোট ${tk(net)}, দেওয়া ${tk(paid)}`}</div></div>
+    <div class="card stat ${avg != null && avg < 60 ? 'red' : ''}"><div class="l">পরীক্ষার গড়</div><div class="v">${avg == null ? '—' : avg + '%'}</div><div class="s">${taken.length}টি পরীক্ষা</div></div>
+    <div class="card stat"><div class="l">জাপান প্রসেস</div><div class="v" style="font-size:19px">${esc((JSTAGES[stageIdx] || JSTAGES[0])[1])}</div><div class="s">${esc(s.target_school || '')}${s.intake ? ' · ' + esc(intakeLabel(s.intake)) : ''}</div></div>
+  </div>
+  ${pct != null && pct < 80 ? '<div class="alertbar red" style="margin-bottom:14px"><b>উপস্থিতি ৮০%-এর কম</b><span>জাপানে পড়তে যাওয়ার আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। নিয়মিত ক্লাসে পাঠান।</span></div>' : ''}
+  <div class="card" style="margin-bottom:14px"><h2>সাম্প্রতিক হাজিরা</h2>${att.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>পাঠ</th><th>হাজিরা</th></tr>${att.slice(0, 15).map(a => `<tr><td>${fmtD(a.date)}</td><td>${esc(a.topic || a.level || '—')}</td><td>${badge(a.status === 'present' ? 'active' : a.status === 'late' ? 'trial' : a.status === 'leave' ? 'completed' : 'due', ATT[a.status] || a.status)}</td></tr>`).join('')}</table></div>${att.length > 15 ? `<p class="small muted">সর্বশেষ ১৫টি ক্লাস দেখানো হচ্ছে (মোট ${att.length}টি)।</p>` : ''}` : '<div class="empty">এখনো হাজিরা নেওয়া হয়নি</div>'}</div>
+  <div class="card" style="margin-bottom:14px"><h2>পরীক্ষার রেজাল্ট</h2>${exams.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>পরীক্ষা</th><th class="num">নম্বর</th><th>ফল</th></tr>${exams.map(e => `<tr><td>${fmtD(e.date)}</td><td>${esc(e.title)}<div class="small muted">${esc(EXAM_TYPE[e.type] || '')}</div></td><td class="num">${e.absent ? '—' : `${num(e.marks)} / ${num(e.max_marks)}`}${e.p != null ? `<div class="small muted">${e.p}%</div>` : ''}</td><td>${e.absent ? badge('dropped', 'অনুপস্থিত') : e.ok ? badge('active', 'পাস') : badge('due', 'পাস করেনি')}</td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো পরীক্ষা হয়নি</div>'}</div>
+  <div class="card" style="margin-bottom:14px"><h2>ফি পরিশোধ</h2><dl class="kv"><dt>মোট ফি</dt><dd>${tk(s.total_fee)}${num(s.discount) ? ` (ছাড় ${tk(s.discount)})` : ''}</dd><dt>দেওয়া হয়েছে</dt><dd>${tk(paid)}</dd><dt>বকেয়া</dt><dd><b style="color:${due ? 'var(--red)' : 'var(--green)'}">${tk(due)}</b></dd></dl>
+    ${(d.payments || []).length ? `<div class="tw" style="margin-top:10px"><table><tr><th>তারিখ</th><th>রশিদ নং</th><th class="num">টাকা</th></tr>${d.payments.map(p => `<tr><td>${fmtD(p.paid_on)}</td><td>${esc(p.receipt_no)}<div class="small muted">${esc(METHOD[p.method] || '')}</div></td><td class="num">${tk(p.amount)}</td></tr>`).join('')}</table></div>` : ''}</div>
+  ${stageIdx > 0 || (d.applications || []).length ? `<div class="card" style="margin-bottom:14px"><h2>জাপানে পড়তে যাওয়ার অবস্থা</h2><div class="steps">${JSTAGES.slice(1).map(([k, l], i) => `<span class="${i + 1 < stageIdx ? 'done' : i + 1 === stageIdx ? 'cur' : ''}">${i + 1}. ${l}</span>`).join('')}</div>
+    ${(d.applications || []).length ? `<div class="tw" style="margin-top:12px"><table><tr><th>স্কুল</th><th>সেশন</th><th>অবস্থা</th></tr>${d.applications.map(a => `<tr><td>${esc(a.school)}<div class="small muted">${esc(a.city || '')}</div></td><td>${esc(intakeLabel(a.intake))}</td><td>${badge(APP_CLS[a.status], APP_ST[a.status] || a.status)}${a.interview_on && ['submitted', 'interview'].includes(a.status) ? `<div class="small muted">ইন্টারভিউ ${fmtD(a.interview_on)}</div>` : ''}</td></tr>`).join('')}</table></div>` : ''}
+    <p class="small" style="margin:12px 0 4px"><b>${docsDone} / ${DOC_TYPES.length}</b> কাগজ জমা হয়েছে</p><div class="pdocs">${DOC_TYPES.map(([k, l]) => { const x = docs.get(k); const ok = x && x.status !== 'missing'; return `<span class="${ok ? 'ok' : ''}">${ok ? '✓' : '○'} ${l}</span>`; }).join('')}</div></div>` : ''}
+  <div class="card" style="text-align:center"><p style="margin:0 0 10px">কোনো প্রশ্ন থাকলে যোগাযোগ করুন</p><div class="row" style="justify-content:center;gap:8px">${wa ? `<a class="btn wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})-এর অভিভাবক।`)}" target="_blank" rel="noopener">${WA_SVG} WhatsApp</a>` : ''}${I.phone ? `<a class="btn ghost" href="tel:${esc(String(I.phone).replace(/[^\d+]/g, ''))}">ফোন ${esc(I.phone)}</a>` : ''}</div>${I.address ? `<p class="small muted" style="margin:10px 0 0">${esc(I.address)}</p>` : ''}</div>
+  <p class="small muted" style="text-align:center;margin:14px 0 30px">তথ্য ${fmtDT(d.generated_at)}-এর · এই লিংক কাউকে দেবেন না</p></div>`;
+}
+
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
