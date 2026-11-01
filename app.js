@@ -145,14 +145,14 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
   write(t, rows) { try { localStorage.setItem(this.key(t), JSON.stringify(rows)); } catch { toast('ব্রাউজারে জায়গা শেষ — ডেমো ফাইল ছোট রাখুন', true); } },
   async fetchAll(t) { return this.read(t); },
-  unique: { applications: [['student_id', 'school_id', 'intake']], exam_results: [['exam_id', 'student_id']], students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
+  unique: { holidays: [['on_date', 'batch']], applications: [['student_id', 'school_id', 'intake']], exam_results: [['exam_id', 'student_id']], students: [['admission_no']], payments: [['receipt_no']], sessions: [['class_date', 'level', 'batch']], attendance: [['session_id', 'student_id']], documents: [['student_id', 'doc_type']] },
   check(t, rows, row) {
     for (const cols of this.unique[t] || []) if (rows.some(r => r.id !== row.id && cols.every(c => r[c] === row[c]))) throw new Error('duplicate key');
   },
@@ -352,6 +352,7 @@ const ICON = {
   home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-7 8-7s8 3 8 7"/><path d="M17 4a4 4 0 0 1 0 8M23 21c0-3-2-5-5-6"/>',
   money: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 10v5M18 10v5"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8" cy="15" r="1"/><circle cx="12" cy="15" r="1"/><circle cx="16" cy="15" r="1"/>',
   teacher: '<circle cx="9" cy="7" r="3.5"/><path d="M2 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5"/><path d="M14 3h8v7h-6"/>',
   check: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 15l3 3 5-6"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -363,7 +364,7 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
@@ -396,6 +397,7 @@ function render() {
   if (p[0] === 'leads') return viewLeads(q);
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
+  if (p[0] === 'calendar') return viewCalendar(q);
   if (p[0] === 'audit') return viewAudit(q);
   if (p[0] === 'alerts') return viewAlerts(q);
   if (p[0] === 'teachers') return viewTeachers(q);
@@ -424,12 +426,15 @@ function viewDashboard() {
   const monthExp = monthSum(S.expenses, 'spent_on', m); const profit = monthIncome - monthExp;
   const follow = S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).sort((a, b) => a.next_follow_up.localeCompare(b.next_follow_up));
   const lastAbsent = (sid) => { const r = S.attendance.filter(x => x.student_id === sid && x.status === 'absent' && smap.has(x.session_id)).map(x => smap.get(x.session_id).class_date).sort(); return r[r.length - 1] || today; };
+  const todayOff = dayInfo(today); const missAtt = missingAttendance();
   const jpSoon = S.applications.filter(a => appOpen(a) && appNext(a) && appNext(a)[0] <= isoPlus(21)).sort((a, b) => appNext(a)[0].localeCompare(appNext(b)[0]));
   const expByCat = {}; S.expenses.filter(e => (e.spent_on || '').startsWith(m)).forEach(e => { expByCat[e.category] = (expByCat[e.category] || 0) + num(e.amount); });
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a></div></div>
   ${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red'); if (!al.length) return ''; return `<a class="alertbar ${red.length ? 'red' : ''}" href="#/alerts"><b>${red.length ? red.length + 'টি জরুরি সতর্কতা' : al.length + 'টি সতর্কতা'}</b><span>${esc(al.slice(0, 2).map(a => { const t = studentName(byId(S.students, a.sid)) + ': ' + a.what + ' — ' + a.issue; return t.length > 110 ? t.slice(0, 108) + '…' : t; }).join(' · '))}${al.length > 2 ? ` · আরও ${al.length - 2}টি` : ''}</span><span class="go">দেখুন →</span></a>`; })()}
+  ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
+  ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''} — ছুটি থাকলে ক্যালেন্ডারে ছুটি দিন</span><span class="go">হাজিরা নিন →</span></a>` : ''}
   <div class="grid g4">
     <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div><div class="s">মোট ভর্তি ${S.students.length} জন</div></div>
     <div class="card stat green"><div class="l">এ মাসের আয়</div><div class="v">${tk(monthIncome)}</div><div class="s">খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b></div></div>
@@ -694,6 +699,7 @@ function viewAttendance(q) {
   const sel = (id, opts, cur) => `<select id="${id}">${Object.entries(opts).map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   mount('#/attendance', `
   <div class="top"><div><h1>হাজিরা</h1><p>${session ? 'এই ক্লাসের হাজিরা নেওয়া হয়েছে, চাইলে বদলাতে পারেন' : 'নতুন ক্লাসের হাজিরা'}</p></div></div>
+  ${(() => { const di = dayInfo(date, batch); return di.off ? `<div class="alertbar" style="margin-bottom:14px"><b>এই দিন ছুটি</b><span>${esc(di.why)} — তবুও ক্লাস হয়ে থাকলে হাজিরা নিতে পারেন।</span></div>` : ''; })()}
   <div class="card row" style="margin-bottom:14px;padding:12px"><input type="date" id="ad" value="${esc(date)}">${sel('al', Object.fromEntries(LEVELS.map(l => [l, l])), level)}${sel('ab', BATCH, batch)}</div>
   <form id="atf"><div class="card form" style="margin-bottom:14px">
     <label class="f">ক্লাস নম্বর<input name="class_no" type="number" min="1" value="${esc(session ? session.class_no ?? '' : prevCount + 1)}"></label>
@@ -1343,7 +1349,7 @@ function printSalarySlip(x) {
 }
 
 // ------------------------------------------------------------------ activity log (admin only)
-const AUD_TABLE = { students: 'ছাত্র', payments: 'টাকা জমা', sessions: 'ক্লাস', attendance: 'হাজিরা', documents: 'কাগজপত্র', expenses: 'খরচ', inquiries: 'আগ্রহী ছাত্র', exams: 'পরীক্ষা', exam_results: 'নম্বর', jp_schools: 'জাপানি স্কুল', applications: 'জাপান আবেদন', teachers: 'শিক্ষক', commissions: 'কমিশন', settings: 'সেটিংস', profiles: 'স্টাফ' };
+const AUD_TABLE = { students: 'ছাত্র', payments: 'টাকা জমা', sessions: 'ক্লাস', attendance: 'হাজিরা', documents: 'কাগজপত্র', expenses: 'খরচ', inquiries: 'আগ্রহী ছাত্র', exams: 'পরীক্ষা', exam_results: 'নম্বর', jp_schools: 'জাপানি স্কুল', applications: 'জাপান আবেদন', teachers: 'শিক্ষক', commissions: 'কমিশন', holidays: 'ছুটি', settings: 'সেটিংস', profiles: 'স্টাফ' };
 const AUD_ACT = { insert: ['যোগ', 'active'], update: ['বদল', 'trial'], delete: ['মুছেছে', 'due'] };
 const MONEY_TABLES = ['payments', 'expenses'];
 const AUD_FIELD = { name_bn: 'বাংলা নাম', name_en: 'ইংরেজি নাম', phone: 'ফোন', guardian_phone: 'অভিভাবকের ফোন', guardian_name: 'অভিভাবক', total_fee: 'মোট ফি', discount: 'ছাড়', next_due_date: 'পরের কিস্তি', status: 'অবস্থা', current_level: 'লেভেল', batch: 'ব্যাচ', package: 'প্যাকেজ', amount: 'টাকা', paid_on: 'তারিখ', spent_on: 'তারিখ', method: 'মাধ্যম', receipt_no: 'রশিদ নং', purpose: 'বাবদ', category: 'খাত', paid_to: 'কাকে', note: 'নোট', notes: 'নোট', japan_stage: 'জাপান ধাপ', target_school: 'স্কুল', intake: 'সেশন', passport_no: 'পাসপোর্ট নং', nid: 'NID', address_present: 'ঠিকানা', marks: 'নম্বর', absent: 'অনুপস্থিত', doc_type: 'কাগজ', file_path: 'ফাইল', expires_on: 'মেয়াদ', issued_on: 'ইস্যুর তারিখ', rate: 'বেতনের হার', processing_fee: 'প্রসেসিং ফি', amount_bdt: 'টাকা (৳)', amount_yen: 'টাকা (¥)', pay_type: 'বেতনের ধরন', hours: 'ঘণ্টা', topic: 'বিষয়', teacher_id: 'শিক্ষক', deadline_on: 'শেষ তারিখ', interview_on: 'ইন্টারভিউ', result_on: 'COE-র ফল', title: 'নাম', max_marks: 'পূর্ণ নম্বর', role: 'ভূমিকা', data: 'সেটিংস', active: 'কাজ চলছে', school_id: 'স্কুল' };
@@ -1378,6 +1384,7 @@ function audSubject(e) {
     case 'jp_schools': return x.name_ja || x.name_en || '';
     case 'applications': return `${st ? studentName(st) : ''}${x.school_id ? ' · ' + schoolName(byId(S.jp_schools, x.school_id)) : ''}`;
     case 'teachers': return x.name || '';
+    case 'holidays': return `${fmtD(x.on_date)} · ${x.title || ''}`;
     case 'profiles': return x.name || '';
     default: return '';
   }
@@ -1688,6 +1695,119 @@ function viewJapanIncome(q, tabs, bindTabs) {
   });
 }
 
+// ------------------------------------------------------------------ class calendar, holidays & weekly routine
+const WDAY = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি'];
+const HOL_TYPE = { govt: 'সরকারি ছুটি', institute: 'প্রতিষ্ঠানের ছুটি', exam: 'পরীক্ষা / বিশেষ দিন' };
+// Fixed-date national holidays only (Eid, Puja etc. change every year — add those yourself)
+const BD_FIXED = [['02-21', 'শহীদ দিবস ও আন্তর্জাতিক মাতৃভাষা দিবস'], ['03-26', 'স্বাধীনতা ও জাতীয় দিবস'], ['04-14', 'পহেলা বৈশাখ'], ['05-01', 'মে দিবস'], ['12-16', 'বিজয় দিবস'], ['12-25', 'বড়দিন']];
+const classDays = () => Array.isArray(S.settings.class_days) && S.settings.class_days.length ? S.settings.class_days.map(Number) : [0, 1, 2, 3, 4, 6];
+const dow = (iso) => new Date(iso + 'T00:00:00').getDay();
+function dayInfo(iso, batch) {
+  const hol = (S.holidays || []).find(h => h.on_date === iso && (h.batch === 'all' || !batch || h.batch === batch));
+  if (hol) return { off: true, why: hol.title, hol };
+  if (!classDays().includes(dow(iso))) return { off: true, why: `সাপ্তাহিক ছুটি (${WDAY[dow(iso)]}বার)` };
+  return { off: false };
+}
+function activeGroups() { // level+batch combinations that currently have students
+  const g = new Map(); for (const s of S.students) if (s.status === 'active' || s.status === 'trial') { const k = s.current_level + '|' + s.batch; g.set(k, (g.get(k) || 0) + 1); }
+  return [...g.entries()].map(([k, n]) => { const [level, batch] = k.split('|'); return { level, batch, n }; }).sort((a, b) => (a.batch + a.level).localeCompare(b.batch + b.level));
+}
+const groupStarted = (g, d) => S.students.some(s => s.current_level === g.level && s.batch === g.batch && (s.status === 'active' || s.status === 'trial') && (s.start_date || s.admission_date || '9999') <= d);
+function missingAttendance(days = 14) { // past class days where a group with students has no attendance yet
+  const out = []; const groups = activeGroups(); if (!groups.length) return out;
+  for (let i = 1; i <= days; i++) {
+    const d = isoAdd(todayISO(), -i);
+    for (const g of groups) {
+      if (dayInfo(d, g.batch).off) continue;
+      if (!groupStarted(g, d)) continue;
+      if (!S.sessions.some(x => x.class_date === d && x.level === g.level && x.batch === g.batch)) out.push({ date: d, ...g });
+    }
+  }
+  return out;
+}
+
+function holidayModal(h, preset = {}) {
+  const v = h || { on_date: todayISO(), type: 'institute', batch: 'all', ...preset };
+  openModal(`<h2>${h ? 'ছুটির তথ্য' : 'ছুটি যোগ করুন'}</h2><form class="form" id="hf">
+    <label class="f">তারিখ<input name="on_date" type="date" required value="${esc(v.on_date)}"></label>
+    ${h ? '' : '<label class="f">কত দিন (একটানা)<input name="days" type="number" min="1" max="30" value="1"></label>'}
+    <label class="f full">কিসের ছুটি<input name="title" required value="${esc(v.title || '')}" placeholder="যেমন: ঈদুল ফিতর, শিক্ষকের অসুস্থতা"></label>
+    <label class="f">ধরন<select name="type">${Object.entries(HOL_TYPE).map(([k, l]) => `<option value="${k}" ${v.type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">কোন ব্যাচ<select name="batch"><option value="all" ${v.batch === 'all' ? 'selected' : ''}>দুই ব্যাচ</option>${Object.entries(BATCH).map(([k, l]) => `<option value="${k}" ${v.batch === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <div class="full row" style="justify-content:flex-end">${h ? '<button type="button" class="btn ghost" id="hd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="hc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#hc').onclick = closeModal;
+  const del = $('#hd'); if (del) del.onclick = async () => { try { await API.remove('holidays', h.id); S.holidays = S.holidays.filter(x => x.id !== h.id); closeModal(); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  $('#hf').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target); const n = Math.min(30, Math.max(1, num(d.days) || 1)); delete d.days;
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try {
+      if (h) putLocal('holidays', await API.update('holidays', h.id, d));
+      else for (let i = 0; i < n; i++) { const on = isoAdd(d.on_date, i); if (S.holidays.some(x => x.on_date === on && x.batch === d.batch)) continue; putLocal('holidays', await API.insert('holidays', { ...d, on_date: on })); }
+      closeModal(); toast('সংরক্ষণ হয়েছে'); render();
+    } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+
+function viewCalendar(q) {
+  const m = q.get('m') || monthISO(); const [Y, M] = m.split('-').map(Number);
+  const first = new Date(Y, M - 1, 1); const days = new Date(Y, M, 0).getDate(); const lead = first.getDay();
+  const today = todayISO(); const groups = activeGroups();
+  const prevM = monthISO(isoAdd(m + '-01', -1)); const nextM = monthISO(isoAdd(m + '-' + pad(days, 2), 1));
+  const cell = (d) => {
+    const iso = `${m}-${pad(d, 2)}`; const info = dayInfo(iso); const ss = S.sessions.filter(x => x.class_date === iso);
+    const exs = S.exams.filter(x => x.exam_date === iso); const ev = S.applications.filter(a => appOpen(a) && [a.deadline_on, a.interview_on].includes(iso));
+    const bHol = (S.holidays || []).filter(h => h.on_date === iso && h.batch !== 'all');
+    const need = !info.off && iso < today ? groups.filter(g => !dayInfo(iso, g.batch).off && groupStarted(g, iso) && !ss.some(x => x.level === g.level && x.batch === g.batch)).length : 0;
+    return `<div class="cd ${info.off ? 'off' : ''} ${iso === today ? 'today' : ''}" data-day="${iso}"><div class="dn">${d}</div>
+      ${info.off ? `<div class="hl">${esc(info.why)}</div>` : ''}${bHol.map(h => `<div class="hl sm">${esc(BATCH[h.batch] || '')}: ${esc(h.title)}</div>`).join('')}
+      ${ss.length ? `<div class="ok">✓ ${ss.length}টি ক্লাস</div>` : ''}${need ? `<div class="miss">হাজিরা বাকি ${need}</div>` : ''}
+      ${exs.map(x => `<div class="ev">✎ ${esc(x.title)}</div>`).join('')}${ev.map(a => `<div class="ev jp">✈ ${esc(studentName(byId(S.students, a.student_id)))}</div>`).join('')}</div>`;
+  };
+  const monthHol = (S.holidays || []).filter(h => (h.on_date || '').startsWith(m)).sort((a, b) => a.on_date.localeCompare(b.on_date));
+  const classCount = Array.from({ length: days }, (_, i) => `${m}-${pad(i + 1, 2)}`).filter(d => !dayInfo(d).off).length;
+  const lastTeacher = (lv, b) => { const x = [...S.sessions].filter(s => s.level === lv && s.batch === b && (s.teacher_id || s.teacher)).sort((p, r) => r.class_date.localeCompare(p.class_date))[0]; return x ? (byId(S.teachers, x.teacher_id) || {}).name || x.teacher : ''; };
+  mount('#/calendar', `
+  <div class="top"><div><h1>ক্লাসের ক্যালেন্ডার</h1><p>ক্লাসের দিন, ছুটি, পরীক্ষা আর জাপান আবেদনের তারিখ এক জায়গায়</p></div><div class="row"><a class="btn ghost" href="#/calendar?m=${prevM}">‹</a><input type="month" id="mon" value="${esc(m)}"><a class="btn ghost" href="#/calendar?m=${nextM}">›</a><button class="btn" id="nh">+ ছুটি</button></div></div>
+  <div class="grid g3" style="margin-bottom:14px">
+    <div class="card stat"><div class="l">${monthLabel(m)}-এ ক্লাসের দিন</div><div class="v">${classCount}</div><div class="s">সাপ্তাহিক ছুটি: ${[0, 1, 2, 3, 4, 5, 6].filter(x => !classDays().includes(x)).map(x => WDAY[x] + 'বার').join(', ') || 'নেই'}</div></div>
+    <div class="card stat"><div class="l">এ মাসের ছুটি</div><div class="v">${monthHol.length}</div></div>
+    <div class="card stat ${missingAttendance().length ? 'red' : 'green'}"><div class="l">হাজিরা বাকি (গত ১৪ দিন)</div><div class="v">${missingAttendance().length}</div><div class="s">ক্লাস হয়েছে কিন্তু হাজিরা নেওয়া হয়নি</div></div>
+  </div>
+  <div class="cal"><div class="cw">${WDAY.map((w, i) => `<div class="${classDays().includes(i) ? '' : 'offh'}">${w}</div>`).join('')}</div><div class="cg">${'<div class="cd blank"></div>'.repeat(lead)}${Array.from({ length: days }, (_, i) => cell(i + 1)).join('')}</div></div>
+  <p class="small muted" style="margin-top:8px">কোনো দিনে চাপ দিলে সেদিনের হাজিরা খুলবে বা ছুটি যোগ করা যাবে। সাপ্তাহিক ছুটির দিন সেটিংসে বদলানো যায়।</p>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">সাপ্তাহিক রুটিন</h2><span class="spacer"></span><button class="btn sm ghost" id="prt">নোটিশ বোর্ডের জন্য প্রিন্ট</button></div>
+      ${groups.length ? `<div class="tw"><table><tr><th>ব্যাচ</th><th>লেভেল</th><th>ছাত্র</th><th>শিক্ষক</th></tr>${groups.map(g => `<tr><td>${esc(BATCH[g.batch] || g.batch)}</td><td><b>${esc(g.level)}</b></td><td>${g.n} জন</td><td>${esc(lastTeacher(g.level, g.batch) || '—')}</td></tr>`).join('')}</table></div><p class="small muted" style="margin:8px 0 0">ক্লাস হয়: ${classDays().map(x => WDAY[x]).join(', ')}বার</p>` : '<div class="empty">এখনো কোনো চলমান ব্যাচ নেই</div>'}</div>
+    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">${monthLabel(m)}-এর ছুটি</h2><span class="spacer"></span>${isAdmin() ? `<button class="btn sm ghost" id="bdh">${Y} সালের জাতীয় ছুটি যোগ</button>` : ''}</div>
+      ${monthHol.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>কিসের</th><th>ব্যাচ</th></tr>${monthHol.map(h => `<tr class="click" data-h="${h.id}"><td>${fmtD(h.on_date)} <span class="small muted">${WDAY[dow(h.on_date)]}</span></td><td>${esc(h.title)}<div class="small muted">${esc(HOL_TYPE[h.type] || '')}</div></td><td>${h.batch === 'all' ? 'দুই ব্যাচ' : esc(BATCH[h.batch] || '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">এ মাসে কোনো ছুটি লেখা নেই</div>'}
+      <p class="small muted" style="margin:8px 0 0">ঈদ, পূজা আর অন্য যেসব ছুটির তারিখ প্রতি বছর বদলায়, সেগুলো সরকারি ঘোষণা দেখে নিজে যোগ করুন।</p></div>
+  </div>`, () => {
+    $('#mon').onchange = (e) => { location.hash = '#/calendar?m=' + e.target.value; };
+    $('#nh').onclick = () => holidayModal(null);
+    $$('[data-h]').forEach(tr => tr.onclick = () => holidayModal(byId(S.holidays, tr.dataset.h)));
+    $$('[data-day]').forEach(c => c.onclick = () => {
+      const iso = c.dataset.day; const info = dayInfo(iso);
+      openModal(`<h2>${fmtD(iso)} · ${WDAY[dow(iso)]}বার</h2><p>${info.off ? `ছুটি: <b>${esc(info.why)}</b>` : 'ক্লাসের দিন'}</p>
+        <div class="row" style="gap:8px;flex-wrap:wrap">${groups.map(g => `<a class="btn sm ghost" href="#/attendance?d=${iso}&l=${g.level}&b=${g.batch}">${esc(g.level)} · ${esc(BATCH[g.batch])} হাজিরা</a>`).join('')}</div>
+        <div class="row" style="justify-content:flex-end;margin-top:16px;gap:8px">${info.hol ? '<button class="btn ghost" id="eh">ছুটি বদলান</button>' : '<button class="btn ghost" id="ah">এই দিন ছুটি</button>'}<button class="btn" id="dc">বন্ধ</button></div>`);
+      $('#dc').onclick = closeModal; $$('#modal-body a').forEach(a => a.addEventListener('click', closeModal));
+      const ah = $('#ah'); if (ah) ah.onclick = () => holidayModal(null, { on_date: iso });
+      const eh = $('#eh'); if (eh) eh.onclick = () => holidayModal(info.hol);
+    });
+    const bdh = $('#bdh'); if (bdh) bdh.onclick = async () => {
+      const add = BD_FIXED.map(([md, t]) => [`${Y}-${md}`, t]).filter(([d]) => !S.holidays.some(h => h.on_date === d && h.batch === 'all'));
+      if (!add.length) return toast(`${Y} সালের নির্দিষ্ট তারিখের ছুটিগুলো আগেই যোগ করা আছে`);
+      if (!(await confirmBox(`${add.map(([d, t]) => `${fmtD(d)} ${t}`).join(' · ')} — এই ${add.length}টি ছুটি যোগ হবে। ঈদ, পূজা ইত্যাদি নিজে যোগ করবেন।`, 'হ্যাঁ, যোগ করুন'))) return;
+      try { for (const [d, t] of add) putLocal('holidays', await API.insert('holidays', { on_date: d, title: t, type: 'govt', batch: 'all' })); toast(`${add.length}টি ছুটি যোগ হয়েছে`); render(); } catch (e) { toast(errMsg(e), true); }
+    };
+    $('#prt').onclick = () => printWindow('Class routine', `${headHtml()}<div style="padding:24px 30px"><div style="text-align:center;font:800 24px 'Noto Serif Bengali';margin-bottom:4px">ক্লাসের রুটিন</div><div style="text-align:center;font:700 13px 'Shippori Mincho B1';letter-spacing:4px;color:#A3843A;margin-bottom:16px">時間割 · CLASS ROUTINE</div>
+      <table><tr><th style="width:auto">ব্যাচ / সময়</th><th style="width:auto">লেভেল</th><th style="width:auto">শিক্ষক</th></tr>${groups.map(g => `<tr><td>${esc(BATCH[g.batch])}</td><td><b>${esc(g.level)}</b></td><td>${esc(lastTeacher(g.level, g.batch) || '')}</td></tr>`).join('')}</table>
+      <p style="margin-top:14px;font-size:15px">ক্লাসের দিন: <b>${classDays().map(x => WDAY[x]).join(', ')}বার</b> · সাপ্তাহিক ছুটি: <b>${[0, 1, 2, 3, 4, 5, 6].filter(x => !classDays().includes(x)).map(x => WDAY[x] + 'বার').join(', ')}</b></p>
+      ${(() => { const up = (S.holidays || []).filter(h => h.on_date >= todayISO()).sort((a, b) => a.on_date.localeCompare(b.on_date)).slice(0, 12); return up.length ? `<div style="margin-top:16px;font-weight:700">সামনের ছুটি</div><table style="margin-top:6px">${up.map(h => `<tr><td style="width:30%">${fmtD(h.on_date)} (${WDAY[dow(h.on_date)]})</td><td>${esc(h.title)}${h.batch !== 'all' ? ' — ' + esc(BATCH[h.batch]) : ''}</td></tr>`).join('')}</table>` : ''; })()}
+      <p style="margin-top:18px;font-size:13px">ক্লাসে নিয়মিত আসুন — জাপানের আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার।</p></div>`);
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -1737,6 +1857,8 @@ function viewSettings() {
     <label class="f">ফোন<input name="phone" value="${esc(st.phone)}" ${ro}></label><label class="f">WhatsApp<input name="whatsapp" value="${esc(st.whatsapp)}" ${ro}></label>
     <label class="f">ইমেইল<input name="email" value="${esc(st.email)}" ${ro}></label><label class="f">প্রতি ক্লাসের ঘণ্টা<input name="hours_per_class" type="number" step="0.5" min="0.5" value="${esc(st.hours_per_class)}" ${ro}></label>
     <label class="f">ডিরেক্টরের নাম (ইংরেজি)<input name="director_en" value="${esc(st.director_en)}" ${ro}></label><label class="f">ডিরেক্টরের নাম (জাপানি)<input name="director_ja" value="${esc(st.director_ja)}" ${ro}></label>
+    <h3>ক্লাসের দিন</h3>
+    <div class="f full"><div class="row" style="gap:12px;flex-wrap:wrap">${WDAY.map((w, i) => `<label style="display:flex;gap:5px;align-items:center;font-weight:500"><input type="checkbox" data-cd="${i}" ${classDays().includes(i) ? 'checked' : ''} ${ro}> ${w}বার</label>`).join('')}</div><span class="small muted">টিক না দেওয়া দিনগুলো সাপ্তাহিক ছুটি ধরা হবে।</span></div>
     <h3>সতর্কতার নিয়ম</h3>
     <label class="f">পাসপোর্টের মেয়াদ কত মাসের কম হলে সতর্কতা<input name="alert_passport_months" type="number" min="1" max="24" value="${esc(st.alert_passport_months)}" ${ro}></label>
     <label class="f">ব্যাংক / আয়ের কাগজ কত দিন পর পুরোনো<input name="alert_fresh_days" type="number" min="30" max="365" value="${esc(st.alert_fresh_days)}" ${ro}></label>
@@ -1762,7 +1884,8 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12 };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
+      if (!data.class_days.length) return toast('অন্তত একটা ক্লাসের দিন বাছুন', true);
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -1800,6 +1923,8 @@ async function seedDemo() {
   await Local.insert('documents', { student_id: made[2].id, doc_type: 'sponsor', status: 'received', issued_on: iso2(-80), note: '' });
   await Local.update('students', made[0].id, { processing_fee: 50000 });
   await Local.insert('payments', { student_id: made[0].id, receipt_no: 'SJI-R-' + pad(++r, 5), paid_on: iso2(-3), amount: 20000, method: 'bank', purpose: 'processing' });
+  await Local.insert('holidays', { on_date: iso2(5), title: 'ডেমো ছুটি — প্রতিষ্ঠানের অনুষ্ঠান', type: 'institute', batch: 'all' });
+  await Local.insert('holidays', { on_date: iso2(-9), title: 'ডেমো সরকারি ছুটি', type: 'govt', batch: 'all' });
   const t1 = await Local.insert('teachers', { name: 'ডেমো শিক্ষক এক', phone: '01600-000001', levels: 'N5', qualification: 'JLPT N2', pay_type: 'hourly', rate: 500, joined_on: iso(base), active: true });
   const t2 = await Local.insert('teachers', { name: 'ডেমো শিক্ষিকা দুই', phone: '01600-000002', levels: 'N5, N4', qualification: 'জাপানে ৫ বছর', pay_type: 'monthly', rate: 15000, joined_on: iso(base), active: true });
   await Local.insert('expenses', { spent_on: iso2(-1), category: 'salary', amount: 5000, method: 'bkash', paid_to: t1.name, teacher_id: t1.id, period: monthISO(iso2(-1)), note: 'অগ্রিম বেতন' });
