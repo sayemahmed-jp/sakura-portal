@@ -32,6 +32,7 @@
 ## ফাইলগুলো
 
 - `index.html`, `style.css`, `app.js` — পোর্টাল
+- `manifest.webmanifest`, `sw.js`, `icons/` — ফোনে অ্যাপের মতো ইনস্টল করার জন্য
 - `config.js` — Supabase-এর ঠিকানা আর key এখানে বসবে
 - `supabase-schema.sql` — ডেটাবেসের টেবিল আর নিরাপত্তার নিয়ম (নতুন প্রজেক্টে এটাই চালান)
 - `web/index.html` — সাকুরার ওয়েবসাইট আর ভর্তির ফর্ম

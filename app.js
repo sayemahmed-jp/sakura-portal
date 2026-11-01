@@ -369,13 +369,14 @@ function shell(active, inner) {
   <div class="shell"><aside class="side" id="side">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => h !== '#/audit' || isAdmin()).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
-    <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div>
+    <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${isStandalone() ? '' : '<br><button id="inst" style="margin-top:6px">📱 অ্যাপ হিসেবে ইনস্টল</button>'}</div>
   </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
 }
 function mount(active, inner, after) {
   $('#app').innerHTML = shell(active, inner);
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
+  const ib = $('#inst'); if (ib) ib.onclick = installApp;
   if (after) after();
 }
 function render() {
@@ -2030,6 +2031,19 @@ async function renderParent(tok) {
   <div class="card" style="text-align:center"><p style="margin:0 0 10px">কোনো প্রশ্ন থাকলে যোগাযোগ করুন</p><div class="row" style="justify-content:center;gap:8px">${wa ? `<a class="btn wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})-এর অভিভাবক।`)}" target="_blank" rel="noopener">${WA_SVG} WhatsApp</a>` : ''}${I.phone ? `<a class="btn ghost" href="tel:${esc(String(I.phone).replace(/[^\d+]/g, ''))}">ফোন ${esc(I.phone)}</a>` : ''}</div>${I.address ? `<p class="small muted" style="margin:10px 0 0">${esc(I.address)}</p>` : ''}</div>
   <p class="small muted" style="text-align:center;margin:14px 0 30px">তথ্য ${fmtDT(d.generated_at)}-এর · এই লিংক কাউকে দেবেন না</p></div>`;
 }
+
+// ------------------------------------------------------------------ install as an app (PWA)
+let _installEvt = null;
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _installEvt = e; });
+window.addEventListener('appinstalled', () => { _installEvt = null; toast('ইনস্টল হয়েছে — হোম স্ক্রিনে "সাকুরা" আইকন দেখুন'); });
+async function installApp() {
+  if (_installEvt) { _installEvt.prompt(); const r = await _installEvt.userChoice.catch(() => null); _installEvt = null; if (r && r.outcome === 'accepted') return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  openModal(`<h2>ফোনে অ্যাপের মতো রাখুন</h2>${ios ? `<p><b>iPhone (Safari):</b></p><ol><li>নিচের <b>Share</b> বোতাম (□↑) চাপুন</li><li><b>Add to Home Screen</b> চাপুন</li><li>ডানে উপরে <b>Add</b> চাপুন</li></ol>` : `<p><b>Android (Chrome):</b></p><ol><li>ডানে উপরে <b>⋮</b> চাপুন</li><li><b>Install app</b> বা <b>Add to Home screen</b> চাপুন</li><li><b>Install</b> চাপুন</li></ol><p><b>কম্পিউটার (Chrome/Edge):</b> ঠিকানার ঘরের ডান পাশে ইনস্টল আইকন (⊕) চাপুন।</p>`}<p class="small muted">এরপর হোম স্ক্রিনে "সাকুরা" আইকন থাকবে, চাপলেই পোর্টাল পুরো স্ক্রিনে খুলবে। লগইন একবার করলেই হবে।</p><div class="row" style="justify-content:flex-end"><button class="btn" id="ic">ঠিক আছে</button></div>`);
+  $('#ic').onclick = closeModal;
+}
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();

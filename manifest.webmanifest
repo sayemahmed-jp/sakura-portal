@@ -1,0 +1,17 @@
+{
+  "name": "Sakura Portal · সাকুরা পোর্টাল",
+  "short_name": "সাকুরা",
+  "description": "সাকুরা জাপানিজ ইনস্টিটিউটের ছাত্র, ফি, হাজিরা আর জাপান আবেদনের পোর্টাল",
+  "lang": "bn",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF8F1",
+  "theme_color": "#1B2945",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
