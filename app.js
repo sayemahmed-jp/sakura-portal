@@ -144,8 +144,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -323,6 +323,7 @@ const ICON = {
   home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-7 8-7s8 3 8 7"/><path d="M17 4a4 4 0 0 1 0 8M23 21c0-3-2-5-5-6"/>',
   money: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 10v5M18 10v5"/>',
+  teacher: '<circle cx="9" cy="7" r="3.5"/><path d="M2 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5"/><path d="M14 3h8v7h-6"/>',
   check: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 15l3 3 5-6"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   wallet: '<path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H3z"/><path d="M3 7l12-4v4"/><circle cx="16.5" cy="13.5" r="1.2"/>',
@@ -332,7 +333,7 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
@@ -364,6 +365,8 @@ function render() {
   if (p[0] === 'exams') return viewExams(q);
   if (p[0] === 'exam') return viewExam(p[1]);
   if (p[0] === 'alerts') return viewAlerts(q);
+  if (p[0] === 'teachers') return viewTeachers(q);
+  if (p[0] === 'teacher') return viewTeacher(p[1], q);
   if (p[0] === 'japan') return viewJapan(q);
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
@@ -655,7 +658,7 @@ function viewAttendance(q) {
     <label class="f">ক্লাস নম্বর<input name="class_no" type="number" min="1" value="${esc(session ? session.class_no ?? '' : prevCount + 1)}"></label>
     <label class="f">ঘণ্টা<input name="hours" type="number" min="0.5" step="0.5" value="${esc(session ? session.hours : S.settings.hours_per_class)}" required></label>
     <label class="f">আজকের পাঠ / বিষয়<input name="topic" value="${esc(session ? session.topic : '')}" placeholder="যেমন: পাঠ ৩ — ここ／そこ"></label>
-    <label class="f">শিক্ষক<input name="teacher" value="${esc(session ? session.teacher : '')}"></label>
+    ${(() => { const act = S.teachers.filter(t => t.active !== false || (session && session.teacher_id === t.id)).sort((a, b) => (a.name || '').localeCompare(b.name || '')); if (!act.length) return `<label class="f">শিক্ষক<input name="teacher" value="${esc(session ? session.teacher : '')}" placeholder="শিক্ষক ও বেতন পাতায় শিক্ষক যোগ করলে এখানে বেছে নেওয়া যাবে"></label>`; const prev = [...S.sessions].filter(x => x.level === level && x.batch === batch && x.teacher_id && x.class_date <= date).sort((a, b) => b.class_date.localeCompare(a.class_date))[0]; const cur = session ? session.teacher_id : prev && prev.teacher_id; return `<label class="f">শিক্ষক<select name="teacher_id"><option value="">— বেছে নিন —</option>${act.map(t => `<option value="${t.id}" ${cur === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`; })()}
   </div>
   <div class="row" style="margin-bottom:10px"><b>${roster.length} জন</b><span class="spacer"></span><button type="button" class="btn sm ghost" id="allp">সবাই উপস্থিত</button></div>
   <div class="tw">${roster.length ? `<table class="stack att-m"><tr><th>ছাত্র</th><th>হাজিরা</th></tr>${roster.map(s => { const st = marks.get(s.id) || ''; return `<tr data-sid="${s.id}"><td data-l=""><b>${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc(s.name_en)}</div></td><td data-l=""><div class="row" style="gap:8px;flex-wrap:nowrap"><div class="mk">${Object.entries(ATT).map(([k, l]) => `<button type="button" data-st="${k}" class="${k} ${st === k ? 'on' : ''}">${l}</button>`).join('')}</div>${st === 'absent' ? waBtn(guardianPhone(s), absentMsg(s, date, attOf(s.id)), '') : ''}</div></td></tr>`; }).join('')}</table>` : `<div class="empty">${level} · ${BATCH[batch]} ব্যাচে কোনো চলমান ছাত্র নেই</div>`}</div>
@@ -674,7 +677,8 @@ function viewAttendance(q) {
       if (unmarked && !(await confirmBox(`${unmarked} জনের হাজিরা দেওয়া হয়নি। তাদের বাদ দিয়ে সংরক্ষণ করবেন?`, 'হ্যাঁ, সংরক্ষণ'))) return;
       const d = formData(e.target); const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       try {
-        const meta = { class_no: d.class_no || null, hours: d.hours || S.settings.hours_per_class, topic: d.topic, teacher: d.teacher };
+        const meta = { class_no: d.class_no || null, hours: d.hours || S.settings.hours_per_class, topic: d.topic };
+        if ('teacher_id' in d) { meta.teacher_id = d.teacher_id || null; const tt = byId(S.teachers, d.teacher_id); meta.teacher = tt ? tt.name : ''; } else meta.teacher = d.teacher;
         const ss = session ? await API.update('sessions', session.id, meta) : await API.insert('sessions', { class_date: date, level, batch, ...meta });
         putLocal('sessions', ss);
         const saved = await API.upsertAttendance(rows.map(r => ({ ...r, session_id: ss.id })));
@@ -719,7 +723,7 @@ function viewExpenses(q) {
     <div class="card stat ${profit < 0 ? 'red' : 'green'}"><div class="l">${profit < 0 ? 'ক্ষতি' : 'লাভ'}</div><div class="v">${tk(Math.abs(profit))}</div><div class="s">আয় − খরচ</div></div>
   </div>
   ${cats.length ? `<div class="card" style="margin-bottom:16px"><h2>খাত অনুযায়ী খরচ</h2><div class="catbars">${cats.map(([k, v]) => `<div class="cb"><span>${esc(EXP_CAT[k] || k)}</span><div class="bar"><i style="width:${Math.round(v * 100 / maxCat)}%;background:var(--red)"></i></div><b>${tk(v)}</b></div>`).join('')}</div></div>` : ''}
-  <div class="tw">${list.length ? `<table class="stack"><tr><th>তারিখ</th><th>খাত</th><th>বিবরণ</th><th>মাধ্যম</th><th class="num">টাকা</th><th></th></tr>${list.map(x => `<tr><td data-l="তারিখ">${fmtD(x.spent_on)}</td><td data-l="খাত">${esc(EXP_CAT[x.category] || x.category)}</td><td data-l="বিবরণ">${esc([x.paid_to, x.note].filter(Boolean).join(' · ') || '—')}</td><td data-l="মাধ্যম">${esc(METHOD[x.method] || x.method)}</td><td class="num" data-l="টাকা"><b>${tk(x.amount)}</b></td><td class="num" data-l="">${isAdmin() ? `<button class="btn sm ghost" data-de="${x.id}" style="color:var(--red)">মুছুন</button>` : ''}</td></tr>`).join('')}</table>` : '<div class="empty">এই মাসে কোনো খরচ লেখা হয়নি। উপরের "+ খরচ যোগ" দিয়ে শুরু করুন।</div>'}</div>`, () => {
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>তারিখ</th><th>খাত</th><th>বিবরণ</th><th>মাধ্যম</th><th class="num">টাকা</th><th></th></tr>${list.map(x => `<tr><td data-l="তারিখ">${fmtD(x.spent_on)}</td><td data-l="খাত">${esc(EXP_CAT[x.category] || x.category)}</td><td data-l="বিবরণ">${x.teacher_id && byId(S.teachers, x.teacher_id) ? `<a href="#/teacher/${x.teacher_id}?m=${esc(x.period || '')}">${esc(x.paid_to)}</a>${x.note ? ' · ' + esc(x.note) : ''}` : esc([x.paid_to, x.note].filter(Boolean).join(' · ') || '—')}</td><td data-l="মাধ্যম">${esc(METHOD[x.method] || x.method)}</td><td class="num" data-l="টাকা"><b>${tk(x.amount)}</b></td><td class="num" data-l="">${isAdmin() ? `<button class="btn sm ghost" data-de="${x.id}" style="color:var(--red)">মুছুন</button>` : ''}</td></tr>`).join('')}</table>` : '<div class="empty">এই মাসে কোনো খরচ লেখা হয়নি। উপরের "+ খরচ যোগ" দিয়ে শুরু করুন।</div>'}</div>`, () => {
     $('#mon').onchange = (e) => { location.hash = '#/expenses?m=' + e.target.value; };
     $('#ne').onclick = expenseModal;
     $('#csv').onclick = () => csvDownload(`sakura-expenses-${m}.csv`, [['Date', 'Category', 'Paid to', 'Note', 'Method', 'Amount'], ...list.map(x => [x.spent_on, EXP_CAT[x.category] || x.category, x.paid_to, x.note, METHOD[x.method] || x.method, x.amount]), [], ['Income (fees)', '', '', '', '', income], ['Expenses', '', '', '', '', spent], ['Profit', '', '', '', '', profit]]);
@@ -1146,6 +1150,144 @@ function viewAlerts(q) {
   });
 }
 
+// ------------------------------------------------------------------ teachers & salary
+const PAY_TYPE = { monthly: 'মাসিক নির্দিষ্ট বেতন', hourly: 'ঘণ্টা হিসেবে', per_class: 'ক্লাস হিসেবে' };
+const PAY_UNIT = { monthly: '/ মাস', hourly: '/ ঘণ্টা', per_class: '/ ক্লাস' };
+const monthEnd = (m) => { const [y, mo] = m.split('-').map(Number); return `${m}-${pad(new Date(y, mo, 0).getDate(), 2)}`; };
+const monthLabel = (m) => { const n = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর']; return `${n[num(m.slice(5)) - 1]} ${m.slice(0, 4)}`; };
+function teacherMonth(t, m) {
+  const ss = S.sessions.filter(s => s.teacher_id === t.id && (s.class_date || '').startsWith(m));
+  const hours = ss.reduce((a, s) => a + num(s.hours), 0);
+  const worked = (!t.joined_on || t.joined_on <= monthEnd(m)) && (!t.left_on || t.left_on >= m + '-01');
+  const earned = t.pay_type === 'hourly' ? Math.round(hours * num(t.rate)) : t.pay_type === 'per_class' ? ss.length * num(t.rate) : (worked && (t.active !== false || ss.length) ? num(t.rate) : 0);
+  const pays = S.expenses.filter(x => x.teacher_id === t.id && x.period === m);
+  const paid = pays.reduce((a, x) => a + num(x.amount), 0);
+  return { ss, classes: ss.length, hours: Math.round(hours * 10) / 10, earned, paid, due: Math.max(0, earned - paid), pays };
+}
+const lastMonths = (n, from = monthISO()) => { const out = []; const [y, mo] = from.split('-').map(Number); for (let i = 0; i < n; i++) { const d = new Date(y, mo - 1 - i, 1); out.push(`${d.getFullYear()}-${pad(d.getMonth() + 1, 2)}`); } return out; };
+
+function teacherModal(t) {
+  const v = t || { pay_type: 'hourly', joined_on: todayISO(), active: true, levels: 'N5' };
+  openModal(`<h2>${t ? 'শিক্ষকের তথ্য' : 'নতুন শিক্ষক'}</h2><form class="form" id="tf">
+    <label class="f">নাম<input name="name" required value="${esc(v.name || '')}"></label>
+    <label class="f">মোবাইল / WhatsApp<input name="phone" type="tel" value="${esc(v.phone || '')}"></label>
+    <label class="f">ইমেইল<input name="email" type="email" value="${esc(v.email || '')}"></label>
+    <label class="f">NID<input name="nid" value="${esc(v.nid || '')}"></label>
+    <label class="f full">ঠিকানা<input name="address" value="${esc(v.address || '')}"></label>
+    <label class="f">কোন লেভেল পড়ান<input name="levels" value="${esc(v.levels || '')}" placeholder="N5, N4"></label>
+    <label class="f">যোগ্যতা<input name="qualification" value="${esc(v.qualification || '')}" placeholder="যেমন: JLPT N2, জাপানে ৫ বছর"></label>
+    <label class="f">বেতনের ধরন<select name="pay_type">${Object.entries(PAY_TYPE).map(([k, l]) => `<option value="${k}" ${v.pay_type === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f"><span id="rl">হার (৳ ${PAY_UNIT[v.pay_type]})</span><input name="rate" type="number" min="0" step="1" required value="${esc(v.rate ?? '')}"></label>
+    <label class="f">যোগদানের তারিখ<input name="joined_on" type="date" value="${esc(v.joined_on || '')}"></label>
+    <label class="f">অবস্থা<select name="active"><option value="yes" ${v.active !== false ? 'selected' : ''}>কাজ করছেন</option><option value="no" ${v.active === false ? 'selected' : ''}>এখন নেই</option></select></label>
+    <label class="f full">নোট<textarea name="notes" placeholder="যেমন: বিকাশ নম্বর, ক্লাসের সময়">${esc(v.notes || '')}</textarea></label>
+    <div class="full row" style="justify-content:flex-end">${t && isAdmin() ? '<button type="button" class="btn ghost" id="td" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="tc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  const f = $('#tf'); $('#tc').onclick = closeModal;
+  f.pay_type.onchange = () => { $('#rl').textContent = `হার (৳ ${PAY_UNIT[f.pay_type.value]})`; };
+  const del = $('#td'); if (del) del.onclick = async () => {
+    if (S.sessions.some(s => s.teacher_id === t.id) || S.expenses.some(x => x.teacher_id === t.id)) { closeModal(); return toast('এই শিক্ষকের ক্লাস বা বেতনের রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "এখন নেই" করে দিন।', true); }
+    closeModal(); if (!(await confirmBox(`${t.name}-এর তথ্য মুছে যাবে।`))) return;
+    try { await API.remove('teachers', t.id); S.teachers = S.teachers.filter(x => x.id !== t.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/teachers'; } catch (e) { toast(errMsg(e), true); }
+  };
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(f); d.active = d.active !== 'no';
+    if (!d.active && !(t && t.left_on)) d.left_on = todayISO(); if (d.active) d.left_on = null;
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    try { const row = t ? await API.update('teachers', t.id, d) : await API.insert('teachers', d); putLocal('teachers', row); closeModal(); toast('সংরক্ষণ হয়েছে'); if (t) render(); else location.hash = '#/teacher/' + row.id; }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+
+function salaryModal(t, m) {
+  const tm = teacherMonth(t, m);
+  openModal(`<h2>বেতন দিন — ${esc(t.name)}</h2>
+    <div class="card" style="margin-bottom:12px;padding:12px"><dl class="kv" style="margin:0"><dt>মাস</dt><dd>${monthLabel(m)}</dd><dt>হিসাব</dt><dd>${t.pay_type === 'monthly' ? 'মাসিক ' + tk(t.rate) : `${tm.classes}টি ক্লাস · ${tm.hours} ঘণ্টা × ${tk(t.rate)} ${PAY_UNIT[t.pay_type]}`}</dd><dt>মোট পাওনা</dt><dd><b>${tk(tm.earned)}</b></dd><dt>আগে দেওয়া</dt><dd>${tk(tm.paid)}</dd><dt>বাকি</dt><dd><b style="color:var(--red)">${tk(tm.due)}</b></dd></dl></div>
+    <form class="form" id="sf">
+    <label class="f">টাকার পরিমাণ (৳)<input name="amount" type="number" min="1" step="1" required value="${tm.due || ''}"></label>
+    <label class="f">তারিখ<input name="spent_on" type="date" required value="${todayISO()}"></label>
+    <label class="f">মাধ্যম<select name="method">${Object.entries(METHOD).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+    <label class="f">নোট<input name="note" value="${esc(monthLabel(m))} মাসের বেতন"></label>
+    <p class="full small muted" style="margin:0">এটা "খরচ ও লাভ"-এ বেতন হিসেবে উঠবে। ভুল হলে খরচের পাতা থেকে অ্যাডমিন মুছতে পারবেন।</p>
+    <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="sc">বাতিল</button><button class="btn" type="submit">বেতন দিন ও রশিদ প্রিন্ট</button></div></form>`);
+  $('#sc').onclick = closeModal;
+  $('#sf').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target);
+    if (!(d.amount > 0)) return toast('সঠিক টাকার পরিমাণ দিন', true);
+    if (d.amount > tm.due && tm.due > 0 && !(await confirmBox(`বাকি ${tk(tm.due)}, কিন্তু দিচ্ছেন ${tk(d.amount)}। তবুও দেবেন?`, 'হ্যাঁ, দিন'))) return;
+    const btn = e.target.querySelector('button[type=submit]'); if (btn) btn.disabled = true;
+    try { const x = await API.insert('expenses', { ...d, category: 'salary', paid_to: t.name, teacher_id: t.id, period: m }); putLocal('expenses', x); closeModal(); toast('বেতন দেওয়া হয়েছে'); render(); printSalarySlip(x); }
+    catch (err) { toast(errMsg(err), true); if (btn) btn.disabled = false; }
+  };
+}
+
+function viewTeachers(q) {
+  const m = q.get('m') || monthISO(); const showAll = q.get('all') === '1';
+  const list = S.teachers.filter(t => showAll || t.active !== false || teacherMonth(t, m).classes).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  const rows = list.map(t => ({ t, tm: teacherMonth(t, m) }));
+  const tot = rows.reduce((a, r) => ({ c: a.c + r.tm.classes, h: a.h + r.tm.hours, e: a.e + r.tm.earned, p: a.p + r.tm.paid, d: a.d + r.tm.due }), { c: 0, h: 0, e: 0, p: 0, d: 0 });
+  const noTeacher = S.sessions.filter(s => !s.teacher_id && (s.class_date || '').startsWith(m)).length;
+  mount('#/teachers', `
+  <div class="top"><div><h1>শিক্ষক ও বেতন</h1><p>ক্লাস আর ঘণ্টা থেকে মাসিক বেতনের হিসাব</p></div><div class="row"><input type="month" id="mon" value="${esc(m)}">${isAdmin() ? '<button class="btn" id="nt">+ নতুন শিক্ষক</button>' : ''}</div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">${monthLabel(m)}-এ ক্লাস</div><div class="v">${tot.c}</div><div class="s">${Math.round(tot.h * 10) / 10} ঘণ্টা</div></div>
+    <div class="card stat"><div class="l">মোট বেতন (পাওনা)</div><div class="v">${tk(tot.e)}</div></div>
+    <div class="card stat green"><div class="l">দেওয়া হয়েছে</div><div class="v">${tk(tot.p)}</div></div>
+    <div class="card stat ${tot.d ? 'red' : ''}"><div class="l">বাকি</div><div class="v">${tk(tot.d)}</div></div>
+  </div>
+  ${noTeacher ? `<div class="alertbar" style="margin-bottom:14px"><b>${noTeacher}টি ক্লাসে শিক্ষক বেছে নেওয়া হয়নি</b><span>হাজিরার পাতায় ক্লাস খুলে "শিক্ষক" বেছে দিন, না হলে ঘণ্টার বেতন কম আসবে।</span></div>` : ''}
+  <div class="tw">${rows.length ? `<table class="stack"><tr><th>শিক্ষক</th><th>বেতনের ধরন</th><th class="num">ক্লাস · ঘণ্টা</th><th class="num">পাওনা</th><th class="num">দেওয়া</th><th class="num">বাকি</th><th></th></tr>${rows.map(({ t, tm }) => `<tr class="click" data-go="#/teacher/${t.id}?m=${m}"><td class="mt" data-l=""><span><b>${esc(t.name)}</b></span></td><td class="dm"><b>${esc(t.name)}</b>${t.active === false ? ' ' + badge('dropped', 'এখন নেই') : ''}<div class="small muted">${esc(t.levels || '')}</div></td><td data-l="বেতনের ধরন">${esc(PAY_TYPE[t.pay_type] || '')}<div class="small muted">${tk(t.rate)} ${PAY_UNIT[t.pay_type] || ''}</div></td><td class="num" data-l="ক্লাস · ঘণ্টা">${tm.classes} · ${tm.hours}</td><td class="num" data-l="পাওনা">${tk(tm.earned)}</td><td class="num" data-l="দেওয়া">${tk(tm.paid)}</td><td class="num" data-l="বাকি">${tm.due ? `<b style="color:var(--red)">${tk(tm.due)}</b>` : badge('paid', tm.earned ? 'পরিশোধিত' : '—')}</td><td class="num" data-l="">${isAdmin() && tm.due ? `<button class="btn sm gold" data-pay="${t.id}" data-stop>বেতন দিন</button>` : ''}</td></tr>`).join('')}</table>` : `<div class="empty">${S.teachers.length ? 'এই মাসে কোনো শিক্ষক নেই' : 'এখনো কোনো শিক্ষক যোগ করা হয়নি। "+ নতুন শিক্ষক" দিয়ে শুরু করুন।'}</div>`}</div>
+  <p class="small muted" style="margin-top:10px"><label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="tall" ${showAll ? 'checked' : ''}> যারা এখন নেই তাদেরও দেখান</label> · ঘণ্টা/ক্লাস হিসেবে বেতন হাজিরার পাতায় বেছে নেওয়া শিক্ষক থেকে হিসাব হয়।</p>`, () => {
+    $('#mon').onchange = (e) => { location.hash = '#/teachers?m=' + e.target.value + (showAll ? '&all=1' : ''); };
+    $('#tall').onchange = (e) => { location.hash = '#/teachers?m=' + m + (e.target.checked ? '&all=1' : ''); };
+    const nt = $('#nt'); if (nt) nt.onclick = () => teacherModal(null);
+    bindGo(); $$('[data-pay]').forEach(b => b.onclick = (e) => { e.stopPropagation(); salaryModal(byId(S.teachers, b.dataset.pay), m); });
+  });
+}
+
+function viewTeacher(id, q) {
+  const t = byId(S.teachers, id);
+  if (!t) return mount('#/teachers', '<div class="empty">শিক্ষক পাওয়া যায়নি</div>');
+  const m = q.get('m') || monthISO(); const tm = teacherMonth(t, m);
+  const hist = lastMonths(12).map(x => ({ m: x, ...teacherMonth(t, x) })).filter(r => r.classes || r.earned || r.paid);
+  const pays = S.expenses.filter(x => x.teacher_id === t.id).sort((a, b) => (b.spent_on || '').localeCompare(a.spent_on || ''));
+  const kv = [['মোবাইল', t.phone], ['ইমেইল', t.email], ['NID', t.nid], ['ঠিকানা', t.address], ['লেভেল', t.levels], ['যোগ্যতা', t.qualification], ['বেতন', `${PAY_TYPE[t.pay_type] || ''} · ${tk(t.rate)} ${PAY_UNIT[t.pay_type] || ''}`], ['যোগদান', fmtD(t.joined_on)], ['নোট', t.notes]];
+  mount('#/teachers', `
+  <div class="top"><div><h1>${esc(t.name)}</h1><p>${esc(t.levels || '')}${t.active === false ? ' · এখন নেই' : ''}</p></div><div class="row">${t.phone ? waBtn(t.phone, `আসসালামু আলাইকুম ${t.name}। ${S.settings.institute_bn} থেকে বলছি। `, 'WhatsApp') : ''}${isAdmin() ? '<button class="btn ghost" id="te">সম্পাদনা</button>' : ''}<input type="month" id="mon" value="${esc(m)}">${isAdmin() && tm.due ? '<button class="btn gold" id="tp">বেতন দিন</button>' : ''}</div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">${monthLabel(m)}-এ ক্লাস</div><div class="v">${tm.classes}</div><div class="s">${tm.hours} ঘণ্টা</div></div>
+    <div class="card stat"><div class="l">পাওনা</div><div class="v">${tk(tm.earned)}</div></div>
+    <div class="card stat green"><div class="l">দেওয়া হয়েছে</div><div class="v">${tk(tm.paid)}</div></div>
+    <div class="card stat ${tm.due ? 'red' : ''}"><div class="l">বাকি</div><div class="v">${tk(tm.due)}</div></div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h2>তথ্য</h2><dl class="kv">${kv.map(([k, x]) => `<dt>${k}</dt><dd>${esc(x || '—')}</dd>`).join('')}</dl></div>
+    <div class="card"><h2>মাসভিত্তিক হিসাব</h2>${hist.length ? `<div class="tw"><table><tr><th>মাস</th><th class="num">ক্লাস</th><th class="num">পাওনা</th><th class="num">দেওয়া</th><th class="num">বাকি</th></tr>${hist.map(r => `<tr class="click" data-go="#/teacher/${t.id}?m=${r.m}"><td>${monthLabel(r.m)}</td><td class="num">${r.classes}</td><td class="num">${tk(r.earned)}</td><td class="num">${tk(r.paid)}</td><td class="num">${r.due ? `<b style="color:var(--red)">${tk(r.due)}</b>` : '—'}</td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো হিসাব নেই</div>'}</div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>${monthLabel(m)}-এর ক্লাস</h2>${tm.ss.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>লেভেল · ব্যাচ</th><th class="hide-m">বিষয়</th><th class="num">ঘণ্টা</th></tr>${[...tm.ss].sort((a, b) => a.class_date.localeCompare(b.class_date)).map(s => `<tr class="click" data-go="#/attendance?d=${s.class_date}&l=${s.level}&b=${s.batch}"><td>${fmtD(s.class_date)}</td><td>${esc(s.level)} · ${esc(BATCH[s.batch] || '')}</td><td class="hide-m">${esc(s.topic || '—')}</td><td class="num">${num(s.hours)}</td></tr>`).join('')}</table></div>` : '<div class="empty">এই মাসে কোনো ক্লাস নেই</div>'}</div>
+    <div class="card"><h2>বেতন দেওয়ার রেকর্ড</h2>${pays.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>মাস</th><th class="num">টাকা</th><th></th></tr>${pays.map(x => `<tr><td>${fmtD(x.spent_on)}</td><td>${x.period ? monthLabel(x.period) : '—'}</td><td class="num"><b>${tk(x.amount)}</b></td><td class="num"><button class="btn sm ghost" data-slip="${x.id}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো বেতন দেওয়া হয়নি</div>'}</div>
+  </div>`, () => {
+    bindGo();
+    $('#mon').onchange = (e) => { location.hash = `#/teacher/${t.id}?m=${e.target.value}`; };
+    const te = $('#te'); if (te) te.onclick = () => teacherModal(t);
+    const tp = $('#tp'); if (tp) tp.onclick = () => salaryModal(t, m);
+    $$('[data-slip]').forEach(b => b.onclick = () => printSalarySlip(byId(S.expenses, b.dataset.slip)));
+  });
+}
+
+function printSalarySlip(x) {
+  if (!x) return; const t = byId(S.teachers, x.teacher_id) || { name: x.paid_to };
+  const m = x.period || (x.spent_on || '').slice(0, 7); const tm = t.id ? teacherMonth(t, m) : null;
+  printWindow('Salary ' + (t.name || ''), `<div style="border:1.5px solid #A3843A">${headHtml()}
+  <div style="padding:16px 20px"><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px"><div><div style="font:700 11px 'Shippori Mincho B1';letter-spacing:3px;color:#A3843A">SALARY SLIP</div><div style="font:800 20px 'Noto Serif Bengali'">বেতনের রশিদ</div></div><div style="text-align:right;font-size:13px">তারিখ: <b>${fmtD(x.spent_on)}</b></div></div>
+  <table><tr><th>শিক্ষকের নাম</th><td>${esc(t.name || '')}</td></tr><tr><th>মাস</th><td>${monthLabel(m)}</td></tr>
+  ${tm ? `<tr><th>ক্লাস · ঘণ্টা</th><td>${tm.classes}টি ক্লাস · ${tm.hours} ঘণ্টা</td></tr><tr><th>বেতনের হার</th><td>${esc(PAY_TYPE[t.pay_type] || '')} · ${tk(t.rate)} ${PAY_UNIT[t.pay_type] || ''}</td></tr><tr><th>মোট পাওনা</th><td>${tk(tm.earned)}</td></tr>` : ''}
+  <tr><th>এবার দেওয়া হলো</th><td><b style="font-size:17px;color:#C8372B">${tk(x.amount)}</b><br><span style="font-size:12px">In words: Taka ${words(x.amount)} only</span></td></tr>
+  <tr><th>মাধ্যম</th><td>${esc(METHOD[x.method] || x.method)}</td></tr>
+  ${tm ? `<tr><th>এই মাসে মোট দেওয়া · বাকি</th><td>${tk(tm.paid)} · <b>${tk(tm.due)}</b></td></tr>` : ''}${x.note ? `<tr><th>নোট</th><td>${esc(x.note)}</td></tr>` : ''}</table>
+  <div style="display:flex;justify-content:space-between;margin-top:40px;font-size:12.5px"><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px">গ্রহণকারীর স্বাক্ষর (শিক্ষক)</div><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px;text-align:right">প্রদানকারীর স্বাক্ষর ও সিল</div></div></div></div>`);
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
@@ -1255,10 +1397,14 @@ async function seedDemo() {
   await Local.insert('documents', { student_id: made[0].id, doc_type: 'bank', status: 'received', issued_on: iso2(-95), note: '' });
   await Local.insert('documents', { student_id: made[2].id, doc_type: 'passport', status: 'received', expires_on: iso2(1500), note: '' });
   await Local.insert('documents', { student_id: made[2].id, doc_type: 'sponsor', status: 'received', issued_on: iso2(-80), note: '' });
+  const t1 = await Local.insert('teachers', { name: 'ডেমো শিক্ষক এক', phone: '01600-000001', levels: 'N5', qualification: 'JLPT N2', pay_type: 'hourly', rate: 500, joined_on: iso(base), active: true });
+  const t2 = await Local.insert('teachers', { name: 'ডেমো শিক্ষিকা দুই', phone: '01600-000002', levels: 'N5, N4', qualification: 'জাপানে ৫ বছর', pay_type: 'monthly', rate: 15000, joined_on: iso(base), active: true });
+  await Local.insert('expenses', { spent_on: iso2(-1), category: 'salary', amount: 5000, method: 'bkash', paid_to: t1.name, teacher_id: t1.id, period: monthISO(iso2(-1)), note: 'অগ্রিম বেতন' });
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {
-      let ss; try { ss = await Local.insert('sessions', { class_date: iso(dt), level: 'N5', batch, class_no: k + 1, hours: 2, topic: 'ডেমো পাঠ ' + (k + 1), teacher: 'ডেমো শিক্ষক' }); } catch { continue; }
+      const tt = batch === 'morning' ? t1 : t2;
+      let ss; try { ss = await Local.insert('sessions', { class_date: iso(dt), level: 'N5', batch, class_no: k + 1, hours: 2, topic: 'ডেমো পাঠ ' + (k + 1), teacher: tt.name, teacher_id: tt.id }); } catch { continue; }
       await Local.upsertAttendance(made.filter(s => s.batch === batch).map((s, j) => ({ session_id: ss.id, student_id: s.id, status: (k + j) % 5 === 0 ? 'absent' : (k + j) % 7 === 0 ? 'late' : 'present' })));
     }
   }
