@@ -123,10 +123,11 @@ function formData(form) {
   }
   return o;
 }
+const csvText = (rows) => '﻿' + rows.map(r => r.map(c => {
+  const s = typeof c === 'object' && c !== null ? JSON.stringify(c) : String(c ?? ''); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}).join(',')).join('\r\n');
 function csvDownload(name, rows) {
-  const csv = '﻿' + rows.map(r => r.map(c => {
-    const s = String(c ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-  }).join(',')).join('\r\n');
+  const csv = csvText(rows);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
@@ -434,6 +435,7 @@ function viewDashboard() {
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a>${isAdmin() ? '<a class="btn ghost" href="#/weekly">সাপ্তাহিক সারাংশ</a>' : ''}</div></div>
   ${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red'); if (!al.length) return ''; return `<a class="alertbar ${red.length ? 'red' : ''}" href="#/alerts"><b>${red.length ? red.length + 'টি জরুরি সতর্কতা' : al.length + 'টি সতর্কতা'}</b><span>${esc(al.slice(0, 2).map(a => { const t = studentName(byId(S.students, a.sid)) + ': ' + a.what + ' — ' + a.issue; return t.length > 110 ? t.slice(0, 108) + '…' : t; }).join(' · '))}${al.length > 2 ? ` · আরও ${al.length - 2}টি` : ''}</span><span class="go">দেখুন →</span></a>`; })()}
+  ${isAdmin() && (!S.settings.last_backup_at || daysBetween(S.settings.last_backup_at.slice(0, 10), today) >= 7) ? `<a class="alertbar" href="#/reports" style="margin-bottom:16px"><b>${S.settings.last_backup_at ? daysBetween(S.settings.last_backup_at.slice(0, 10), today) + ' দিন ব্যাকআপ নেওয়া হয়নি' : 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি'}</b><span>রিপোর্ট পাতা থেকে "পুরো ব্যাকআপ নিন" চেপে ZIP ফাইলটা ল্যাপটপ বা Google Drive-এ রাখুন।</span><span class="go">ব্যাকআপ নিন →</span></a>` : ''}
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''} — ছুটি থাকলে ক্যালেন্ডারে ছুটি দিন</span><span class="go">হাজিরা নিন →</span></a>` : ''}
   <div class="grid g4">
@@ -1895,13 +1897,15 @@ function viewReports() {
     <div class="card"><h2>বকেয়ার তালিকা</h2><p class="muted small">যাদের কাছে টাকা বাকি, অভিভাবকের ফোন নম্বরসহ।</p><button class="btn ghost" id="r1">CSV ডাউনলোড</button></div>
     <div class="card"><h2>হাজিরা ও শিক্ষার ঘণ্টা</h2><p class="muted small">প্রত্যেক ছাত্রের মোট ঘণ্টা, উপস্থিতি % আর লেভেল অনুযায়ী ভাগ।</p><button class="btn ghost" id="r2">CSV ডাউনলোড</button></div>
     <div class="card"><h2>ছাত্রদের পূর্ণ তালিকা</h2><p class="muted small">সব তথ্যসহ, জাপানের স্কুলে পাঠানোর প্রস্তুতির জন্য।</p><button class="btn ghost" id="r3">CSV ডাউনলোড</button></div>
-    <div class="card"><h2>পুরো ব্যাকআপ</h2><p class="muted small">সব তথ্য একটা JSON ফাইলে। মাসে একবার নামিয়ে রাখুন।</p><button class="btn ghost" id="r4" ${isAdmin() ? '' : 'disabled'}>ব্যাকআপ ডাউনলোড</button></div>
+    <div class="card"><h2>পুরো ব্যাকআপ (ZIP)</h2><p class="muted small">সব তথ্য, Excel-এ খোলার মতো ফাইল, আর আপলোড করা সব কাগজ ও ছবি — একটা ZIP ফাইলে। ${S.settings.last_backup_at ? 'শেষ ব্যাকআপ: ' + fmtDT(S.settings.last_backup_at) : 'এখনো ব্যাকআপ নেওয়া হয়নি'}</p><button class="btn gold" id="r6" ${isAdmin() ? '' : 'disabled'}>পুরো ব্যাকআপ নিন</button></div>
+    <div class="card"><h2>শুধু তথ্য (JSON)</h2><p class="muted small">সব তথ্য একটা JSON ফাইলে। মাসে একবার নামিয়ে রাখুন।</p><button class="btn ghost" id="r4" ${isAdmin() ? '' : 'disabled'}>ব্যাকআপ ডাউনলোড</button></div>
   </div>`, () => {
     bindGo();
     $('#r5').onclick = () => csvDownload(`sakura-profit-loss-${todayISO()}.csv`, [['Month', 'Income', 'Expenses', 'Profit'], ...pl.map(r => [r.m, r.inc, r.exp, r.pr])]);
     $('#r1').onclick = () => csvDownload(`sakura-dues-${todayISO()}.csv`, [['Admission no', 'Name', 'Level', 'Batch', 'Total fee', 'Discount', 'Paid', 'Due', 'Next due date', 'Phone', 'Guardian phone'], ...studs.map(s => [s.admission_no, s.name_en || s.name_bn, s.current_level, s.batch, s.total_fee, s.discount, paidOf(s.id), dueOf(s), s.next_due_date, s.phone, s.guardian_phone]).filter(r => r[7] > 0)]);
     $('#r2').onclick = () => csvDownload(`sakura-attendance-${todayISO()}.csv`, [['Admission no', 'Name', 'Level', 'Classes marked', 'Attended', 'Attendance %', 'Total hours', 'N5 hours', 'N4 hours', 'N3 hours', 'First class', 'Last class'], ...studs.map(s => { const a = attOf(s.id, smap); return [s.admission_no, s.name_en || s.name_bn, s.current_level, a.total, a.came, a.pct ?? '', a.hours, a.byLevel.N5 || 0, a.byLevel.N4 || 0, a.byLevel.N3 || 0, a.first || '', a.last || '']; })]);
     $('#r3').onclick = () => { const cols = ['admission_no', 'admission_date', 'name_bn', 'name_en', 'dob', 'gender', 'nid', 'passport_no', 'phone', 'email', 'address_present', 'address_permanent', 'education', 'guardian_name', 'guardian_relation', 'guardian_phone', 'package', 'current_level', 'batch', 'start_date', 'total_fee', 'discount', 'status', 'japan_stage', 'target_school', 'intake', 'notes']; csvDownload(`sakura-students-${todayISO()}.csv`, [cols, ...S.students.map(s => cols.map(c => s[c]))]); };
+    $('#r6').onclick = fullBackup;
     $('#r4').onclick = () => { const blob = new Blob([JSON.stringify({ exported_at: new Date().toISOString(), settings: S.settings, ...Object.fromEntries(TABLES.map(t => [t, S[t]])) }, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `sakura-backup-${todayISO()}.json`; a.click(); };
   });
 }
@@ -2229,6 +2233,43 @@ async function installApp() {
   $('#ic').onclick = closeModal;
 }
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// ------------------------------------------------------------------ full backup (ZIP with data, spreadsheets and uploaded files)
+let _zipLib = null;
+function loadZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (_zipLib) return _zipLib;
+  _zipLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'; sc.onload = () => res(window.JSZip); sc.onerror = () => { _zipLib = null; rej(new Error('ZIP তৈরির ফাইল লোড হয়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন')); }; document.head.appendChild(sc); });
+  return _zipLib;
+}
+async function fullBackup() {
+  if (!isAdmin()) return toast('শুধু অ্যাডমিন ব্যাকআপ নিতে পারেন', true);
+  openModal('<h2>ব্যাকআপ তৈরি হচ্ছে…</h2><p id="bkp">তথ্য আনা হচ্ছে…</p><div class="bar" style="width:100%"><i id="bkb" style="width:3%"></i></div><p class="small muted">বন্ধ করবেন না। কাগজ বেশি থাকলে কয়েক মিনিট লাগতে পারে।</p>');
+  const step = (t, pct) => { const p = $('#bkp'), b = $('#bkb'); if (p) p.textContent = t; if (b) b.style.width = pct + '%'; };
+  try {
+    const Zip = await loadZip(); await loadAll(); const zip = new Zip(); const now = new Date(); const stamp = `${todayISO()}_${pad(now.getHours(), 2)}${pad(now.getMinutes(), 2)}`;
+    let audit = []; try { audit = (await API.auditList({ from: '2020-01-01', to: todayISO(), limit: 20000 })).rows; } catch { /* log table may not exist */ }
+    const data = { exported_at: now.toISOString(), app: 'Sakura Portal', settings: S.settings, profiles: S.profiles, ...Object.fromEntries(TABLES.map(t => [t, S[t]])), audit_log: audit };
+    zip.file('data/sakura-backup.json', JSON.stringify(data, null, 1));
+    step('Excel ফাইল তৈরি হচ্ছে…', 10);
+    for (const t of [...TABLES, 'audit_log']) { const rows = t === 'audit_log' ? audit : S[t]; if (!rows || !rows.length) continue; const cols = [...new Set(rows.flatMap(r => Object.keys(r)))]; zip.file(`excel/${t}.csv`, csvText([cols, ...rows.map(r => cols.map(c => r[c]))])); }
+    const docs = S.documents.filter(d => d.file_path); const photos = []; let ok = 0, fail = 0;
+    for (const [i, d] of docs.entries()) {
+      step(`কাগজ নামানো হচ্ছে ${i + 1} / ${docs.length}…`, 12 + Math.round((i / Math.max(1, docs.length)) * 78));
+      const s = byId(S.students, d.student_id) || {}; const folder = `${s.admission_no || 'unknown'}-${(s.name_en || s.name_bn || '').replace(/[^\w\u0980-\u09FF -]/g, '').trim().slice(0, 40)}`;
+      const ext = (d.file_path.split('.').pop() || 'bin').replace(/[^a-z0-9]/gi, '').slice(0, 5);
+      try { const u = await API.fileUrl(d.file_path); const r = await fetch(u); if (!r.ok) throw new Error(r.status); zip.file(`files/${folder}/${d.doc_type}.${ext}`, await r.blob()); ok++; } catch { fail++; photos.push(d.file_path); }
+    }
+    zip.file('README.txt', `Sakura Portal backup — ${now.toISOString()}\n\nডেটা: data/sakura-backup.json (পুরো তথ্য, পোর্টালে ফেরত আনার জন্য)\nExcel: excel/*.csv (Excel বা Google Sheets-এ খোলা যায়)\nকাগজপত্র: files/<ভর্তি নং-নাম>/ (${ok}টি ফাইল)${fail ? `\nনামানো যায়নি: ${fail}টি — ${photos.join(', ')}` : ''}\n\nএই ফাইলে ছাত্রদের NID, পাসপোর্ট আর ব্যাংকের কাগজ আছে — নিরাপদ জায়গায় রাখুন, কাউকে দেবেন না।\n`);
+    step('ZIP ফাইল বানানো হচ্ছে…', 92);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `sakura-backup-${stamp}.zip`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    const st = { ...S.settings, last_backup_at: now.toISOString() }; try { await API.saveSettings(st); S.settings = st; } catch { /* still downloaded */ }
+    step('হয়ে গেছে', 100);
+    openModal(`<h2>ব্যাকআপ তৈরি হয়েছে</h2><p><b>sakura-backup-${stamp}.zip</b> নামে ফাইল ডাউনলোড হয়েছে (${(blob.size / 1048576).toFixed(1)} MB)।</p><ul><li>তথ্য: ${S.students.length} জন ছাত্র, ${S.payments.length}টি টাকা জমা, ${S.attendance.length}টি হাজিরা</li><li>কাগজ ও ছবি: ${ok}টি${fail ? ` <span style="color:var(--red)">(${fail}টি নামানো যায়নি)</span>` : ''}</li></ul><p class="small muted">ফাইলটা ল্যাপটপের একটা ফোল্ডারে আর Google Drive-এ রাখুন। এতে ছাত্রদের NID আর পাসপোর্ট আছে, তাই কাউকে পাঠাবেন না।</p><div class="row" style="justify-content:flex-end"><button class="btn" id="bkc">ঠিক আছে</button></div>`);
+    $('#bkc').onclick = () => { closeModal(); render(); };
+  } catch (e) { closeModal(); toast(errMsg(e), true); }
+}
 
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
