@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS = {
 const BATCH = { morning: 'সকাল ১০–১২টা', evening: 'সন্ধ্যা ৬–৮টা' };
 const STATUS = { trial: 'ট্রায়াল', active: 'চলমান', completed: 'কোর্স শেষ', dropped: 'বাদ দিয়েছে', japan: 'জাপানে' };
 const METHOD = { cash: 'ক্যাশ', bkash: 'বিকাশ', nagad: 'নগদ', bank: 'ব্যাংক' };
-const PURPOSE = { course_fee: 'কোর্স ফি', installment: 'কিস্তি', admission: 'ভর্তি ফি', other: 'অন্যান্য' };
+const PURPOSE = { course_fee: 'কোর্স ফি', installment: 'কিস্তি', admission: 'ভর্তি ফি', processing: 'জাপান প্রসেসিং ফি', other: 'অন্যান্য' };
 const ATT = { present: 'উপস্থিত', late: 'দেরি', leave: 'ছুটি', absent: 'অনুপস্থিত' };
 const DOC_TYPES = [
   ['photo', 'পাসপোর্ট সাইজ ছবি'], ['passport', 'পাসপোর্ট'], ['nid', 'NID / জন্ম নিবন্ধন'],
@@ -145,8 +145,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions'];
+const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -242,7 +242,11 @@ function putLocal(t, row) { const i = S[t].findIndex(r => r.id === row.id); if (
 
 // ------------------------------------------------------------------ derived numbers
 const sessionMap = () => new Map(S.sessions.map(s => [s.id, s]));
-function paidOf(sid) { return S.payments.filter(p => p.student_id === sid).reduce((a, p) => a + num(p.amount), 0); }
+function paidOf(sid) { return S.payments.filter(p => p.student_id === sid && p.purpose !== 'processing').reduce((a, p) => a + num(p.amount), 0); } // course fees only
+function procPaidOf(sid) { return S.payments.filter(p => p.student_id === sid && p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0); }
+function procDueOf(st) { return Math.max(0, num(st.processing_fee) - procPaidOf(st.id)); }
+function commIncome(m) { return (S.commissions || []).filter(c => c.status === 'received' && (c.received_on || '').startsWith(m)).reduce((a, c) => a + num(c.amount_bdt), 0); }
+function incomeOf(m) { return monthSum(S.payments, 'paid_on', m) + commIncome(m); }
 function netFee(st) { return Math.max(0, num(st.total_fee) - num(st.discount)); }
 function dueOf(st) { return Math.max(0, netFee(st) - paidOf(st.id)); }
 function attOf(sid, smap = sessionMap()) {
@@ -407,7 +411,7 @@ window.addEventListener('hashchange', render);
 function viewDashboard() {
   const smap = sessionMap(); const today = todayISO(); const m = monthISO();
   const current = S.students.filter(s => s.status === 'active' || s.status === 'trial');
-  const monthIncome = S.payments.filter(p => (p.paid_on || '').startsWith(m)).reduce((a, p) => a + num(p.amount), 0);
+  const monthIncome = incomeOf(m);
   const dues = S.students.filter(s => s.status !== 'dropped').map(s => ({ s, due: dueOf(s) })).filter(x => x.due > 0).sort((a, b) => (a.s.next_due_date || '9999').localeCompare(b.s.next_due_date || '9999'));
   const totalDue = dues.reduce((a, x) => a + x.due, 0);
   const todaySessions = S.sessions.filter(s => s.class_date === today).map(s => s.id);
@@ -501,7 +505,7 @@ function viewStudentForm(id, leadId) {
     ${sel('package', 'প্যাকেজ (ফি অনুযায়ী)', Object.fromEntries(PACKAGES.map(p => [p, p + ' — ' + tk(S.settings.fees[p])])))}
     ${sel('current_level', 'এখন কোন লেভেলের ক্লাসে', Object.fromEntries(LEVELS.map(l => [l, l])))}
     ${sel('batch', 'ব্যাচ', BATCH)}${inp('start_date', 'ক্লাস শুরুর তারিখ', 'date')}
-    ${inp('total_fee', 'মোট ফি (৳)', 'number', 'min="0" step="1" required')}${inp('discount', 'ছাড় (৳)', 'number', 'min="0" step="1"')}
+    ${inp('total_fee', 'মোট ফি (৳)', 'number', 'min="0" step="1" required')}${inp('discount', 'ছাড় (৳)', 'number', 'min="0" step="1"')}${inp('processing_fee', 'জাপান প্রসেসিং ফি (৳, না থাকলে খালি)', 'number', 'min="0" step="1"')}
     ${inp('next_due_date', 'পরের কিস্তির তারিখ', 'date')}${sel('status', 'অবস্থা', STATUS)}
     <label class="f full">নোট<textarea name="notes">${esc(v.notes || '')}</textarea></label>
     <div class="full row" style="justify-content:flex-end"><a class="btn ghost" href="${s ? '#/student/' + s.id : '#/students'}">বাতিল</a><button class="btn" type="submit">${s ? 'সংরক্ষণ' : 'ভর্তি করুন'}</button></div>
@@ -509,7 +513,7 @@ function viewStudentForm(id, leadId) {
     const f = $('#sf');
     f.package.onchange = () => { f.total_fee.value = S.settings.fees[f.package.value] || 0; const first = f.package.value.split('+')[0]; if (LEVELS.includes(first) && !s) f.current_level.value = first; };
     f.onsubmit = async (e) => {
-      e.preventDefault(); const d = formData(f); d.total_fee = d.total_fee || 0; d.discount = d.discount || 0;
+      e.preventDefault(); const d = formData(f); d.total_fee = d.total_fee || 0; d.discount = d.discount || 0; d.processing_fee = d.processing_fee || 0;
       const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
       try {
         const row = s ? await API.update('students', s.id, d) : await API.insert('students', d);
@@ -535,6 +539,7 @@ async function viewStudent(id, tab) {
   if (tab === 'fees') {
     const pays = S.payments.filter(p => p.student_id === s.id).sort((x, y) => (y.paid_on || '').localeCompare(x.paid_on || ''));
     body = `<div class="grid g4"><div class="card stat"><div class="l">মোট ফি</div><div class="v">${tk(s.total_fee)}</div></div><div class="card stat"><div class="l">ছাড়</div><div class="v">${tk(s.discount)}</div></div><div class="card stat green"><div class="l">পরিশোধিত</div><div class="v">${tk(paid)}</div></div><div class="card stat red"><div class="l">বকেয়া</div><div class="v">${tk(due)}</div><div class="s">${s.next_due_date ? 'পরের কিস্তি ' + fmtD(s.next_due_date) : ''}</div></div></div>
+    ${num(s.processing_fee) || procPaidOf(s.id) ? `<div class="card" style="margin-top:14px;padding:12px 16px"><div class="row"><b>জাপান প্রসেসিং ফি</b><span class="spacer"></span><span>চুক্তি ${tk(s.processing_fee)} · পেয়েছি ${tk(procPaidOf(s.id))} · ${procDueOf(s) ? `<b style="color:var(--red)">বাকি ${tk(procDueOf(s))}</b>` : badge('paid', 'পরিশোধিত')}</span></div></div>` : ''}
     <div class="row" style="margin:14px 0"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">পরিশোধের তালিকা</h2><span class="spacer"></span>${due ? waBtn(guardianPhone(s), dueMsg(s), 'বকেয়ার রিমাইন্ডার') : ''}<button class="btn gold" id="addpay">+ টাকা জমা</button></div>
     <div class="tw">${pays.length ? `<table class="stack"><tr><th>তারিখ</th><th>রশিদ নং</th><th>বাবদ</th><th>মাধ্যম</th><th class="num">টাকা</th><th></th></tr>${pays.map(p => `<tr><td data-l="তারিখ">${fmtD(p.paid_on)}</td><td data-l="রশিদ নং">${esc(p.receipt_no)}</td><td data-l="বাবদ">${esc(PURPOSE[p.purpose] || p.purpose)}</td><td data-l="মাধ্যম">${esc(METHOD[p.method] || p.method)}${p.trx_id ? ` · ${esc(p.trx_id)}` : ''}</td><td class="num" data-l="টাকা"><b>${tk(p.amount)}</b></td><td class="num" data-l=""><button class="btn sm ghost" data-rc="${p.id}">রশিদ প্রিন্ট</button></td></tr>`).join('')}</table>` : '<div class="empty">এখনো কোনো টাকা জমা হয়নি</div>'}</div>`;
   }
@@ -642,7 +647,9 @@ function paymentModal(studentId) {
     <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="pc">বাতিল</button><button class="btn gold" type="submit">জমা করুন ও রশিদ</button></div></form>`);
   $('#pc').onclick = closeModal;
   const f = $('#pf');
-  f.student_id.onchange = () => { const s = byId(S.students, f.student_id.value); if (s) { const d = dueOf(s); f.amount.value = d || ''; f.next_due_date.value = s.next_due_date || ''; } };
+  const sugg = () => { const s = byId(S.students, f.student_id.value); if (s) { const d = f.purpose.value === 'processing' ? procDueOf(s) : dueOf(s); f.amount.value = d || ''; } };
+  f.student_id.onchange = () => { const s = byId(S.students, f.student_id.value); if (s) { sugg(); f.next_due_date.value = s.next_due_date || ''; } };
+  f.purpose.onchange = sugg;
   f.onsubmit = async (e) => {
     e.preventDefault(); const d = formData(f); const next = d.next_due_date; delete d.next_due_date;
     if (!d.student_id) return toast('ছাত্র বাছাই করুন', true);
@@ -745,13 +752,14 @@ function expenseModal() {
 function viewExpenses(q) {
   const m = q.get('m') || monthISO();
   const list = S.expenses.filter(x => (x.spent_on || '').startsWith(m)).sort((a, b) => (b.spent_on + (b.created_at || '')).localeCompare(a.spent_on + (a.created_at || '')));
-  const income = monthSum(S.payments, 'paid_on', m); const spent = list.reduce((a, x) => a + num(x.amount), 0); const profit = income - spent;
+  const feeInc = S.payments.filter(p => (p.paid_on || '').startsWith(m) && p.purpose !== 'processing').reduce((a, p) => a + num(p.amount), 0); const procInc = S.payments.filter(p => (p.paid_on || '').startsWith(m) && p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0); const cInc = commIncome(m);
+  const income = incomeOf(m); const spent = list.reduce((a, x) => a + num(x.amount), 0); const profit = income - spent;
   const byCat = {}; list.forEach(x => { byCat[x.category] = (byCat[x.category] || 0) + num(x.amount); });
   const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]); const maxCat = Math.max(1, ...cats.map(c => c[1]));
   mount('#/expenses', `
   <div class="top"><div><h1>খরচ ও লাভ</h1><p>মাস অনুযায়ী আয়, খরচ আর লাভ-ক্ষতি</p></div><div class="row"><input type="month" id="mon" value="${esc(m)}"><button class="btn ghost" id="csv">CSV ডাউনলোড</button><button class="btn" id="ne">+ খরচ যোগ</button></div></div>
   <div class="grid g3" style="margin-bottom:16px">
-    <div class="card stat green"><div class="l">আয় (ফি জমা)</div><div class="v">${tk(income)}</div><div class="s">${S.payments.filter(p => (p.paid_on || '').startsWith(m)).length}টি রশিদ</div></div>
+    <div class="card stat green"><div class="l">আয়</div><div class="v">${tk(income)}</div><div class="s">কোর্স ফি ${tk(feeInc)}${procInc ? ` · প্রসেসিং ${tk(procInc)}` : ''}${cInc ? ` · কমিশন ${tk(cInc)}` : ''}</div></div>
     <div class="card stat red"><div class="l">খরচ</div><div class="v">${tk(spent)}</div><div class="s">${list.length}টি খরচ</div></div>
     <div class="card stat ${profit < 0 ? 'red' : 'green'}"><div class="l">${profit < 0 ? 'ক্ষতি' : 'লাভ'}</div><div class="v">${tk(Math.abs(profit))}</div><div class="s">আয় − খরচ</div></div>
   </div>
@@ -1028,10 +1036,11 @@ function appRows(list, { showStudent = true, showSchool = true } = {}) {
 function bindApps() { $$('[data-app]').forEach(tr => tr.onclick = () => appModal(byId(S.applications, tr.dataset.app))); $$('[data-app] a').forEach(el => el.addEventListener('click', e => e.stopPropagation())); }
 
 function viewJapan(q) {
-  const v = q.get('v') === 'schools' ? 'schools' : 'apps';
-  const tabs = `<div class="tabs"><button data-jv="apps" class="${v === 'apps' ? 'on' : ''}">আবেদন</button><button data-jv="schools" class="${v === 'schools' ? 'on' : ''}">জাপানি স্কুল (${S.jp_schools.length})</button></div>`;
-  const bindTabs = () => $$('[data-jv]').forEach(b => b.onclick = () => { location.hash = '#/japan' + (b.dataset.jv === 'schools' ? '?v=schools' : ''); });
+  const v = ['schools', 'income'].includes(q.get('v')) ? q.get('v') : 'apps';
+  const tabs = `<div class="tabs"><button data-jv="apps" class="${v === 'apps' ? 'on' : ''}">আবেদন</button><button data-jv="schools" class="${v === 'schools' ? 'on' : ''}">জাপানি স্কুল (${S.jp_schools.length})</button>${isAdmin() ? `<button data-jv="income" class="${v === 'income' ? 'on' : ''}">আয় ও কমিশন</button>` : ''}</div>`;
+  const bindTabs = () => $$('[data-jv]').forEach(b => b.onclick = () => { location.hash = '#/japan' + (b.dataset.jv === 'apps' ? '' : '?v=' + b.dataset.jv); });
   if (v === 'schools') return viewSchools(q, tabs, bindTabs);
+  if (v === 'income' && isAdmin()) return viewJapanIncome(q, tabs, bindTabs);
   const f = { st: q.get('st') || 'open', in: q.get('in') || '', s: q.get('s') || '' };
   const list = S.applications.filter(a => {
     if (f.st === 'open' && !appOpen(a)) return false;
@@ -1322,15 +1331,15 @@ function printSalarySlip(x) {
 }
 
 // ------------------------------------------------------------------ activity log (admin only)
-const AUD_TABLE = { students: 'ছাত্র', payments: 'টাকা জমা', sessions: 'ক্লাস', attendance: 'হাজিরা', documents: 'কাগজপত্র', expenses: 'খরচ', inquiries: 'আগ্রহী ছাত্র', exams: 'পরীক্ষা', exam_results: 'নম্বর', jp_schools: 'জাপানি স্কুল', applications: 'জাপান আবেদন', teachers: 'শিক্ষক', settings: 'সেটিংস', profiles: 'স্টাফ' };
+const AUD_TABLE = { students: 'ছাত্র', payments: 'টাকা জমা', sessions: 'ক্লাস', attendance: 'হাজিরা', documents: 'কাগজপত্র', expenses: 'খরচ', inquiries: 'আগ্রহী ছাত্র', exams: 'পরীক্ষা', exam_results: 'নম্বর', jp_schools: 'জাপানি স্কুল', applications: 'জাপান আবেদন', teachers: 'শিক্ষক', commissions: 'কমিশন', settings: 'সেটিংস', profiles: 'স্টাফ' };
 const AUD_ACT = { insert: ['যোগ', 'active'], update: ['বদল', 'trial'], delete: ['মুছেছে', 'due'] };
 const MONEY_TABLES = ['payments', 'expenses'];
-const AUD_FIELD = { name_bn: 'বাংলা নাম', name_en: 'ইংরেজি নাম', phone: 'ফোন', guardian_phone: 'অভিভাবকের ফোন', guardian_name: 'অভিভাবক', total_fee: 'মোট ফি', discount: 'ছাড়', next_due_date: 'পরের কিস্তি', status: 'অবস্থা', current_level: 'লেভেল', batch: 'ব্যাচ', package: 'প্যাকেজ', amount: 'টাকা', paid_on: 'তারিখ', spent_on: 'তারিখ', method: 'মাধ্যম', receipt_no: 'রশিদ নং', purpose: 'বাবদ', category: 'খাত', paid_to: 'কাকে', note: 'নোট', notes: 'নোট', japan_stage: 'জাপান ধাপ', target_school: 'স্কুল', intake: 'সেশন', passport_no: 'পাসপোর্ট নং', nid: 'NID', address_present: 'ঠিকানা', marks: 'নম্বর', absent: 'অনুপস্থিত', doc_type: 'কাগজ', file_path: 'ফাইল', expires_on: 'মেয়াদ', issued_on: 'ইস্যুর তারিখ', rate: 'বেতনের হার', pay_type: 'বেতনের ধরন', hours: 'ঘণ্টা', topic: 'বিষয়', teacher_id: 'শিক্ষক', deadline_on: 'শেষ তারিখ', interview_on: 'ইন্টারভিউ', result_on: 'COE-র ফল', title: 'নাম', max_marks: 'পূর্ণ নম্বর', role: 'ভূমিকা', data: 'সেটিংস', active: 'কাজ চলছে', school_id: 'স্কুল' };
+const AUD_FIELD = { name_bn: 'বাংলা নাম', name_en: 'ইংরেজি নাম', phone: 'ফোন', guardian_phone: 'অভিভাবকের ফোন', guardian_name: 'অভিভাবক', total_fee: 'মোট ফি', discount: 'ছাড়', next_due_date: 'পরের কিস্তি', status: 'অবস্থা', current_level: 'লেভেল', batch: 'ব্যাচ', package: 'প্যাকেজ', amount: 'টাকা', paid_on: 'তারিখ', spent_on: 'তারিখ', method: 'মাধ্যম', receipt_no: 'রশিদ নং', purpose: 'বাবদ', category: 'খাত', paid_to: 'কাকে', note: 'নোট', notes: 'নোট', japan_stage: 'জাপান ধাপ', target_school: 'স্কুল', intake: 'সেশন', passport_no: 'পাসপোর্ট নং', nid: 'NID', address_present: 'ঠিকানা', marks: 'নম্বর', absent: 'অনুপস্থিত', doc_type: 'কাগজ', file_path: 'ফাইল', expires_on: 'মেয়াদ', issued_on: 'ইস্যুর তারিখ', rate: 'বেতনের হার', processing_fee: 'প্রসেসিং ফি', amount_bdt: 'টাকা (৳)', amount_yen: 'টাকা (¥)', pay_type: 'বেতনের ধরন', hours: 'ঘণ্টা', topic: 'বিষয়', teacher_id: 'শিক্ষক', deadline_on: 'শেষ তারিখ', interview_on: 'ইন্টারভিউ', result_on: 'COE-র ফল', title: 'নাম', max_marks: 'পূর্ণ নম্বর', role: 'ভূমিকা', data: 'সেটিংস', active: 'কাজ চলছে', school_id: 'স্কুল' };
 const AUD_HIDE = ['id', 'created_at', 'created_by', 'updated_at'];
 
 function audValue(k, v) {
   if (v == null || v === '') return '—';
-  if (k === 'amount' || k === 'total_fee' || k === 'discount' || k === 'rate') return tk(v);
+  if (['amount', 'total_fee', 'discount', 'rate', 'processing_fee', 'amount_bdt'].includes(k)) return tk(v); if (k === 'amount_yen') return yen(v);
   if (/_on$|_date$|^dob$/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v))) return fmtD(String(v).slice(0, 10));
   if (k === 'status') return STATUS[v] || APP_ST[v] || ATT[v] || DOC_STATUS[v] || LEAD_ST[v] || v;
   if (k === 'method') return METHOD[v] || v; if (k === 'purpose') return PURPOSE[v] || v; if (k === 'pay_type') return PAY_TYPE[v] || v; if (k === 'role') return v === 'admin' ? 'অ্যাডমিন' : 'স্টাফ'; if (k === 'category') return EXP_CAT[v] || v; if (k === 'batch') return BATCH[v] || v;
@@ -1598,12 +1607,81 @@ async function printJpDoc(kind, s, a) {
   }
 }
 
+// ------------------------------------------------------------------ Japan income: processing fees & school commissions
+const COMM_ST = { expected: 'পাওয়ার কথা', received: 'পেয়েছি', cancelled: 'বাতিল' };
+const COMM_CLS = { expected: 'trial', received: 'active', cancelled: 'dropped' };
+function commissionModal(c, preset = {}) {
+  const v = c || { status: 'expected', ...preset };
+  const schools = [...S.jp_schools].sort((a, b) => schoolName(a).localeCompare(schoolName(b)));
+  if (!schools.length) return toast('আগে "জাপানি স্কুল" তালিকায় স্কুল যোগ করুন', true);
+  const apps = S.applications.filter(a => ['accepted', 'coe_applied', 'coe_granted', 'visa', 'departed'].includes(a.status));
+  openModal(`<h2>${c ? 'কমিশনের তথ্য' : 'স্কুল থেকে কমিশন'}</h2><form class="form" id="cmf">
+    <label class="f full">জাপানি স্কুল<select name="school_id" required>${schools.map(sc => `<option value="${sc.id}" ${v.school_id === sc.id ? 'selected' : ''}>${esc(schoolName(sc))}</option>`).join('')}</select></label>
+    <label class="f full">কোন ছাত্রের জন্য (থাকলে)<select name="application_id"><option value="">— একাধিক ছাত্র / প্রযোজ্য নয় —</option>${apps.map(a => { const s = byId(S.students, a.student_id); return `<option value="${a.id}" ${v.application_id === a.id ? 'selected' : ''}>${esc(studentName(s))} · ${esc(schoolName(byId(S.jp_schools, a.school_id)))} · ${esc(intakeLabel(a.intake))}</option>`; }).join('')}</select></label>
+    <label class="f">অবস্থা<select name="status">${Object.entries(COMM_ST).map(([k, l]) => `<option value="${k}" ${v.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">কমিশন (¥, স্কুলের হিসাবে)<input name="amount_yen" type="number" min="0" step="1000" value="${esc(v.amount_yen ?? '')}"></label>
+    <label class="f">পাওয়ার কথা কবে<input name="expected_on" type="date" value="${esc(v.expected_on || '')}"></label>
+    <label class="f">হাতে পেয়েছি (৳)<input name="amount_bdt" type="number" min="0" step="1" value="${esc(v.amount_bdt ?? '')}"></label>
+    <label class="f">পাওয়ার তারিখ<input name="received_on" type="date" value="${esc(v.received_on || '')}"></label>
+    <label class="f full">নোট<input name="note" value="${esc(v.note || '')}" placeholder="যেমন: ব্যাংক ট্রান্সফার, ২ জন ছাত্রের জন্য একসাথে"></label>
+    <p class="full small muted" style="margin:0">"পেয়েছি" হলে টাকার অঙ্ক (৳) "খরচ ও লাভ" আর রিপোর্টের আয়ে যোগ হবে, পাওয়ার তারিখের মাসে।</p>
+    <div class="full row" style="justify-content:flex-end">${c && isAdmin() ? '<button type="button" class="btn ghost" id="cmd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="cmc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  const f = $('#cmf'); $('#cmc').onclick = closeModal;
+  f.application_id.onchange = () => { const a = byId(S.applications, f.application_id.value); if (a) f.school_id.value = a.school_id; };
+  f.status.onchange = () => { if (f.status.value === 'received' && !f.received_on.value) f.received_on.value = todayISO(); };
+  const del = $('#cmd'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox('এই কমিশনের রেকর্ড মুছে যাবে।'))) return; try { await API.remove('commissions', c.id); S.commissions = S.commissions.filter(x => x.id !== c.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(f); d.application_id = d.application_id || null;
+    const a = byId(S.applications, d.application_id); d.student_id = a ? a.student_id : null;
+    if (d.status === 'received' && !(d.amount_bdt > 0)) return toast('হাতে কত টাকা (৳) পেয়েছেন লিখুন', true);
+    if (d.status === 'received' && !d.received_on) d.received_on = todayISO();
+    const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    try { putLocal('commissions', c ? await API.update('commissions', c.id, d) : await API.insert('commissions', d)); closeModal(); toast('সংরক্ষণ হয়েছে'); render(); }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+
+function viewJapanIncome(q, tabs, bindTabs) {
+  const y = q.get('y') || todayISO().slice(0, 4);
+  const inYear = (d) => (d || '').startsWith(y);
+  const procStudents = S.students.filter(s => num(s.processing_fee) > 0 || S.payments.some(p => p.student_id === s.id && p.purpose === 'processing'));
+  const procAgreed = procStudents.reduce((a, s) => a + num(s.processing_fee), 0);
+  const procGot = S.payments.filter(p => p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0);
+  const procYear = S.payments.filter(p => p.purpose === 'processing' && inYear(p.paid_on)).reduce((a, p) => a + num(p.amount), 0);
+  const commGot = S.commissions.filter(c => c.status === 'received' && inYear(c.received_on)).reduce((a, c) => a + num(c.amount_bdt), 0);
+  const commWait = S.commissions.filter(c => c.status === 'expected');
+  const jpExp = S.expenses.filter(x => x.category === 'japan' && inYear(x.spent_on)).reduce((a, x) => a + num(x.amount), 0);
+  const done = S.applications.filter(a => ['coe_granted', 'visa', 'departed'].includes(a.status));
+  const noComm = done.filter(a => !S.commissions.some(c => c.application_id === a.id));
+  const years = [...new Set([todayISO().slice(0, 4), ...S.payments.filter(p => p.purpose === 'processing').map(p => (p.paid_on || '').slice(0, 4)), ...S.commissions.map(c => (c.received_on || c.expected_on || '').slice(0, 4))].filter(Boolean))].sort().reverse();
+  const comms = [...S.commissions].sort((a, b) => (b.received_on || b.expected_on || '').localeCompare(a.received_on || a.expected_on || ''));
+  mount('#/japan', `
+  <div class="top"><div><h1>জাপান আবেদন</h1><p>জাপান প্রসেসিং থেকে আয়: ছাত্রের প্রসেসিং ফি আর স্কুলের কমিশন</p></div><div class="row"><select id="yr">${years.map(x => `<option ${x === y ? 'selected' : ''}>${x}</option>`).join('')}</select><button class="btn" id="ncm">+ কমিশন</button></div></div>
+  ${tabs}
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat green"><div class="l">${y}-এ প্রসেসিং ফি পেয়েছি</div><div class="v">${tk(procYear)}</div><div class="s">মোট বাকি ${tk(Math.max(0, procAgreed - procGot))}</div></div>
+    <div class="card stat green"><div class="l">${y}-এ কমিশন পেয়েছি</div><div class="v">${tk(commGot)}</div><div class="s">${commWait.length ? commWait.length + 'টি পাওয়ার কথা' : ''}</div></div>
+    <div class="card stat red"><div class="l">${y}-এ জাপান প্রসেসিং খরচ</div><div class="v">${tk(jpExp)}</div><div class="s">খরচের খাত "জাপান প্রসেসিং খরচ"</div></div>
+    <div class="card stat ${procYear + commGot - jpExp < 0 ? 'red' : 'green'}"><div class="l">জাপান প্রসেসিং-এর লাভ</div><div class="v">${tk(procYear + commGot - jpExp)}</div><div class="s">ফি + কমিশন − খরচ</div></div>
+  </div>
+  ${noComm.length ? `<div class="alertbar" style="margin-bottom:14px"><b>${noComm.length} জন COE/ভিসা পেয়েছে, কিন্তু কমিশন লেখা হয়নি</b><span>${noComm.slice(0, 4).map(a => esc(studentName(byId(S.students, a.student_id))) + ' · ' + esc(schoolName(byId(S.jp_schools, a.school_id)))).join(' · ')}</span></div>` : ''}
+  <div class="card" style="margin-bottom:16px"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">স্কুল থেকে কমিশন</h2></div>${comms.length ? `<div class="tw"><table class="stack"><tr><th>স্কুল</th><th>ছাত্র</th><th>অবস্থা</th><th class="num">¥</th><th class="num">৳ পেয়েছি</th><th>তারিখ</th></tr>${comms.map(c => `<tr class="click" data-cm="${c.id}"><td class="mt" data-l=""><span><b>${esc(schoolName(byId(S.jp_schools, c.school_id)))}</b></span></td><td class="dm"><b>${esc(schoolName(byId(S.jp_schools, c.school_id)))}</b></td><td data-l="ছাত্র">${c.student_id ? esc(studentName(byId(S.students, c.student_id))) : '<span class="muted">—</span>'}</td><td data-l="অবস্থা">${badge(COMM_CLS[c.status], COMM_ST[c.status] || c.status)}</td><td class="num" data-l="¥">${c.amount_yen ? yen(c.amount_yen) : '—'}</td><td class="num" data-l="৳ পেয়েছি">${c.amount_bdt ? tk(c.amount_bdt) : '—'}</td><td data-l="তারিখ">${c.status === 'received' ? fmtD(c.received_on) : c.expected_on ? (c.expected_on < todayISO() ? badge('due', fmtD(c.expected_on)) : fmtD(c.expected_on)) : '—'}</td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো কমিশনের রেকর্ড নেই। কোনো ছাত্র COE পেলে বা জাপানে গেলে স্কুল যে কমিশন দেয়, এখানে লিখে রাখুন।</div>'}
+    ${noComm.length ? `<div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap"><span class="small muted">দ্রুত যোগ:</span>${noComm.slice(0, 6).map(a => `<button class="btn sm ghost" data-qc="${a.id}">${esc(studentName(byId(S.students, a.student_id)))}</button>`).join('')}</div>` : ''}</div>
+  <div class="card"><h2>ছাত্রদের প্রসেসিং ফি</h2>${procStudents.length ? `<div class="tw"><table class="stack"><tr><th>ছাত্র</th><th class="num">চুক্তি</th><th class="num">পেয়েছি</th><th class="num">বাকি</th></tr>${procStudents.map(s => { const pd = procPaidOf(s.id); const due = procDueOf(s); return `<tr class="click" data-go="#/student/${s.id}?t=fees"><td class="mt" data-l=""><span><b>${esc(studentName(s))}</b></span></td><td class="dm"><b>${esc(studentName(s))}</b><div class="small muted">${esc(s.admission_no)}</div></td><td class="num" data-l="চুক্তি">${tk(s.processing_fee)}</td><td class="num" data-l="পেয়েছি">${tk(pd)}</td><td class="num" data-l="বাকি">${due ? `<b style="color:var(--red)">${tk(due)}</b>` : badge('paid', 'পরিশোধিত')}</td></tr>`; }).join('')}</table></div>` : '<div class="empty">কোনো ছাত্রের প্রসেসিং ফি ঠিক করা হয়নি। ছাত্রের তথ্য সম্পাদনায় "জাপান প্রসেসিং ফি" লিখুন, আর টাকা জমার সময় "বাবদ: জাপান প্রসেসিং ফি" বেছে নিন।</div>'}</div>`, () => {
+    bindTabs(); bindGo();
+    $('#yr').onchange = (e) => { location.hash = '#/japan?v=income&y=' + e.target.value; };
+    $('#ncm').onclick = () => commissionModal(null);
+    $$('[data-cm]').forEach(tr => tr.onclick = () => commissionModal(byId(S.commissions, tr.dataset.cm)));
+    $$('[data-qc]').forEach(b => b.onclick = () => { const a = byId(S.applications, b.dataset.qc); commissionModal(null, { application_id: a.id, school_id: a.school_id }); });
+  });
+}
+
 // ------------------------------------------------------------------ reports
 function viewReports() {
   const smap = sessionMap();
   const months = []; const d = new Date(); d.setDate(1);
   for (let i = 11; i >= 0; i--) { const x = new Date(d.getFullYear(), d.getMonth() - i, 1); months.push(`${x.getFullYear()}-${pad(x.getMonth() + 1, 2)}`); }
-  const inc = months.map(m => S.payments.filter(p => (p.paid_on || '').startsWith(m)).reduce((a, p) => a + num(p.amount), 0));
+  const inc = months.map(m => incomeOf(m));
   const exp = months.map(m => monthSum(S.expenses, 'spent_on', m));
   const max = Math.max(1, ...inc, ...exp);
   const W = 760, H = 220, L = 46, bw = (W - L) / months.length, bar = Math.max(6, (bw - 14) / 2);
@@ -1708,9 +1786,13 @@ async function seedDemo() {
   await Local.insert('documents', { student_id: made[0].id, doc_type: 'bank', status: 'received', issued_on: iso2(-95), note: '' });
   await Local.insert('documents', { student_id: made[2].id, doc_type: 'passport', status: 'received', expires_on: iso2(1500), note: '' });
   await Local.insert('documents', { student_id: made[2].id, doc_type: 'sponsor', status: 'received', issued_on: iso2(-80), note: '' });
+  await Local.update('students', made[0].id, { processing_fee: 50000 });
+  await Local.insert('payments', { student_id: made[0].id, receipt_no: 'SJI-R-' + pad(++r, 5), paid_on: iso2(-3), amount: 20000, method: 'bank', purpose: 'processing' });
   const t1 = await Local.insert('teachers', { name: 'ডেমো শিক্ষক এক', phone: '01600-000001', levels: 'N5', qualification: 'JLPT N2', pay_type: 'hourly', rate: 500, joined_on: iso(base), active: true });
   const t2 = await Local.insert('teachers', { name: 'ডেমো শিক্ষিকা দুই', phone: '01600-000002', levels: 'N5, N4', qualification: 'জাপানে ৫ বছর', pay_type: 'monthly', rate: 15000, joined_on: iso(base), active: true });
   await Local.insert('expenses', { spent_on: iso2(-1), category: 'salary', amount: 5000, method: 'bkash', paid_to: t1.name, teacher_id: t1.id, period: monthISO(iso2(-1)), note: 'অগ্রিম বেতন' });
+  const ga = (await Promise.resolve(Local.read('applications'))).find(a => a.status === 'coe_granted');
+  if (ga) await Local.insert('commissions', { school_id: ga.school_id, application_id: ga.id, student_id: ga.student_id, status: 'received', amount_yen: 50000, amount_bdt: 40000, received_on: iso2(-1), note: 'ডেমো তথ্য' });
   for (let k = 0; k < 12; k++) {
     const dt = new Date(base); dt.setDate(base.getDate() + k * 2); if (dt > new Date()) break;
     for (const batch of ['morning', 'evening']) {
@@ -1744,7 +1826,8 @@ function headHtml() {
 }
 function printReceipt(p) {
   if (!p) return; const s = byId(S.students, p.student_id) || {};
-  const paidTotal = paidOf(s.id); const due = s.id ? dueOf(s) : 0;
+  const proc = p.purpose === 'processing';
+  const paidTotal = proc ? procPaidOf(s.id) : paidOf(s.id); const due = s.id ? (proc ? procDueOf(s) : dueOf(s)) : 0; const feeTotal = proc ? num(s.processing_fee) : netFee(s);
   const copy = (label) => `<div style="border:1.5px solid #A3843A;margin-bottom:14px;page-break-inside:avoid">${headHtml()}
   <div style="padding:14px 18px"><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px"><div><div style="font:700 11px 'Shippori Mincho B1';letter-spacing:3px;color:#A3843A">MONEY RECEIPT</div><div style="font:800 20px 'Noto Serif Bengali'">ফি-র রশিদ</div></div>
   <div style="text-align:right;font-size:13px"><span style="background:#C8372B;color:#fff;padding:2px 10px;border-radius:4px;font-weight:700">${label}</span><br>রশিদ নং: <b>${esc(p.receipt_no)}</b> · তারিখ: <b>${fmtD(p.paid_on)}</b></div></div>
@@ -1752,7 +1835,7 @@ function printReceipt(p) {
   <tr><th>কোর্স / ব্যাচ</th><td>${esc(s.package || '')} · ${esc(BATCH[s.batch] || '')}</td></tr><tr><th>বাবদ</th><td>${esc(PURPOSE[p.purpose] || p.purpose)}</td></tr>
   <tr><th>মাধ্যম</th><td>${esc(METHOD[p.method] || p.method)}${p.trx_id ? ' · TrxID: ' + esc(p.trx_id) : ''}</td></tr>
   <tr><th>টাকার পরিমাণ</th><td><b style="font-size:17px;color:#C8372B">${tk(p.amount)}</b><br><span style="font-size:12px">In words: Taka ${words(p.amount)} only</span></td></tr>
-  <tr><th>মোট ফি · মোট পরিশোধিত · বকেয়া</th><td>${tk(netFee(s))} · ${tk(paidTotal)} · <b>${tk(due)}</b>${s.next_due_date && due ? ' · পরের কিস্তি ' + fmtD(s.next_due_date) : ''}</td></tr></table>
+  <tr><th>${proc ? 'প্রসেসিং ফি' : 'মোট ফি'} · মোট পরিশোধিত · বকেয়া</th><td>${tk(feeTotal)} · ${tk(paidTotal)} · <b>${tk(due)}</b>${s.next_due_date && due && !proc ? ' · পরের কিস্তি ' + fmtD(s.next_due_date) : ''}</td></tr></table>
   <div style="display:flex;justify-content:space-between;margin-top:34px;font-size:12.5px"><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px">প্রদানকারীর স্বাক্ষর</div><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px;text-align:right">গ্রহণকারীর স্বাক্ষর ও সিল</div></div>
   <div style="font-size:11px;color:#6E665A;margin-top:8px">ফেরত নীতি: ক্লাস শুরুর অন্তত ৩ দিন আগে বাতিল করলে ৮০% ফেরত। রশিদটি যত্নে রাখুন।</div></div></div>`;
   printWindow('Receipt ' + p.receipt_no, copy('অফিস কপি') + '<div style="border-top:1.5px dashed #8A7F6C;margin:4px 0 14px"></div>' + copy('ছাত্র কপি'));
@@ -1889,7 +1972,7 @@ function localParentView(tok) { // demo mode: same shape as the database functio
   return {
     institute: { bn: st.institute_bn, en: st.institute_en, ja: st.institute_ja, phone: st.phone, whatsapp: st.whatsapp, address: st.address },
     student: s,
-    payments: read('payments').filter(p => p.student_id === s.id).map(p => ({ paid_on: p.paid_on, receipt_no: p.receipt_no, amount: p.amount, method: p.method })).sort(by('paid_on')),
+    payments: read('payments').filter(p => p.student_id === s.id).map(p => ({ paid_on: p.paid_on, receipt_no: p.receipt_no, amount: p.amount, method: p.method, purpose: p.purpose })).sort(by('paid_on')),
     attendance: read('attendance').filter(a => a.student_id === s.id && ss.has(a.session_id)).map(a => { const x = ss.get(a.session_id); return { date: x.class_date, level: x.level, hours: x.hours, topic: x.topic, status: a.status }; }).sort(by('date')),
     exams: read('exam_results').filter(r => r.student_id === s.id && ex.has(r.exam_id)).map(r => { const e = ex.get(r.exam_id); return { date: e.exam_date, title: e.title, type: e.type, level: e.level, max_marks: e.max_marks, pass_marks: e.pass_marks, marks: r.marks, absent: r.absent }; }).sort(by('date')),
     documents: read('documents').filter(d => d.student_id === s.id).map(d => ({ doc_type: d.doc_type, status: d.status, expires_on: d.expires_on })),
@@ -1906,7 +1989,8 @@ async function renderParent(tok) {
   catch (e) { app.innerHTML = `<div class="login"><div class="card"><h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">আবার চেষ্টা</button></div></div>`; return; }
   if (!d) { app.innerHTML = `<div class="login"><div class="card"><span class="kamon" style="width:56px;height:56px;display:grid;place-items:center;margin-bottom:10px">${KAMON}</span><h1>লিংকটি কাজ করছে না</h1><p>লিংকটি ভুল, অথবা প্রতিষ্ঠান থেকে বন্ধ করে নতুন লিংক দেওয়া হয়েছে। নতুন লিংকের জন্য অফিসে যোগাযোগ করুন।</p></div></div>`; return; }
   const I = d.institute || {}; const s = d.student || {};
-  const net = Math.max(0, num(s.total_fee) - num(s.discount)); const paid = (d.payments || []).reduce((a, p) => a + num(p.amount), 0); const due = Math.max(0, net - paid);
+  const net = Math.max(0, num(s.total_fee) - num(s.discount)); const paid = (d.payments || []).filter(p => p.purpose !== 'processing').reduce((a, p) => a + num(p.amount), 0); const due = Math.max(0, net - paid);
+  const procPaid = (d.payments || []).filter(p => p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0); const procDue = Math.max(0, num(s.processing_fee) - procPaid);
   const att = d.attendance || []; const came = att.filter(a => a.status === 'present' || a.status === 'late').length; const pct = att.length ? Math.round(came * 100 / att.length) : null;
   const hours = att.filter(a => a.status === 'present' || a.status === 'late').reduce((a, x) => a + num(x.hours), 0);
   const exams = (d.exams || []).map(e => { const p = e.absent || e.marks == null || !num(e.max_marks) ? null : Math.round(num(e.marks) * 100 / num(e.max_marks)); const pm = e.pass_marks != null ? num(e.pass_marks) : Math.ceil(num(e.max_marks) * 0.6); return { ...e, p, ok: !e.absent && e.marks != null && num(e.marks) >= pm }; });
@@ -1927,8 +2011,8 @@ async function renderParent(tok) {
   ${pct != null && pct < 80 ? '<div class="alertbar red" style="margin-bottom:14px"><b>উপস্থিতি ৮০%-এর কম</b><span>জাপানে পড়তে যাওয়ার আবেদনের জন্য অন্তত ৮০% উপস্থিতি দরকার। নিয়মিত ক্লাসে পাঠান।</span></div>' : ''}
   <div class="card" style="margin-bottom:14px"><h2>সাম্প্রতিক হাজিরা</h2>${att.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>পাঠ</th><th>হাজিরা</th></tr>${att.slice(0, 15).map(a => `<tr><td>${fmtD(a.date)}</td><td>${esc(a.topic || a.level || '—')}</td><td>${badge(a.status === 'present' ? 'active' : a.status === 'late' ? 'trial' : a.status === 'leave' ? 'completed' : 'due', ATT[a.status] || a.status)}</td></tr>`).join('')}</table></div>${att.length > 15 ? `<p class="small muted">সর্বশেষ ১৫টি ক্লাস দেখানো হচ্ছে (মোট ${att.length}টি)।</p>` : ''}` : '<div class="empty">এখনো হাজিরা নেওয়া হয়নি</div>'}</div>
   <div class="card" style="margin-bottom:14px"><h2>পরীক্ষার রেজাল্ট</h2>${exams.length ? `<div class="tw"><table><tr><th>তারিখ</th><th>পরীক্ষা</th><th class="num">নম্বর</th><th>ফল</th></tr>${exams.map(e => `<tr><td>${fmtD(e.date)}</td><td>${esc(e.title)}<div class="small muted">${esc(EXAM_TYPE[e.type] || '')}</div></td><td class="num">${e.absent ? '—' : `${num(e.marks)} / ${num(e.max_marks)}`}${e.p != null ? `<div class="small muted">${e.p}%</div>` : ''}</td><td>${e.absent ? badge('dropped', 'অনুপস্থিত') : e.ok ? badge('active', 'পাস') : badge('due', 'পাস করেনি')}</td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো পরীক্ষা হয়নি</div>'}</div>
-  <div class="card" style="margin-bottom:14px"><h2>ফি পরিশোধ</h2><dl class="kv"><dt>মোট ফি</dt><dd>${tk(s.total_fee)}${num(s.discount) ? ` (ছাড় ${tk(s.discount)})` : ''}</dd><dt>দেওয়া হয়েছে</dt><dd>${tk(paid)}</dd><dt>বকেয়া</dt><dd><b style="color:${due ? 'var(--red)' : 'var(--green)'}">${tk(due)}</b></dd></dl>
-    ${(d.payments || []).length ? `<div class="tw" style="margin-top:10px"><table><tr><th>তারিখ</th><th>রশিদ নং</th><th class="num">টাকা</th></tr>${d.payments.map(p => `<tr><td>${fmtD(p.paid_on)}</td><td>${esc(p.receipt_no)}<div class="small muted">${esc(METHOD[p.method] || '')}</div></td><td class="num">${tk(p.amount)}</td></tr>`).join('')}</table></div>` : ''}</div>
+  <div class="card" style="margin-bottom:14px"><h2>ফি পরিশোধ</h2><dl class="kv"><dt>মোট ফি</dt><dd>${tk(s.total_fee)}${num(s.discount) ? ` (ছাড় ${tk(s.discount)})` : ''}</dd><dt>দেওয়া হয়েছে</dt><dd>${tk(paid)}</dd><dt>বকেয়া</dt><dd><b style="color:${due ? 'var(--red)' : 'var(--green)'}">${tk(due)}</b></dd>${num(s.processing_fee) || procPaid ? `<dt>জাপান প্রসেসিং ফি</dt><dd>${tk(s.processing_fee)} · দেওয়া ${tk(procPaid)} · <b style="color:${procDue ? 'var(--red)' : 'var(--green)'}">বাকি ${tk(procDue)}</b></dd>` : ''}</dl>
+    ${(d.payments || []).length ? `<div class="tw" style="margin-top:10px"><table><tr><th>তারিখ</th><th>রশিদ নং</th><th class="num">টাকা</th></tr>${d.payments.map(p => `<tr><td>${fmtD(p.paid_on)}</td><td>${esc(p.receipt_no)}<div class="small muted">${esc(PURPOSE[p.purpose] || '')} · ${esc(METHOD[p.method] || '')}</div></td><td class="num">${tk(p.amount)}</td></tr>`).join('')}</table></div>` : ''}</div>
   ${stageIdx > 0 || (d.applications || []).length ? `<div class="card" style="margin-bottom:14px"><h2>জাপানে পড়তে যাওয়ার অবস্থা</h2><div class="steps">${JSTAGES.slice(1).map(([k, l], i) => `<span class="${i + 1 < stageIdx ? 'done' : i + 1 === stageIdx ? 'cur' : ''}">${i + 1}. ${l}</span>`).join('')}</div>
     ${(d.applications || []).length ? `<div class="tw" style="margin-top:12px"><table><tr><th>স্কুল</th><th>সেশন</th><th>অবস্থা</th></tr>${d.applications.map(a => `<tr><td>${esc(a.school)}<div class="small muted">${esc(a.city || '')}</div></td><td>${esc(intakeLabel(a.intake))}</td><td>${badge(APP_CLS[a.status], APP_ST[a.status] || a.status)}${a.interview_on && ['submitted', 'interview'].includes(a.status) ? `<div class="small muted">ইন্টারভিউ ${fmtD(a.interview_on)}</div>` : ''}</td></tr>`).join('')}</table></div>` : ''}
     <p class="small" style="margin:12px 0 4px"><b>${docsDone} / ${DOC_TYPES.length}</b> কাগজ জমা হয়েছে</p><div class="pdocs">${DOC_TYPES.map(([k, l]) => { const x = docs.get(k); const ok = x && x.status !== 'missing'; return `<span class="${ok ? 'ok' : ''}">${ok ? '✓' : '○'} ${l}</span>`; }).join('')}</div></div>` : ''}
