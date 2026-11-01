@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS = {
   alert_passport_months: 6,
   alert_fresh_days: 90,
   alert_deadline_days: 14,
+  id_valid_months: 12,
   fees: { 'N5': 20000, 'N4': 20000, 'N3': 22000, 'N5+N4': 35000, 'N5+N4+N3': 45000 },
   textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' },
   wa_due: 'আসসালামু আলাইকুম। {institute} থেকে বলছি। {name}-এর কোর্স ফি বাবদ {due} বকেয়া আছে{date}। অনুগ্রহ করে সময়মতো পরিশোধ করবেন। ধন্যবাদ। যোগাযোগ: {phone}',
@@ -424,7 +425,7 @@ function viewStudents(q) {
     return true;
   }).sort((a, b) => (b.admission_no || '').localeCompare(a.admission_no || ''));
   mount('#/students', `
-  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><a class="btn" href="#/students/new">+ নতুন ছাত্র</a></div>
+  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}<a class="btn" href="#/students/new">+ নতুন ছাত্র</a></div></div>
   <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
     <input class="search" name="s" placeholder="নাম, ভর্তি নম্বর বা ফোন দিয়ে খুঁজুন" value="${esc(f.s)}">
     <select name="l"><option value="">সব লেভেল</option>${LEVELS.map(l => `<option ${f.l === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -436,6 +437,7 @@ function viewStudents(q) {
   () => {
     $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); const p = new URLSearchParams(Object.entries(d).filter(([, v]) => v)); location.hash = '#/students?' + p; };
     $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
+    const ia = $('#idall'); if (ia) ia.onclick = () => printIdCards([...list].sort((a, b) => (a.admission_no || '').localeCompare(b.admission_no || '')));
     bindGo();
   });
 }
@@ -542,9 +544,10 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
+  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
+    $('#idc').onclick = () => printIdCards([s]);
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
       if (S.payments.some(p => p.student_id === s.id)) return toast('এই ছাত্রের টাকা জমার রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "বাদ দিয়েছে" করে দিন।', true);
@@ -1196,6 +1199,7 @@ function viewSettings() {
     <label class="f">পাসপোর্টের মেয়াদ কত মাসের কম হলে সতর্কতা<input name="alert_passport_months" type="number" min="1" max="24" value="${esc(st.alert_passport_months)}" ${ro}></label>
     <label class="f">ব্যাংক / আয়ের কাগজ কত দিন পর পুরোনো<input name="alert_fresh_days" type="number" min="30" max="365" value="${esc(st.alert_fresh_days)}" ${ro}></label>
     <label class="f">আবেদনের শেষ তারিখের কত দিন আগে সতর্কতা<input name="alert_deadline_days" type="number" min="1" max="90" value="${esc(st.alert_deadline_days)}" ${ro}></label>
+    <label class="f">আইডি কার্ডের মেয়াদ (ক্লাস শুরু থেকে কত মাস)<input name="id_valid_months" type="number" min="1" max="60" value="${esc(st.id_valid_months)}" ${ro}></label>
     <h3>কোর্স ফি (৳)</h3>
     ${PACKAGES.map(p => `<label class="f">${p}<input name="fee_${p}" type="number" min="0" value="${esc(st.fees[p])}" ${ro}></label>`).join('')}
     <h3>WhatsApp মেসেজের লেখা</h3>
@@ -1215,7 +1219,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14 };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12 };
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
@@ -1333,6 +1337,72 @@ function printTranscript(s) {
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
   <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div></div>`);
+}
+
+// ------------------------------------------------------------------ student ID cards (85.6 × 54 mm, front + back side by side)
+let _qrLib = null;
+function loadQR() {
+  if (window.qrcode) return Promise.resolve(window.qrcode);
+  if (_qrLib) return _qrLib;
+  _qrLib = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; sc.onload = () => res(window.qrcode); sc.onerror = () => { _qrLib = null; rej(new Error('QR কোড তৈরির ফাইল লোড হয়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন')); }; document.head.appendChild(sc); });
+  return _qrLib;
+}
+const profileLink = (s) => `${location.origin}${location.pathname}#/student/${s.id}`;
+function qrSvg(text) { const q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
+function cardValidTill(s) { const from = s.start_date || s.admission_date || todayISO(); return addMonthsISO(from, num(S.settings.id_valid_months) || 12); }
+
+async function printIdCards(list) {
+  list = list.filter(Boolean);
+  if (!list.length) return toast('কার্ড প্রিন্ট করার মতো কোনো ছাত্র নেই', true);
+  const w = window.open('', '_blank'); // open first so the pop-up blocker allows it
+  if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  w.document.write('<p style="font-family:sans-serif;padding:20px">কার্ড তৈরি হচ্ছে…</p>');
+  try { await loadQR(); } catch (e) { w.close(); return toast(errMsg(e), true); }
+  const photos = {};
+  await Promise.all(list.map(async s => { const d = S.documents.find(x => x.student_id === s.id && x.doc_type === 'photo' && x.file_path); if (d) try { photos[s.id] = await API.fileUrl(d.file_path); } catch { /* no photo */ } }));
+  const st = S.settings;
+  const card = (s) => `<div class="pair">
+    <div class="card front"><div class="band"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">STUDENT ID</span></div>
+      <div class="body"><div class="ph">${photos[s.id] ? `<img src="${esc(photos[s.id])}" alt="">` : `<span>${esc(initials(s))}</span>`}</div>
+      <div class="info"><div class="en">${esc(s.name_en || s.name_bn)}</div><div class="bn">${esc(s.name_bn || '')}</div>
+      <dl><dt>ID No.</dt><dd><b>${esc(s.admission_no)}</b></dd><dt>Course</dt><dd>JLPT ${esc(s.package)} · ${esc(s.current_level)}</dd><dt>Batch</dt><dd>${s.batch === 'evening' ? 'Evening 6–8 PM' : 'Morning 10–12 AM'}</dd><dt>Valid till</dt><dd>${fmtD(cardValidTill(s))}</dd></dl></div></div>
+      <div class="strip"></div></div>
+    <div class="card back"><div class="bbody"><div class="qr">${qrSvg(profileLink(s))}<small>${esc(s.admission_no)}</small></div>
+      <div class="btxt"><b style="font-family:'Noto Serif Bengali'">${esc(st.institute_bn)}</b>
+      <p>এই কার্ড প্রতিষ্ঠানের সম্পত্তি। কার্ডটি পেলে নিচের নম্বরে জানান। ক্লাসে কার্ড সাথে রাখুন।</p>
+      <p>অফিস: <b>${esc(st.phone)}</b><br>WhatsApp: ${esc(st.whatsapp)}${s.guardian_phone ? `<br>অভিভাবক: ${esc(s.guardian_phone)}` : ''}${st.address ? `<br>${esc(st.address)}` : ''}</p>
+      <div class="sig"><span></span>Director · ${esc(st.director_en)}</div></div></div>
+      <div class="bfoot">${esc(st.institute_ja)} · Japanese language · Study in Japan</div></div></div>`;
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>ID cards (${list.length})</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">
+  <style>@page{size:A4;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:'Hind Siliguri',sans-serif;color:#26231E;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sheet{display:flex;flex-direction:column;gap:2.5mm;align-items:center}
+  .pair{display:flex;gap:0;page-break-inside:avoid;break-inside:avoid}
+  .card{width:85.6mm;height:54mm;border:.2mm dashed #9B907C;position:relative;overflow:hidden;background:#FBF8F1}
+  .band{height:13mm;background:#1B2945;color:#fff;display:flex;align-items:center;gap:2mm;padding:0 2.5mm;border-bottom:.8mm solid #A3843A}
+  .km{width:9mm;height:9mm;border-radius:50%;background:#FBF8F1;border:.4mm solid #C9A95C;display:grid;place-items:center;flex:none}
+  .nm{display:flex;flex-direction:column;line-height:1.15}.nm b{font:800 8.6pt 'Shippori Mincho B1',serif}.nm span{font:700 6.6pt 'Shippori Mincho B1';color:#E2C987;letter-spacing:.6mm}
+  .tag{margin-left:auto;background:#C8372B;font:700 5.8pt sans-serif;letter-spacing:.3mm;padding:.8mm 1.6mm;border-radius:.8mm}
+  .body{display:flex;gap:2.8mm;padding:2.6mm 3mm 0}
+  .ph{width:20mm;height:25mm;border:.5mm solid #A3843A;background:#EFE6D3;display:grid;place-items:center;flex:none;overflow:hidden}
+  .ph img{width:100%;height:100%;object-fit:cover}.ph span{font:800 18pt 'Shippori Mincho B1';color:#A3843A}
+  .info{min-width:0;flex:1}.en{font:800 9.4pt 'Shippori Mincho B1',serif;color:#1B2945;line-height:1.15;text-transform:uppercase}.bn{font:700 8pt 'Noto Serif Bengali';margin-bottom:1mm}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:.3mm 2mm;margin:0;font-size:6.6pt;line-height:1.35}dt{color:#6E665A}dd{margin:0}
+  .strip{position:absolute;left:0;right:0;bottom:0;height:2.2mm;background:#C8372B}
+  .bbody{display:flex;gap:3mm;padding:3.5mm 3.2mm 0}
+  .qr{width:25mm;flex:none;text-align:center}.qr svg{width:25mm;height:25mm;display:block}.qr small{font-size:6pt;color:#6E665A}
+  .btxt{font-size:6.4pt;line-height:1.4;min-width:0}.btxt b{font-size:7.8pt;color:#1B2945}.btxt p{margin:.8mm 0}
+  .sig{margin-top:2.2mm;font-size:5.8pt;color:#6E665A}.sig span{display:block;width:24mm;border-top:.2mm solid #8A7F6C;margin-bottom:.4mm}
+  .bfoot{position:absolute;left:0;right:0;bottom:0;height:5mm;background:#1B2945;color:#E2C987;font:700 5.8pt 'Shippori Mincho B1';letter-spacing:.3mm;display:grid;place-items:center}
+  .help{font-size:12px;color:#6E665A;text-align:center;margin:6mm 0 3mm}
+  .print{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:8px 14px;border-radius:6px;font:inherit;cursor:pointer}@media print{.print,.help{display:none}}</style></head>
+  <body><button class="print" onclick="window.print()">প্রিন্ট / Print</button>
+  <p class="help">প্রতি সারিতে বাঁ দিকে সামনের অংশ, ডান দিকে পেছনের অংশ। দাগ বরাবর কেটে মাঝখানে ভাঁজ করে ল্যামিনেট করুন। প্রিন্টের সময় Scale "100%" / "Actual size" রাখুন।</p>
+  <div class="sheet">${list.map(card).join('')}</div></body></html>`);
+  w.document.close();
+  const imgs = [...w.document.images]; await Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* user can press the button */ } }, 900);
 }
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
