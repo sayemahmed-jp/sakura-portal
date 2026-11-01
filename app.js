@@ -808,7 +808,7 @@ function viewLeads(q) {
   const dueToday = S.inquiries.filter(l => open(l) && l.next_follow_up && l.next_follow_up <= today).length;
   const bySrc = {}; S.inquiries.forEach(l => { const k = l.source || 'other'; bySrc[k] = bySrc[k] || { n: 0, j: 0 }; bySrc[k].n++; if (l.status === 'joined') bySrc[k].j++; });
   mount('#/leads', `
-  <div class="top"><div><h1>আগ্রহী ছাত্র</h1><p>যারা জিজ্ঞেস করেছে, তাদের ফলো-আপ আর ভর্তি</p></div><button class="btn" id="nl">+ নতুন আগ্রহী</button></div>
+  <div class="top"><div><h1>আগ্রহী ছাত্র</h1><p>যারা জিজ্ঞেস করেছে, তাদের ফলো-আপ আর ভর্তি</p></div><div class="row"><button class="btn ghost" id="weblink">ওয়েবসাইটের লিংক</button><button class="btn" id="nl">+ নতুন আগ্রহী</button></div></div>
   <div class="grid g4" style="margin-bottom:16px">
     <div class="card stat"><div class="l">এ মাসে নতুন জিজ্ঞাসা</div><div class="v">${thisMonth.length}</div><div class="s">মোট ${S.inquiries.length} জন</div></div>
     <div class="card stat green"><div class="l">ভর্তি হয়েছে</div><div class="v">${joined}</div><div class="s">এ মাসে ${thisMonth.filter(l => l.status === 'joined').length} জন</div></div>
@@ -822,11 +822,22 @@ function viewLeads(q) {
   <div class="tw">${list.length ? `<table class="stack"><tr><th>নাম</th><th>কী চায়</th><th>উৎস</th><th>অবস্থা</th><th>ফলো-আপ</th><th></th></tr>${list.map(l => `<tr class="click" data-lead="${l.id}"><td class="mt" data-l=""><span><b>${esc(l.name)}</b><span class="small muted"> · ${esc(l.phone)}</span></span></td><td class="dm"><b>${esc(l.name)}</b><div class="small muted">${esc(l.phone)}</div></td><td data-l="কী চায়">${esc(LEAD_INT[l.interest] || l.interest)}</td><td data-l="উৎস">${esc(LEAD_SRC[l.source] || l.source)}</td><td data-l="অবস্থা">${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td data-l="ফলো-আপ">${!open(l) || !l.next_follow_up ? '<span class="muted">—</span>' : l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : l.next_follow_up === today ? badge('trial', 'আজ') : fmtD(l.next_follow_up)}</td><td class="num" data-l=""><div class="row" style="gap:6px;justify-content:flex-end;flex-wrap:nowrap">${waBtn(l.phone, leadMsg(l), '')}${l.status === 'joined' && l.student_id ? `<a class="btn sm ghost" href="#/student/${l.student_id}" data-stop>প্রোফাইল</a>` : l.status !== 'lost' ? `<a class="btn sm gold" href="#/students/new?lead=${l.id}" data-stop>ভর্তি করুন</a>` : ''}</div></td></tr>`).join('')}</table>` : '<div class="empty">এই তালিকায় কেউ নেই। কেউ ফোন করলে বা ফেসবুকে মেসেজ দিলে "+ নতুন আগ্রহী" দিয়ে লিখে রাখুন।</div>'}</div>
   ${Object.keys(bySrc).length ? `<div class="card" style="margin-top:16px"><h2>কোথা থেকে ছাত্র আসছে</h2><div class="tw"><table><tr><th>উৎস</th><th class="num">জিজ্ঞাসা</th><th class="num">ভর্তি</th></tr>${Object.entries(bySrc).sort((a, b) => b[1].n - a[1].n).map(([k, v]) => `<tr><td>${esc(LEAD_SRC[k] || k)}</td><td class="num">${v.n}</td><td class="num">${v.j}</td></tr>`).join('')}</table></div><p class="small muted">যে উৎস থেকে বেশি ভর্তি হয়, বিজ্ঞাপনের টাকা সেখানে বেশি দিন।</p></div>` : ''}`, () => {
     $('#nl').onclick = () => leadModal(null);
+    $('#weblink').onclick = websiteModal;
     $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); location.hash = '#/leads?' + new URLSearchParams(Object.entries(d).filter(([, v]) => v)); };
     $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
     $$('[data-lead]').forEach(tr => tr.onclick = () => leadModal(byId(S.inquiries, tr.dataset.lead)));
     bindGo();
   });
+}
+
+const siteUrl = (src) => new URL('web/' + (src ? '?src=' + src : ''), location.href.split('#')[0]).href;
+function websiteModal() {
+  const rows = [['সাধারণ লিংক (প্রোফাইল, ভিজিটিং কার্ড)', ''], ['ফেসবুক পোস্ট ও বিজ্ঞাপনের জন্য', 'facebook'], ['WhatsApp-এ শেয়ার করার জন্য', 'whatsapp'], ['পরিচিতদের দেওয়ার জন্য', 'referral']];
+  openModal(`<h2>ওয়েবসাইট ও ভর্তির ফর্ম</h2><p class="small muted">এই লিংক যে কেউ খুলতে পারে। কেউ ফর্ম পূরণ করলে তার নাম "আগ্রহী ছাত্র" তালিকায় নিজে থেকে চলে আসবে (উৎস দেখে বুঝবেন কোথা থেকে এসেছে)। ফি আর ফোন নম্বর সেটিংস থেকে নেয়।</p>
+  ${rows.map(([l, src]) => `<div class="card" style="padding:10px;margin:8px 0"><div class="small muted">${l}</div><div class="row" style="gap:8px;flex-wrap:nowrap"><code style="flex:1;word-break:break-all;font-size:12.5px">${esc(siteUrl(src))}</code><button class="btn sm ghost" data-cp="${esc(siteUrl(src))}">কপি</button></div></div>`).join('')}
+  <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><a class="btn ghost" href="${esc(siteUrl(''))}" target="_blank" rel="noopener">ওয়েবসাইট খুলুন</a><button class="btn" id="wmc">ঠিক আছে</button></div>`);
+  $('#wmc').onclick = closeModal;
+  $$('[data-cp]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.cp); toast('লিংক কপি হয়েছে'); } catch { toast('কপি হয়নি — লিংকটা হাতে সিলেক্ট করে কপি করুন', true); } });
 }
 
 // ------------------------------------------------------------------ exams
@@ -1390,7 +1401,7 @@ function audDetail(e) {
 }
 const fmtDT = (iso) => { if (!iso) return '—'; const d = new Date(iso); return `${pad(d.getDate(), 2)}-${pad(d.getMonth() + 1, 2)}-${d.getFullYear()} ${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}`; };
 function audRows(list, { showWhere = true } = {}) {
-  return `<table class="stack"><tr><th>সময়</th><th>কে</th><th>কাজ</th>${showWhere ? '<th>কোথায়</th>' : ''}<th>কী</th><th>বিবরণ</th></tr>${list.map(e => { const [al, ac] = AUD_ACT[e.action] || [e.action, '']; const link = audLink(e); const money = MONEY_TABLES.includes(e.table_name) && e.action !== 'insert'; return `<tr class="${money ? 'audmoney' : ''}"><td data-l="সময়" style="white-space:nowrap">${fmtDT(e.at)}</td><td data-l="কে">${esc(e.user_name || (e.user_id ? 'স্টাফ' : 'সিস্টেম'))}</td><td data-l="কাজ">${badge(ac, al)}${money ? ' ' + badge('due', 'টাকার রেকর্ড') : ''}</td>${showWhere ? `<td data-l="কোথায়">${esc(AUD_TABLE[e.table_name] || e.table_name)}</td>` : ''}<td data-l="কী">${link ? `<a href="${link}">${esc(audSubject(e) || '—')}</a>` : esc(audSubject(e) || '—')}</td><td data-l="বিবরণ"><span class="cell small">${audDetail(e) || '—'}</span></td></tr>`; }).join('')}</table>`;
+  return `<table class="stack"><tr><th>সময়</th><th>কে</th><th>কাজ</th>${showWhere ? '<th>কোথায়</th>' : ''}<th>কী</th><th>বিবরণ</th></tr>${list.map(e => { const [al, ac] = AUD_ACT[e.action] || [e.action, '']; const link = audLink(e); const money = MONEY_TABLES.includes(e.table_name) && e.action !== 'insert'; return `<tr class="${money ? 'audmoney' : ''}"><td data-l="সময়" style="white-space:nowrap">${fmtDT(e.at)}</td><td data-l="কে">${esc(e.user_name || (e.user_id ? 'স্টাফ' : e.table_name === 'inquiries' && e.action === 'insert' ? 'ওয়েবসাইট' : 'সিস্টেম'))}</td><td data-l="কাজ">${badge(ac, al)}${money ? ' ' + badge('due', 'টাকার রেকর্ড') : ''}</td>${showWhere ? `<td data-l="কোথায়">${esc(AUD_TABLE[e.table_name] || e.table_name)}</td>` : ''}<td data-l="কী">${link ? `<a href="${link}">${esc(audSubject(e) || '—')}</a>` : esc(audSubject(e) || '—')}</td><td data-l="বিবরণ"><span class="cell small">${audDetail(e) || '—'}</span></td></tr>`; }).join('')}</table>`;
 }
 
 async function viewAudit(q) {
