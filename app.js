@@ -149,8 +149,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
-const OPTIONAL_TABLES = ['expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials'];
+const OPTIONAL_TABLES = ['materials', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -200,6 +200,9 @@ const Local = {
     localStorage.setItem('sakura_demo_files', JSON.stringify(files)); return path;
   },
   async fileUrl(path) { const files = JSON.parse(localStorage.getItem('sakura_demo_files') || '{}'); return files[path] || ''; },
+  async uploadTo(bucket, path, file) { return this.upload(path, file); },
+  async fileUrlFrom(bucket, path) { return this.fileUrl(path); },
+  async removeFile(bucket, path) { const files = JSON.parse(localStorage.getItem('sakura_demo_files') || '{}'); delete files[path]; localStorage.setItem('sakura_demo_files', JSON.stringify(files)); },
   async getSettings() { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } },
   async saveSettings(data) { localStorage.setItem('sakura_demo_settings', JSON.stringify(data)); },
   async profiles() { return [{ id: 'demo', name: 'ডেমো অ্যাডমিন', role: 'admin' }]; }
@@ -220,6 +223,9 @@ const Remote = {
   async upsertAttendance(rows) { const { data, error } = await sb.from('attendance').upsert(rows, { onConflict: 'session_id,student_id' }).select(); if (error) throw error; return data; },
   async upload(path, file) { const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined }); if (error) throw error; return path; },
   async fileUrl(path) { const { data, error } = await sb.storage.from(BUCKET).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
+  async uploadTo(bucket, path, file) { const { error } = await sb.storage.from(bucket).upload(path, file, { upsert: false, contentType: file.type || undefined }); if (error) throw error; return path; },
+  async fileUrlFrom(bucket, path) { const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
+  async removeFile(bucket, path) { const { error } = await sb.storage.from(bucket).remove([path]); if (error) throw error; },
   async getSettings() { const { data, error } = await sb.from('settings').select('data').eq('id', 1).maybeSingle(); if (error) throw error; return (data && data.data) || {}; },
   async saveSettings(d) { const { error } = await sb.from('settings').update({ data: d, updated_at: new Date().toISOString() }).eq('id', 1); if (error) throw error; },
   async auditList({ from, to, t, a, u, student, limit = 300 }) {
@@ -354,6 +360,7 @@ function renderLogin() {
 
 // ------------------------------------------------------------------ shell & router
 const ICON = {
+  book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/><path d="M8 7h8M8 11h6"/>',
   home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-7 8-7s8 3 8 7"/><path d="M17 4a4 4 0 0 1 0 8M23 21c0-3-2-5-5-6"/>',
   money: '<rect x="2" y="6" width="20" height="13" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M6 10v5M18 10v5"/>',
@@ -369,7 +376,7 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
@@ -412,6 +419,7 @@ function render() {
   if (p[0] === 'japan') return viewJapan(q);
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
+  if (p[0] === 'materials') return viewMaterials(q);
   if (p[0] === 'settings') return viewSettings();
   return viewDashboard();
 }
@@ -599,11 +607,12 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
+  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     $('#idc').onclick = () => printIdCards([s]);
     $('#plink').onclick = () => parentLinkModal(s);
+    $('#ssite').onclick = () => studentSiteModal(s);
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
@@ -2157,6 +2166,141 @@ async function printIdCards(list) {
 const newParentToken = () => { const b = new Uint8Array(24); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const parentLink = (tok) => `${location.origin}${location.pathname}#/p/${tok}`;
 function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(), name: s.name_bn || s.name_en, link }); }
+
+// ------------------------------------------------------------------ study materials & student site (v14 database)
+const MAT_BUCKET = 'materials';
+const MAT_LEVEL = { all: 'সব লেভেল', N5: 'N5', N4: 'N4', N3: 'N3' };
+const MAT_KIND = { pdf: 'PDF', audio: 'অডিও', video: 'ভিডিও', image: 'ছবি', link: 'লিংক', file: 'ফাইল' };
+const MAT_MAX = 50 * 1024 * 1024; // Supabase free plan: 50 MB per file, 1 GB in total
+const studentSiteUrl = () => location.origin + location.pathname.replace(/[^/]*$/, '') + 'student/';
+const fmtSize = (b) => !num(b) ? '' : num(b) >= 1048576 ? (num(b) / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(num(b) / 1024)) + ' KB';
+function matKindOf(file) { const t = file.type || ''; if (t === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf'; if (t.startsWith('audio/')) return 'audio'; if (t.startsWith('video/')) return 'video'; if (t.startsWith('image/')) return 'image'; return 'file'; }
+function studentAccess(s) { // the same rule the database uses (student_block_reason)
+  if (s.portal_blocked) return 'blocked'; if (s.status === 'dropped') return 'dropped'; if (dueOf(s) > 0) return 'due'; return null;
+}
+const ACCESS_WHY = { blocked: 'অফিস থেকে বন্ধ রাখা হয়েছে', dropped: 'ছাত্রের অবস্থা "বাদ দিয়েছে"', due: 'পুরো কোর্স ফি এখনো পরিশোধ হয়নি' };
+const studentLevels = (s) => [...new Set([...(s.package || '').split('+'), s.current_level].filter(x => LEVELS.includes(x)))];
+async function openMaterial(m) {
+  if (!m.file_path) { if (m.url) window.open(m.url, '_blank', 'noopener'); return; }
+  const w = window.open('', '_blank');
+  try { const u = await API.fileUrlFrom(MAT_BUCKET, m.file_path); if (!u) throw new Error('ফাইল পাওয়া যায়নি'); if (w) w.location = u; else location.href = u; } catch (e) { if (w) w.close(); toast(errMsg(e), true); }
+}
+
+function viewMaterials(q) {
+  const lv = MAT_LEVEL[q.get('l')] ? q.get('l') : '';
+  const all = S.materials || [];
+  const order = { all: 0, N5: 1, N4: 2, N3: 3 };
+  const list = all.filter(m => !lv || m.level === lv).sort((a, b) => (order[a.level] - order[b.level]) || (num(a.sort_order) - num(b.sort_order)) || (a.chapter || '').localeCompare(b.chapter || '', 'bn', { numeric: true }) || (a.title || '').localeCompare(b.title || ''));
+  const used = all.reduce((a, m) => a + num(m.size_bytes), 0);
+  const linked = S.students.filter(s => s.auth_user_id).length;
+  const open = S.students.filter(s => s.auth_user_id && !studentAccess(s)).length;
+  const url = studentSiteUrl();
+  mount('#/materials', `
+  <div class="top"><div><h1>পড়ার উপকরণ</h1><p>ছাত্ররা নিজের লগইন দিয়ে ছাত্রদের সাইটে এগুলো পড়ে ও শোনে — শুধু নিজের প্যাকেজের লেভেল, আর পুরো কোর্স ফি দেওয়া থাকলে।</p></div>
+    <div class="row"><a class="btn ghost" href="${esc(url)}" target="_blank" rel="noopener">ছাত্রদের সাইট খুলুন</a><button class="btn ghost" id="mcp">সাইটের লিংক কপি</button><button class="btn" id="madd">+ নতুন উপকরণ</button></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">মোট উপকরণ</div><div class="v">${all.length}</div><div class="s">${all.filter(m => m.published === false).length ? all.filter(m => m.published === false).length + 'টি লুকানো' : 'সবগুলো ছাত্ররা দেখতে পারে'}</div></div>
+    <div class="card stat"><div class="l">লগইন যুক্ত ছাত্র</div><div class="v">${linked}</div><div class="s">চলমান ${S.students.filter(s => s.status === 'active' || s.status === 'trial').length} জনের মধ্যে</div></div>
+    <div class="card stat green"><div class="l">বই খোলা আছে</div><div class="v">${open}</div><div class="s">বাকিদের ফি বাকি বা বন্ধ</div></div>
+    <div class="card stat ${used > 0.85 * 1073741824 ? 'red' : ''}"><div class="l">জায়গা ব্যবহার</div><div class="v">${fmtSize(used) || '0 MB'}</div><div class="s">ফ্রি প্ল্যানে মোট ১ GB (কাগজপত্রসহ)</div></div>
+  </div>
+  <div class="tabs"><button data-ml="" class="${!lv ? 'on' : ''}">সব (${all.length})</button>${Object.entries(MAT_LEVEL).map(([k, l]) => `<button data-ml="${k}" class="${lv === k ? 'on' : ''}">${l} (${all.filter(m => m.level === k).length})</button>`).join('')}</div>
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>অধ্যায়</th><th>নাম</th><th>লেভেল</th><th>ধরন</th><th>অবস্থা</th><th></th></tr>${list.map(m => `<tr class="click" data-me="${m.id}">
+    <td data-l="অধ্যায়">${esc(m.chapter || '—')}</td>
+    <td data-l="নাম"><b>${esc(m.title)}</b>${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}</td>
+    <td data-l="লেভেল">${esc(MAT_LEVEL[m.level] || m.level)}</td>
+    <td data-l="ধরন">${esc(MAT_KIND[m.kind] || m.kind)}${m.size_bytes ? ` <span class="small muted">${fmtSize(m.size_bytes)}</span>` : ''}</td>
+    <td data-l="অবস্থা">${m.published === false ? badge('dropped', 'লুকানো') : badge('active', 'ছাত্ররা দেখে')}</td>
+    <td><button class="btn sm ghost" data-mo="${m.id}" data-stop>খুলুন</button></td></tr>`).join('')}</table>` : `<div class="empty">${lv ? 'এই লেভেলে' : 'এখনো'} কোনো উপকরণ নেই। "+ নতুন উপকরণ" চেপে PDF, অডিও, ভিডিও বা লিংক যোগ করুন।</div>`}</div>
+  <div class="card" style="margin-top:16px"><h2>যা জেনে রাখবেন</h2><ul class="small" style="margin:0;padding-left:18px;line-height:1.8">
+    <li><b>ছাপানো বইয়ের PDF বা অডিও এখানে রাখবেন না</b> (যেমন Minna no Nihongo, Genki) — এটা কপিরাইট আইনের লঙ্ঘন। নিজেদের বানানো নোট, ওয়ার্কশিট, শব্দের তালিকা, মডেল টেস্ট আর নিজেদের রেকর্ডিং রাখুন।</li>
+    <li>প্রতিটা ফাইল সর্বোচ্চ ৫০ MB। বড় ভিডিও YouTube-এ "Unlisted" করে তুলে এখানে লিংক দিন — জায়গা বাঁচবে।</li>
+    <li>ছাত্র ফাইল খুললে ১ ঘণ্টার জন্য একটা লিংক তৈরি হয়, তারপর সেটা আর কাজ করে না। তবে কেউ ফাইল নামিয়ে অন্যকে দিলে সেটা আটকানো যায় না।</li>
+    <li>ছাত্রকে চালু করতে: ছাত্রের পাতায় <b>"ছাত্রদের সাইট"</b> বোতাম → WhatsApp-এ নিয়ম পাঠান।</li></ul></div>`, () => {
+    bindGo();
+    $$('[data-ml]').forEach(b => b.onclick = () => { location.hash = '#/materials' + (b.dataset.ml ? '?l=' + b.dataset.ml : ''); });
+    $$('[data-me]').forEach(tr => tr.onclick = () => materialModal(byId(S.materials, tr.dataset.me)));
+    $$('[data-mo]').forEach(b => b.onclick = (e) => { e.stopPropagation(); openMaterial(byId(S.materials, b.dataset.mo)); });
+    $('#madd').onclick = () => materialModal(null, lv);
+    $('#mcp').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('সাইটের লিংক কপি হয়েছে'); } catch { toast(url); } };
+  });
+}
+
+function materialModal(m, presetLevel) {
+  const v = m || { level: presetLevel || 'N5', published: true, sort_order: ((S.materials || []).filter(x => x.level === (presetLevel || 'N5')).reduce((a, x) => Math.max(a, num(x.sort_order)), 0) + 1) };
+  const isLink = m ? !m.file_path : false;
+  openModal(`<h2>${m ? 'উপকরণ বদলান' : 'নতুন উপকরণ'}</h2>
+  <form id="mf" class="form">
+    <label class="f full">নাম<input name="title" required maxlength="140" value="${esc(v.title || '')}" placeholder="যেমন: পাঠ ৩ — শব্দতালিকা ও অনুশীলন"></label>
+    <label class="f">লেভেল<select name="level">${Object.entries(MAT_LEVEL).map(([k, l]) => `<option value="${k}" ${v.level === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">অধ্যায় / পাঠ<input name="chapter" maxlength="60" value="${esc(v.chapter || '')}" placeholder="যেমন: পাঠ ৩"></label>
+    <label class="f">ক্রম (ছোট সংখ্যা আগে)<input name="sort_order" type="number" step="1" value="${esc(v.sort_order ?? 0)}"></label>
+    <label class="f">কী দেবেন<select name="src"><option value="file" ${isLink ? '' : 'selected'}>ফাইল আপলোড (PDF, অডিও, ভিডিও, ছবি)</option><option value="link" ${isLink ? 'selected' : ''}>লিংক (YouTube, Google Drive ইত্যাদি)</option></select></label>
+    <label class="f full" id="mfile">ফাইল${m && m.file_path ? ` <span class="small muted">— এখন আছে: ${esc(m.file_name || 'ফাইল')} ${fmtSize(m.size_bytes)}; বদলাতে চাইলে নতুনটা বেছে নিন</span>` : ''}<input name="file" type="file" accept=".pdf,application/pdf,audio/*,video/*,image/*"></label>
+    <label class="f full" id="mlink">লিংক<input name="url" type="url" value="${esc(v.url || '')}" placeholder="https://youtu.be/…"></label>
+    <label class="f full">ছোট বর্ণনা (ঐচ্ছিক)<textarea name="description" maxlength="300">${esc(v.description || '')}</textarea></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে (টিক তুলে দিলে লুকানো থাকবে)</label>
+    <p class="small muted full" id="mmsg" style="margin:0"></p>
+    <div class="full row" style="justify-content:flex-end">${m && isAdmin() ? '<button type="button" class="btn ghost" id="mdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mcc">বাতিল</button><button class="btn" type="submit">${m ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
+  </form>`);
+  const f = $('#mf');
+  const sync = () => { const link = f.src.value === 'link'; $('#mfile').style.display = link ? 'none' : ''; $('#mlink').style.display = link ? '' : 'none'; };
+  f.src.onchange = sync; sync();
+  $('#mcc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button[type=submit]'); const msg = $('#mmsg');
+    const d = { title: f.title.value.trim(), level: f.level.value, chapter: f.chapter.value.trim(), sort_order: Math.round(num(f.sort_order.value)), description: f.description.value.trim(), published: f.published.checked };
+    if (!d.title) return toast('নাম লিখুন', true);
+    const file = f.file.files[0]; let oldPath = null;
+    if (f.src.value === 'link') {
+      const u = f.url.value.trim(); if (!/^https?:\/\//i.test(u)) return toast('পুরো লিংক দিন (https:// দিয়ে শুরু)', true);
+      Object.assign(d, { url: u, kind: /youtu\.?be|vimeo/i.test(u) ? 'video' : 'link', file_path: null, file_name: null, size_bytes: null });
+      if (m && m.file_path) oldPath = m.file_path;
+    } else if (file) {
+      if (file.size > MAT_MAX) return toast(`ফাইলটা ${fmtSize(file.size)} — সর্বোচ্চ ৫০ MB রাখা যায়। বড় ভিডিও YouTube-এ Unlisted করে লিংক দিন।`, true);
+      btn.disabled = true; msg.textContent = `আপলোড হচ্ছে… (${fmtSize(file.size)} — বড় ফাইলে কয়েক মিনিট লাগতে পারে, পাতা বন্ধ করবেন না)`;
+      const ext = ((file.name.match(/\.([A-Za-z0-9]{1,8})$/) || [])[1] || 'bin').toLowerCase();
+      const safe = (file.name.replace(/\.[^.]*$/, '').normalize('NFKD').replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)) || 'file';
+      try { d.file_path = await API.uploadTo(MAT_BUCKET, `${d.level}/${Date.now()}-${safe}.${ext}`, file); } catch (err) { btn.disabled = false; msg.textContent = ''; return toast('আপলোড হয়নি: ' + errMsg(err), true); }
+      Object.assign(d, { file_name: file.name, size_bytes: file.size, kind: matKindOf(file), url: null });
+      if (m && m.file_path) oldPath = m.file_path;
+    } else if (!m || !m.file_path) return toast('একটা ফাইল বেছে নিন', true);
+    btn.disabled = true;
+    try {
+      const row = m ? await API.update('materials', m.id, d) : await API.insert('materials', d);
+      putLocal('materials', row);
+      if (oldPath && oldPath !== row.file_path) API.removeFile(MAT_BUCKET, oldPath).catch(() => {});
+      closeModal(); toast(m ? 'সংরক্ষণ হয়েছে' : 'যোগ হয়েছে'); render();
+    } catch (err) { btn.disabled = false; msg.textContent = ''; if (d.file_path && (!m || d.file_path !== m.file_path)) API.removeFile(MAT_BUCKET, d.file_path).catch(() => {}); toast(errMsg(err), true); }
+  };
+  const del = $('#mdel'); if (del) del.onclick = async () => {
+    closeModal(); if (!(await confirmBox(`"${m.title}" মুছে যাবে, ছাত্ররা আর দেখতে পাবে না।`))) return;
+    try { await API.remove('materials', m.id); if (m.file_path) await API.removeFile(MAT_BUCKET, m.file_path).catch(() => {}); S.materials = S.materials.filter(x => x.id !== m.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); }
+  };
+}
+
+function studentInviteMsg(s) {
+  return `আসসালামু আলাইকুম ${s.name_bn || s.name_en}। ${S.settings.institute_bn}-এর ছাত্রদের সাইটে আপনার লেভেলের নোট, শিট আর অডিও পাবেন।\n\n১. এই লিংক খুলুন: ${studentSiteUrl()}\n২. "নতুন অ্যাকাউন্ট" চেপে নিজের ইমেইল আর একটা পাসওয়ার্ড দিন।\n৩. ভর্তি নম্বর ${s.admission_no} আর ভর্তির সময় দেওয়া মোবাইল নম্বর লিখে "যুক্ত করুন" চাপুন।\n\nপুরো কোর্স ফি পরিশোধ হলে বইগুলো খুলে যাবে। কোনো সমস্যা হলে অফিসে জানান।`;
+}
+function studentSiteModal(s) {
+  const why = studentAccess(s); const lv = studentLevels(s);
+  const n = (S.materials || []).filter(m => m.published !== false && (m.level === 'all' || lv.includes(m.level))).length;
+  openModal(`<h2>ছাত্রদের সাইট — ${esc(studentName(s))}</h2>
+    <dl class="kv"><dt>লগইন</dt><dd>${s.auth_user_id ? '✓ ছাত্র নিজের লগইন যুক্ত করেছে' : 'এখনো যুক্ত করেনি'}</dd>
+    <dt>বই দেখা</dt><dd>${why ? `🔒 বন্ধ — ${esc(ACCESS_WHY[why])}${why === 'due' ? ` (বকেয়া ${tk(dueOf(s))})` : ''}` : '✓ খোলা'}</dd>
+    <dt>যে লেভেল দেখবে</dt><dd>${esc(lv.join(', ') || '—')} · ${n}টি উপকরণ</dd></dl>
+    <p class="small muted">ছাত্র নিজের ইমেইল দিয়ে অ্যাকাউন্ট খুলে <b>ভর্তি নম্বর ${esc(s.admission_no)}</b> আর ভর্তির সময় দেওয়া মোবাইল নম্বর (ছাত্র বা অভিভাবকের) দিয়ে যুক্ত করবে। পুরো কোর্স ফি পরিশোধ হলে নিজে থেকেই বই খুলে যাবে।</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">${waBtn(s.phone || s.guardian_phone, studentInviteMsg(s), 'নিয়ম WhatsApp-এ পাঠান')}<a class="btn ghost" href="${esc(studentSiteUrl())}" target="_blank" rel="noopener">সাইট খুলুন</a></div>
+    <div class="row" style="justify-content:flex-end;margin-top:18px;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="sblk" ${s.portal_blocked ? '' : 'style="color:var(--red)"'}>${s.portal_blocked ? 'অ্যাক্সেস আবার চালু করুন' : 'অ্যাক্সেস বন্ধ রাখুন'}</button>
+      ${s.auth_user_id && isAdmin() ? '<button class="btn ghost" id="sunl" style="color:var(--red)">লগইন আলাদা করুন</button>' : ''}
+      <button class="btn" id="scl">ঠিক আছে</button></div>`);
+  $('#scl').onclick = closeModal;
+  const save = async (patch, msg) => { try { putLocal('students', await API.update('students', s.id, patch)); toast(msg); studentSiteModal(byId(S.students, s.id)); } catch (e) { toast(errMsg(e), true); } };
+  $('#sblk').onclick = () => save({ portal_blocked: !s.portal_blocked }, s.portal_blocked ? 'অ্যাক্সেস চালু হয়েছে' : 'অ্যাক্সেস বন্ধ করা হয়েছে');
+  const un = $('#sunl'); if (un) un.onclick = async () => { closeModal(); if (!(await confirmBox('এই লগইন আর এই ছাত্রের সাথে যুক্ত থাকবে না। ছাত্র চাইলে আবার যুক্ত করতে পারবে (যেমন নতুন ইমেইল দিয়ে)।', 'হ্যাঁ, আলাদা করুন'))) return; save({ auth_user_id: null }, 'লগইন আলাদা করা হয়েছে'); };
+}
 
 function parentLinkModal(s) {
   const tok = s.parent_token; const link = tok ? parentLink(tok) : '';
