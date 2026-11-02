@@ -374,6 +374,9 @@ function renderLogin() {
 
 // ------------------------------------------------------------------ shell & router
 const ICON = {
+  quiz: '<rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="M8.5 12.5l2 2 4-4.5M8.5 18h7"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
+  trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
   book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/><path d="M8 7h8M8 11h6"/>',
   home: '<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
   users: '<circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-7 8-7s8 3 8 7"/><path d="M17 4a4 4 0 0 1 0 8M23 21c0-3-2-5-5-6"/>',
@@ -390,19 +393,31 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'teacher'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+// menu sections — each page sits in one, and the page header shows "section › page"
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/materials', '#/mocks']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
+const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
-  return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${!isTeacher() && computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
-  <div class="shell"><aside class="side" id="side">
-    <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
-    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)))).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
-    <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${isStandalone() ? '' : '<br><button id="inst" style="margin-top:6px">📱 অ্যাপ হিসেবে ইনস্টল</button>'}</div>
-  </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
+  const al = isTeacher() ? [] : computeAlerts(); const red = al.filter(a => a.level === 'red').length;
+  const item = (h) => { const n = NAV.find(x => x[0] === h); if (!n || !navAllowed(h)) return ''; const [, l, i] = n; return `<a href="${h}" class="${active === h ? 'on' : ''}" ${active === h ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[i]}</svg><span>${l}</span>${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`; };
+  const nav = NAV_GROUPS.map(([g, hs]) => { const items = hs.map(item).join(''); return items ? `<div class="grp">${g}</div>${items}` : ''; }).join('');
+  const grp = NAV_GROUPS.find(([, hs]) => hs.includes(active)); const page = NAV.find(x => x[0] === active);
+  const d = new Date(); const name = S.profile.name || S.user.email || '';
+  return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
+  <div class="shell"><aside class="side" id="side" aria-label="মেনু">
+    <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
+    <nav class="nav">${nav}</nav>
+    <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
+      <div class="acts">${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
+  </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
+    <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
 function mount(active, inner, after) {
   $('#app').innerHTML = shell(active, inner);
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
+  $('#scrim').onclick = () => $('#side').classList.remove('open');
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
   if (after) after();
 }
