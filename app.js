@@ -7,6 +7,8 @@
 // ------------------------------------------------------------------ config
 const CFG = window.SAKURA_CONFIG || {};
 const DEMO = !(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
+// a password-reset link arrives as …#access_token=…&type=recovery; note it before supabase-js tidies the address
+const RECOVERY = /type=recovery/.test(location.hash);
 const sb = DEMO ? null : window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const BUCKET = 'documents';
 
@@ -315,14 +317,70 @@ function monthSum(arr, field, m, amt = 'amount') { return arr.filter(x => (x[fie
 const badge = (cls, label) => `<span class="b ${esc(cls)}">${esc(label)}</span>`;
 const bar = (pct) => pct == null ? '<span class="muted small">—</span>' : `<div class="row" style="gap:6px;flex-wrap:nowrap"><div class="bar ${pct < 80 ? 'low' : ''}"><i style="width:${pct}%"></i></div><span class="small">${pct}%</span></div>`;
 
+
+// ------------------------------------------------------------------ passwords: forgot, reset link, change
+function renderForgot(note = '') {
+  $('#app').innerHTML = `<div class="login"><form class="card" id="fgf">
+    <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
+    <h1>পাসওয়ার্ড ভুলে গেছেন?</h1><p class="muted" style="margin:0 0 14px">আপনার ইমেইল লিখুন। নতুন পাসওয়ার্ড দেওয়ার একটা লিংক ইমেইলে যাবে।</p>
+    <label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
+    <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লিংক পাঠান</button>
+    <p class="small" id="fgm" style="margin:12px 0 0;line-height:1.6">${esc(note)}</p>
+    <p class="small" style="margin:12px 0 0"><a href="#" id="fgback">← লগইনে ফিরে যান</a></p></form></div>`;
+  $('#fgback').onclick = (e) => { e.preventDefault(); renderLogin(); };
+  $('#fgf').onsubmit = async (e) => {
+    e.preventDefault(); const btn = e.target.querySelector('button'); const m = $('#fgm'); btn.disabled = true;
+    const { error } = await sb.auth.resetPasswordForEmail(e.target.email.value.trim().toLowerCase(), { redirectTo: location.origin + location.pathname });
+    btn.disabled = false;
+    if (error) { m.style.color = 'var(--red)'; m.textContent = /rate|seconds/i.test(error.message) ? 'একটু আগেই লিংক পাঠানো হয়েছে — এক মিনিট পরে আবার চেষ্টা করুন।' : errMsg(error); return; }
+    m.style.color = 'var(--green)'; m.textContent = 'লিংক পাঠানো হয়েছে। ইমেইল খুলে (Spam ফোল্ডারও দেখুন) লিংকে চাপুন, তারপর নতুন পাসওয়ার্ড দিন। কয়েক মিনিটেও না এলে পরিচালককে জানান।';
+  };
+}
+function renderNewPassword(user) {
+  $('#app').innerHTML = `<div class="login"><form class="card" id="npf">
+    <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
+    <h1>নতুন পাসওয়ার্ড দিন</h1><p class="muted" style="margin:0 0 14px">${esc(user && user.email || '')}</p>
+    <label class="f">নতুন পাসওয়ার্ড (অন্তত ৮ অক্ষর)<input name="p1" type="password" minlength="8" required autocomplete="new-password"></label>
+    <label class="f" style="margin-top:10px">আবার লিখুন<input name="p2" type="password" minlength="8" required autocomplete="new-password"></label>
+    <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">পাসওয়ার্ড সংরক্ষণ</button>
+    <p class="small" id="npm" style="color:var(--red);margin:10px 0 0"></p></form></div>`;
+  $('#npf').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const m = $('#npm');
+    if (f.p1.value !== f.p2.value) { m.textContent = 'দুটো পাসওয়ার্ড মেলেনি।'; return; }
+    const btn = f.querySelector('button'); btn.disabled = true;
+    const { error } = await sb.auth.updateUser({ password: f.p1.value });
+    if (error) { btn.disabled = false; m.textContent = /different|same/i.test(error.message) ? 'আগের পাসওয়ার্ড থেকে আলাদা একটা দিন।' : errMsg(error); return; }
+    history.replaceState(null, '', location.pathname + '#/'); toast('নতুন পাসওয়ার্ড সংরক্ষণ হয়েছে'); afterLogin(user);
+  };
+}
+function changePasswordModal() {
+  openModal(`<h2>পাসওয়ার্ড বদলান</h2><form id="cpf" class="form">
+    <label class="f full">নতুন পাসওয়ার্ড (অন্তত ৮ অক্ষর)<input name="p1" type="password" minlength="8" required autocomplete="new-password"></label>
+    <label class="f full">আবার লিখুন<input name="p2" type="password" minlength="8" required autocomplete="new-password"></label>
+    <p class="small full" id="cpm" style="color:var(--red);margin:0"></p>
+    <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="cpc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#cpc').onclick = closeModal;
+  $('#cpf').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const m = $('#cpm');
+    if (f.p1.value !== f.p2.value) { m.textContent = 'দুটো পাসওয়ার্ড মেলেনি।'; return; }
+    const { error } = await sb.auth.updateUser({ password: f.p1.value });
+    if (error) { m.textContent = /different|same/i.test(error.message) ? 'আগের পাসওয়ার্ড থেকে আলাদা একটা দিন।' : errMsg(error); return; }
+    closeModal(); toast('পাসওয়ার্ড বদলানো হয়েছে');
+  };
+}
+
 // ------------------------------------------------------------------ auth
 async function boot() {
   const pm = location.hash.match(/^#\/p\/([A-Za-z0-9_-]{24,})/);
   if (pm) return renderParent(pm[1]);
   if (DEMO) { renderLogin(); return; }
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (ev === 'SIGNED_OUT') { S.user = null; S.profile = null; S.loaded = false; renderLogin(); }
+    if (ev === 'PASSWORD_RECOVERY' && session) renderNewPassword(session.user);
+  });
   const { data } = await sb.auth.getSession();
+  if (data.session && RECOVERY) return renderNewPassword(data.session.user);
   if (data.session) await afterLogin(data.session.user); else renderLogin();
-  sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') { S.user = null; S.profile = null; S.loaded = false; renderLogin(); } });
 }
 async function afterLogin(user) {
   S.user = user;
@@ -357,9 +415,11 @@ function renderLogin() {
       `<label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
       <label class="f" style="margin-top:10px">পাসওয়ার্ড<input name="password" type="password" required autocomplete="current-password"></label>
       <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লগইন</button>
-      <p class="small" style="margin:14px 0 0">প্রথমবার? <a href="#" id="tosignup">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
+      <p class="small" style="margin:14px 0 0"><a href="#" id="toforgot">পাসওয়ার্ড ভুলে গেছেন?</a></p>
+      <p class="small" style="margin:6px 0 0">প্রথমবার? <a href="#" id="tosignup">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
   </form></div>`;
   const ts = $('#tosignup'); if (ts) ts.onclick = (e) => { e.preventDefault(); renderSignup(); };
+  const tf = $('#toforgot'); if (tf) tf.onclick = (e) => { e.preventDefault(); renderForgot(); };
   $('#lf').onsubmit = async (e) => {
     e.preventDefault();
     if (DEMO) return afterLogin({ id: 'demo', email: 'demo' });
@@ -409,7 +469,7 @@ function shell(active, inner) {
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
     <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
-      <div class="acts">${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
+      <div class="acts">${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
   </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
@@ -419,6 +479,7 @@ function mount(active, inner, after) {
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
   $('#scrim').onclick = () => $('#side').classList.remove('open');
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
+  const cp = $('#chpw'); if (cp) cp.onclick = changePasswordModal;
   if (after) after();
 }
 function render() {
