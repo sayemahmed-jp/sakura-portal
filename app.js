@@ -81,7 +81,7 @@ const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্�
 // teachers see class work only — the database (migration v16) gives them nothing else
 const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
-const ADMIN_ROUTES = ['weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
+const ADMIN_ROUTES = ['people', 'weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
 
 // ------------------------------------------------------------------ helpers
@@ -154,8 +154,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts'];
-const OPTIONAL_TABLES = ['materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites'];
+const OPTIONAL_TABLES = ['staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -225,7 +225,7 @@ const Remote = {
   async insert(t, row) { const { data, error } = await sb.from(t).insert(row).select().single(); if (error) throw error; return data; },
   async insertMany(t, rows) { const out = []; for (let i = 0; i < rows.length; i += 200) { const { data, error } = await sb.from(t).insert(rows.slice(i, i + 200)).select(); if (error) throw error; out.push(...data); } return out; },
   async update(t, id, patch) { const { data, error } = await sb.from(t).update(patch).eq('id', id).select().single(); if (error) throw error; return data; },
-  async remove(t, id) { const { error } = await sb.from(t).delete().eq('id', id); if (error) throw error; },
+  async remove(t, id) { const { data, error } = await sb.from(t).delete().eq('id', id).select('id'); if (error) throw error; if (!data || !data.length) throw new Error('মোছা যায়নি — এটা মোছার অনুমতি আপনার নেই, অথবা এতে ছাত্রদের নম্বর/চেষ্টা আছে (তখন শুধু পরিচালক মুছতে পারেন)।'); },
   async upsertResults(rows) { const { data, error } = await sb.from('exam_results').upsert(rows, { onConflict: 'exam_id,student_id' }).select(); if (error) throw error; return data; },
   async upsertAttendance(rows) { const { data, error } = await sb.from('attendance').upsert(rows, { onConflict: 'session_id,student_id' }).select(); if (error) throw error; return data; },
   async upload(path, file) { const { error } = await sb.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: file.type || undefined }); if (error) throw error; return path; },
@@ -247,7 +247,7 @@ const Remote = {
 };
 const API = DEMO ? Local : Remote;
 
-const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications'].includes(t));
+const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications'].includes(t));
 async function loadAll() {
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(DEMO ? t : t === 'teachers' && !isAdmin() ? 'teacher_list' : t === 'students' && isTeacher() ? 'student_roster' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
@@ -333,8 +333,13 @@ async function afterLogin(user) {
       const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
       if (error) throw error;
       if (!data) {
-        $('#app').innerHTML = `<div class="login"><div class="card"><h1>অনুমতি নেই</h1><p>আপনার লগইন (${esc(user.email)}) এখনও স্টাফ হিসেবে যোগ করা হয়নি। ডিরেক্টরকে বলুন আপনাকে যোগ করতে।</p><button class="btn" id="lo">লগআউট</button></div></div>`;
-        $('#lo').onclick = () => sb.auth.signOut(); return;
+        $('#app').innerHTML = `<div class="login"><form class="card" id="clf"><h1>অনুমতি নেই</h1><p>আপনার লগইন (${esc(user.email)}) এখনও পোর্টালে যোগ করা হয়নি। পরিচালক আমন্ত্রণ কোড পাঠিয়ে থাকলে নিচে লিখুন।</p>
+          <label class="f">আমন্ত্রণ কোড<input name="code" required maxlength="12" autocapitalize="characters" autocomplete="off" style="letter-spacing:.1em"></label>
+          <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:12px">কোড দিন</button><p class="small" id="clm" style="color:var(--red);margin:8px 0 0"></p>
+          <button type="button" class="btn ghost" id="lo" style="margin-top:6px">লগআউট</button></form></div>`;
+        $('#lo').onclick = () => sb.auth.signOut();
+        $('#clf').onsubmit = async (e) => { e.preventDefault(); const b = e.target.querySelector('button[type=submit]'); b.disabled = true; await claimAndEnter(user, e.target.code.value, (msg) => { b.disabled = false; $('#clm').textContent = msg; }); };
+        return;
       }
       S.profile = data;
     }
@@ -351,8 +356,10 @@ function renderLogin() {
       <button class="btn" type="submit" style="width:100%;justify-content:center">ডেমো মোডে ঢুকুন</button>` :
       `<label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
       <label class="f" style="margin-top:10px">পাসওয়ার্ড<input name="password" type="password" required autocomplete="current-password"></label>
-      <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লগইন</button>`}
+      <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লগইন</button>
+      <p class="small" style="margin:14px 0 0">প্রথমবার? <a href="#" id="tosignup">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
   </form></div>`;
+  const ts = $('#tosignup'); if (ts) ts.onclick = (e) => { e.preventDefault(); renderSignup(); };
   $('#lf').onsubmit = async (e) => {
     e.preventDefault();
     if (DEMO) return afterLogin({ id: 'demo', email: 'demo' });
@@ -383,7 +390,7 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'teacher'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${!isTeacher() && computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
@@ -431,6 +438,7 @@ function render() {
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
   if (p[0] === 'settings') return viewSettings();
+  if (p[0] === 'people') return viewPeople();
   return viewDashboard();
 }
 window.addEventListener('hashchange', render);
@@ -889,7 +897,7 @@ function examModal(ex) {
     <label class="f">পূর্ণ নম্বর<input name="max_marks" type="number" min="1" step="0.5" required value="${esc(v.max_marks)}"></label>
     <label class="f">পাস নম্বর (খালি রাখলে ৬০%)<input name="pass_marks" type="number" min="0" step="0.5" value="${esc(v.pass_marks ?? '')}"></label>
     <p class="full small muted" style="margin:0">JLPT N5: পূর্ণ নম্বর ১৮০, পাস ৮০। NAT-TEST 5Q: পূর্ণ নম্বর ১৮০, পাস ১০০।</p>
-    <div class="full row" style="justify-content:flex-end">${ex && isAdmin() ? '<button type="button" class="btn ghost" id="xd" style="color:var(--red);margin-right:auto">পরীক্ষা মুছুন</button>' : ''}<button type="button" class="btn ghost" id="xc">বাতিল</button><button class="btn" type="submit">${ex ? 'সংরক্ষণ' : 'তৈরি করে নম্বর তুলুন'}</button></div></form>`);
+    <div class="full row" style="justify-content:flex-end">${ex && (isAdmin() || !S.exam_results.some(r => r.exam_id === ex.id)) ? '<button type="button" class="btn ghost" id="xd" style="color:var(--red);margin-right:auto">পরীক্ষা মুছুন</button>' : ''}<button type="button" class="btn ghost" id="xc">বাতিল</button><button class="btn" type="submit">${ex ? 'সংরক্ষণ' : 'তৈরি করে নম্বর তুলুন'}</button></div></form>`);
   $('#xc').onclick = closeModal;
   const f = $('#xf');
   f.type.onchange = () => { if (['jlpt', 'nat'].includes(f.type.value)) { f.max_marks.value = 180; f.pass_marks.value = f.type.value === 'jlpt' ? 80 : 100; } };
@@ -1971,7 +1979,7 @@ function viewSettings() {
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
     ${isAdmin() ? '<div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div>' : ''}
   </form>
-  <div class="card" style="margin-top:16px"><h2>স্টাফ</h2><div class="tw"><table><tr><th>নাম</th><th>ভূমিকা</th></tr>${S.profiles.map(p => `<tr><td>${esc(p.name || '—')}</td><td>${ROLE_NAME[p.role] || p.role}</td></tr>`).join('')}</table></div>
+  <div class="card" style="margin-top:16px"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">স্টাফ ও শিক্ষক</h2><span class="spacer"></span><a class="btn sm ghost" href="#/people">যোগ করুন / বদলান</a></div><div class="tw"><table><tr><th>নাম</th><th>ভূমিকা</th></tr>${S.profiles.map(p => `<tr><td>${esc(p.name || '—')}</td><td>${ROLE_NAME[p.role] || p.role}</td></tr>`).join('')}</table></div>
   <p class="small muted">নতুন স্টাফ যোগ করতে README-এর "স্টাফ যোগ করা" অংশ দেখুন। স্টাফরা ছাত্র ভর্তি, টাকা জমা আর হাজিরা নিতে পারবেন; মোছা আর টাকার রেকর্ড বদলানো শুধু অ্যাডমিনের কাজ।</p></div>
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
@@ -2252,7 +2260,7 @@ function materialModal(m, presetLevel) {
     <label class="f full">ছোট বর্ণনা (ঐচ্ছিক)<textarea name="description" maxlength="300">${esc(v.description || '')}</textarea></label>
     <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে (টিক তুলে দিলে লুকানো থাকবে)</label>
     <p class="small muted full" id="mmsg" style="margin:0"></p>
-    <div class="full row" style="justify-content:flex-end">${m && isAdmin() ? '<button type="button" class="btn ghost" id="mdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mcc">বাতিল</button><button class="btn" type="submit">${m ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
+    <div class="full row" style="justify-content:flex-end">${m ? '<button type="button" class="btn ghost" id="mdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mcc">বাতিল</button><button class="btn" type="submit">${m ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
   </form>`);
   const f = $('#mf');
   const sync = () => { const link = f.src.value === 'link'; $('#mfile').style.display = link ? 'none' : ''; $('#mlink').style.display = link ? '' : 'none'; };
@@ -2351,7 +2359,7 @@ function mockTestModal(t, presetLevel) {
     <label class="f full">ছোট বর্ণনা<input name="description" maxlength="200" value="${esc(v.description || '')}"></label>
     <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="show_answers" type="checkbox" ${v.show_answers === false ? '' : 'checked'} style="width:auto"> জমা দেওয়ার পর সঠিক উত্তর আর ব্যাখ্যা দেখাবে</label>
     <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published ? 'checked' : ''} style="width:auto"> ছাত্রদের জন্য চালু</label>
-    <div class="full row" style="justify-content:flex-end">${t && isAdmin() ? '<button type="button" class="btn ghost" id="mkdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mkc">বাতিল</button><button class="btn" type="submit">${t ? 'সংরক্ষণ' : 'তৈরি করুন'}</button></div>
+    <div class="full row" style="justify-content:flex-end">${t && (isAdmin() || !(S.mock_attempts || []).some(a => a.test_id === t.id)) ? '<button type="button" class="btn ghost" id="mkdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mkc">বাতিল</button><button class="btn" type="submit">${t ? 'সংরক্ষণ' : 'তৈরি করুন'}</button></div>
   </form>`);
   const f = $('#mkf'); $('#mkc').onclick = closeModal;
   f.onsubmit = async (e) => {
@@ -2429,7 +2437,7 @@ function mockQuestionModal(t, x, presetSection) {
     ${o.slice(0, 4).map((op, i) => `<label class="f">উত্তর ${ABCD[i]}${i >= 2 ? ' (ঐচ্ছিক)' : ''}<input name="op${i}" value="${esc(op)}" ${i < 2 ? 'required' : ''}></label>`).join('')}
     <label class="f">সঠিক উত্তর<select name="correct">${ABCD.map((l, i) => `<option value="${i}" ${num(v.correct) === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f full">ব্যাখ্যা (জমার পর ছাত্র দেখবে)<textarea name="explanation" rows="2">${esc(v.explanation || '')}</textarea></label>
-    <div class="full row" style="justify-content:flex-end">${x && isAdmin() ? '<button type="button" class="btn ghost" id="mqd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mqc">বাতিল</button><button class="btn" type="submit">${x ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
+    <div class="full row" style="justify-content:flex-end">${x ? '<button type="button" class="btn ghost" id="mqd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mqc">বাতিল</button><button class="btn" type="submit">${x ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
   </form>`);
   const f = $('#mqf'); const sync = () => { const s = f.section.value; $('#mqp').style.display = s === 'reading' ? '' : 'none'; $('#mqs').style.display = s === 'listening' ? '' : 'none'; $('#mqa').style.display = s === 'listening' ? '' : 'none'; };
   f.section.onchange = sync; sync(); $('#mqc').onclick = closeModal;
@@ -2522,6 +2530,117 @@ function viewTeacherHome() {
     <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table>${low.slice(0, 10).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}</td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সবার উপস্থিতি ভালো</div>'}</div>
     <div class="card"><h2>সাম্প্রতিক অনলাইন মক টেস্ট</h2>${mocks.length ? `<div class="tw"><table>${mocks.map(a => { const t = byId(S.mock_tests || [], a.test_id); const s = byId(S.students, a.student_id); const p = num(a.total) ? Math.round(num(a.score) * 100 / num(a.total)) : 0; return `<tr class="click" data-go="#/mock/${a.test_id}?t=res"><td>${esc(s ? studentName(s) : '—')}</td><td>${esc(t ? t.title : '')}</td><td class="num"><b style="color:${t && p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(a.score)}/${num(a.total)}</b></td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কেউ অনলাইনে মক টেস্ট দেয়নি</div>'}</div>
   </div>`, () => bindGo());
+}
+
+// ------------------------------------------------------------------ people: the director adds and removes logins (v17 database)
+const portalUrl = () => location.origin + location.pathname;
+function newInviteCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const b = new Uint8Array(8); crypto.getRandomValues(b); return [...b].map(x => A[x % A.length]).join(''); }
+const inviteMsg = (inv) => `আসসালামু আলাইকুম ${inv.name}। ${S.settings.institute_bn}-এর পোর্টালে আপনাকে ${ROLE_NAME[inv.role]} হিসেবে যোগ করা হয়েছে।\n\n১. এই লিংক খুলুন: ${portalUrl()}\n২. "প্রথমবার? অ্যাকাউন্ট খুলুন" চাপুন\n৩. ইমেইল: ${inv.email}\n৪. নিজের একটা পাসওয়ার্ড দিন (অন্তত ৮ অক্ষর)\n৫. আমন্ত্রণ কোড: ${inv.code}\n\nকোডটি ${fmtD((inv.expires_at || '').slice(0, 10))} পর্যন্ত কাজ করবে। পাসওয়ার্ড কাউকে বলবেন না।`;
+async function viewPeople() {
+  if (!isAdmin()) return mount('#/people', ADMIN_ONLY_MSG);
+  mount('#/people', '<div class="empty">লোড হচ্ছে…</div>');
+  let people;
+  try { if (DEMO) people = S.profiles.map(p => ({ ...p, email: p.id === 'demo' ? 'demo' : (p.email || '') })); else { const { data, error } = await sb.rpc('admin_people'); if (error) throw error; people = data || []; } }
+  catch (e) { return mount('#/people', `<div class="empty">${esc(errMsg(e))}</div>`); }
+  const me = S.profile.id; const now = new Date().toISOString();
+  const inv = (S.staff_invites || []).slice().sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  const open = inv.filter(i => !i.used_at && i.expires_at > now); const closed = inv.filter(i => i.used_at || i.expires_at <= now).slice(0, 10);
+  const count = (r) => people.filter(p => p.role === r).length;
+  mount('#/people', `
+  <div class="top"><div><h1>স্টাফ ও শিক্ষক</h1><p>কে পোর্টালে ঢুকতে পারবে আর কী দেখবে — এখান থেকেই যোগ করুন, ভূমিকা বদলান বা লগইন বন্ধ করুন।</p></div>
+    <div class="row"><button class="btn" id="padd">+ নতুন শিক্ষক / স্টাফ</button></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">পরিচালক</div><div class="v">${count('admin')}</div></div>
+    <div class="card stat"><div class="l">অফিস স্টাফ</div><div class="v">${count('staff')}</div></div>
+    <div class="card stat"><div class="l">শিক্ষক</div><div class="v">${count('teacher')}</div></div>
+    <div class="card stat"><div class="l">আমন্ত্রণ বাকি</div><div class="v">${open.length}</div><div class="s">এখনো অ্যাকাউন্ট খোলেননি</div></div>
+  </div>
+  <div class="card"><h2>যাদের লগইন আছে</h2><div class="tw"><table class="stack"><tr><th>নাম</th><th>ইমেইল</th><th>ভূমিকা</th><th>শেষ লগইন</th><th></th></tr>
+    ${people.map(p => `<tr><td data-l="নাম"><b>${esc(p.name || '—')}</b>${p.id === me ? ' <span class="small muted">(আপনি)</span>' : ''}</td><td data-l="ইমেইল" style="overflow-wrap:anywhere">${esc(p.email || '—')}</td>
+      <td data-l="ভূমিকা"><select data-role="${esc(p.id)}" ${p.id === me ? 'disabled title="নিজের ভূমিকা বদলানো যায় না"' : ''}>${Object.entries(ROLE_NAME).map(([k, v]) => `<option value="${k}" ${p.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
+      <td data-l="শেষ লগইন">${p.last_sign_in_at ? fmtDT(p.last_sign_in_at) : '—'}</td>
+      <td>${p.id === me ? '' : `<button class="btn sm ghost" data-rm="${esc(p.id)}" style="color:var(--red)">লগইন বন্ধ করুন</button>`}</td></tr>`).join('')}</table></div>
+    <p class="small muted" style="margin:10px 0 0">লগইন বন্ধ করলে সে আর পোর্টালে ঢুকতে পারবে না; তার আগের কাজের রেকর্ড (হাজিরা, নম্বর, টাকা জমা) থেকে যাবে। ভূমিকা বদলালে পরের বার পাতা খুললেই নতুন ভূমিকা কাজ করবে।</p></div>
+  <div class="card" style="margin-top:16px"><h2>আমন্ত্রণ</h2>${open.length ? `<div class="tw"><table class="stack"><tr><th>নাম</th><th>ইমেইল</th><th>ভূমিকা</th><th>কোড</th><th>মেয়াদ</th><th></th></tr>
+    ${open.map(i => `<tr><td data-l="নাম"><b>${esc(i.name)}</b></td><td data-l="ইমেইল" style="overflow-wrap:anywhere">${esc(i.email)}</td><td data-l="ভূমিকা">${esc(ROLE_NAME[i.role])}</td><td data-l="কোড"><code style="font-size:15px;letter-spacing:.08em">${esc(i.code)}</code></td><td data-l="মেয়াদ">${fmtD(i.expires_at.slice(0, 10))}</td>
+      <td><div class="row" style="gap:6px;flex-wrap:wrap"><a class="btn sm wa" href="https://wa.me/?text=${encodeURIComponent(inviteMsg(i))}" target="_blank" rel="noopener">${WA_SVG} পাঠান</a><button class="btn sm ghost" data-icp="${esc(i.id)}">কপি</button><button class="btn sm ghost" data-ix="${esc(i.id)}" style="color:var(--red)">বাতিল</button></div></td></tr>`).join('')}</table></div>`
+    : '<div class="empty">কোনো আমন্ত্রণ বাকি নেই। "+ নতুন শিক্ষক / স্টাফ" চেপে কাউকে যোগ করুন।</div>'}
+    ${closed.length ? `<details style="margin-top:10px"><summary class="small muted">পুরোনো আমন্ত্রণ (${closed.length})</summary><div class="tw"><table>${closed.map(i => `<tr><td>${esc(i.name)}</td><td>${esc(i.email)}</td><td>${esc(ROLE_NAME[i.role])}</td><td class="small muted">${i.used_at ? 'অ্যাকাউন্ট খুলেছেন ' + fmtD(i.used_at.slice(0, 10)) : 'মেয়াদ শেষ'}</td></tr>`).join('')}</table></div></details>` : ''}</div>
+  <div class="card" style="margin-top:16px"><h2>কীভাবে কাজ করে</h2><ol class="small" style="margin:0;padding-left:18px;line-height:1.9">
+    <li>"+ নতুন শিক্ষক / স্টাফ" চেপে নাম, ইমেইল আর ভূমিকা দিন — একটা ৮ অক্ষরের কোড তৈরি হবে।</li>
+    <li>"পাঠান" চেপে WhatsApp-এ নিয়ম আর কোড পাঠান।</li>
+    <li>সে পোর্টাল খুলে "প্রথমবার? অ্যাকাউন্ট খুলুন" চাপবে, সেই ইমেইল আর নিজের পাসওয়ার্ড দেবে, কোড লিখবে — তারপরই ঢুকতে পারবে। কোড শুধু সেই ইমেইলেই কাজ করে, ১৪ দিন পর্যন্ত।</li>
+    <li>কে কী দেখবে তা ঠিক হয় ভূমিকা দিয়ে: <b>শিক্ষক</b> — হাজিরা, পরীক্ষা, উপকরণ, মক টেস্ট; <b>অফিস স্টাফ</b> — ভর্তি, টাকা জমা, কাগজ, জাপান আবেদনও; <b>পরিচালক</b> — সব কিছু। পরিচালক যোগ করার আগে ভালো করে ভাবুন।</li></ol></div>`, () => {
+    $('#padd').onclick = () => inviteModal();
+    $$('[data-role]').forEach(sel => sel.onchange = async () => {
+      const p = people.find(x => x.id === sel.dataset.role); const role = sel.value;
+      if (role === 'admin' && !(await confirmBox(`${p.name}-কে পরিচালক করলে সে সব কিছু দেখতে ও বদলাতে পারবে — টাকা, বেতন, ব্যাকআপ, অন্যদের লগইন।`, 'হ্যাঁ, পরিচালক করুন'))) { sel.value = p.role; return; }
+      try { const row = await API.update('profiles', p.id, { role }); S.profiles = S.profiles.map(x => x.id === row.id ? row : x); toast(`${p.name} এখন ${ROLE_NAME[role]}`); viewPeople(); } catch (e) { sel.value = p.role; toast(errMsg(e), true); }
+    });
+    $$('[data-rm]').forEach(b => b.onclick = async () => {
+      const p = people.find(x => x.id === b.dataset.rm);
+      if (!(await confirmBox(`${p.name} (${p.email || ''}) আর পোর্টালে ঢুকতে পারবে না। পরে আবার চাইলে নতুন আমন্ত্রণ পাঠাতে হবে।`, 'হ্যাঁ, লগইন বন্ধ করুন'))) return;
+      try { await API.remove('profiles', p.id); S.profiles = S.profiles.filter(x => x.id !== p.id); toast('লগইন বন্ধ করা হয়েছে'); viewPeople(); } catch (e) { toast(errMsg(e), true); }
+    });
+    $$('[data-icp]').forEach(b => b.onclick = async () => { const i = inv.find(x => x.id === b.dataset.icp); try { await navigator.clipboard.writeText(inviteMsg(i)); toast('মেসেজ কপি হয়েছে'); } catch { toast('কোড: ' + i.code); } });
+    $$('[data-ix]').forEach(b => b.onclick = async () => {
+      const i = inv.find(x => x.id === b.dataset.ix); if (!(await confirmBox(`${i.name}-এর আমন্ত্রণ বাতিল হবে; কোডটি আর কাজ করবে না।`, 'হ্যাঁ, বাতিল করুন'))) return;
+      try { await API.remove('staff_invites', i.id); S.staff_invites = S.staff_invites.filter(x => x.id !== i.id); toast('আমন্ত্রণ বাতিল হয়েছে'); viewPeople(); } catch (e) { toast(errMsg(e), true); }
+    });
+  });
+}
+function inviteModal() {
+  openModal(`<h2>নতুন শিক্ষক / স্টাফ যোগ করুন</h2>
+  <form id="ivf" class="form">
+    <label class="f full">নাম<input name="name" required maxlength="60" placeholder="যেমন: রহিমা আক্তার"></label>
+    <label class="f full">ইমেইল (যেটা দিয়ে লগইন করবে)<input name="email" type="email" required maxlength="120" autocomplete="off"></label>
+    <label class="f full">ভূমিকা<select name="role"><option value="teacher">শিক্ষক — হাজিরা, পরীক্ষা, উপকরণ, মক টেস্ট</option><option value="staff">অফিস স্টাফ — ভর্তি, টাকা জমা, কাগজ, জাপান আবেদনও</option><option value="admin">পরিচালক — সব কিছু</option></select></label>
+    <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="ivc">বাতিল</button><button class="btn" type="submit">কোড তৈরি করুন</button></div>
+  </form>`);
+  const f = $('#ivf'); $('#ivc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const d = { name: f.name.value.trim(), email: f.email.value.trim().toLowerCase(), role: f.role.value, code: newInviteCode(), expires_at: new Date(Date.now() + 14 * 864e5).toISOString() };
+    try {
+      const row = await API.insert('staff_invites', d); putLocal('staff_invites', row);
+      openModal(`<h2>${esc(row.name)}-এর আমন্ত্রণ তৈরি হয়েছে</h2><p>আমন্ত্রণ কোড:</p><p style="font:700 28px ui-monospace,monospace;letter-spacing:.12em;margin:4px 0 12px">${esc(row.code)}</p>
+        <div class="card" style="padding:10px;white-space:pre-line;font-size:13.5px" id="ivmsg">${esc(inviteMsg(row))}</div>
+        <div class="row" style="gap:8px;margin-top:12px;justify-content:flex-end"><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(inviteMsg(row))}" target="_blank" rel="noopener">${WA_SVG} WhatsApp-এ পাঠান</a><button class="btn ghost" id="ivcp">কপি</button><button class="btn" id="ivok">ঠিক আছে</button></div>`);
+      $('#ivok').onclick = () => { closeModal(); viewPeople(); };
+      $('#ivcp').onclick = async () => { try { await navigator.clipboard.writeText(inviteMsg(row)); toast('মেসেজ কপি হয়েছে'); } catch { toast('কোড: ' + row.code); } };
+    } catch (err) { btn.disabled = false; toast(errMsg(err), true); }
+  };
+}
+// first-time login: create the account and claim the invite code
+function renderSignup(note = '') {
+  $('#app').innerHTML = `<div class="login"><form class="card" id="sgf" autocomplete="on">
+    <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
+    <h1>প্রথমবার? অ্যাকাউন্ট খুলুন</h1><p class="muted" style="margin:0 0 14px">পরিচালকের পাঠানো আমন্ত্রণ কোড লাগবে। যে ইমেইলে আমন্ত্রণ এসেছে, সেটাই দিন।</p>
+    <label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
+    <label class="f" style="margin-top:10px">নতুন পাসওয়ার্ড (অন্তত ৮ অক্ষর)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
+    <label class="f" style="margin-top:10px">আবার পাসওয়ার্ড<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
+    <label class="f" style="margin-top:10px">আমন্ত্রণ কোড<input name="code" required maxlength="12" autocapitalize="characters" autocomplete="off" style="letter-spacing:.1em"></label>
+    <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">অ্যাকাউন্ট খুলুন</button>
+    <p class="small" id="sgm" style="margin:10px 0 0;color:var(--red)">${esc(note)}</p>
+    <p class="small" style="margin:12px 0 0"><a href="#" id="sgback">← লগইনে ফিরে যান</a></p>
+  </form></div>`;
+  $('#sgback').onclick = (e) => { e.preventDefault(); renderLogin(); };
+  $('#sgf').onsubmit = async (e) => {
+    e.preventDefault(); const f = e.target; const m = $('#sgm'); const btn = f.querySelector('button[type=submit]');
+    if (f.password.value !== f.password2.value) { m.textContent = 'দুটো পাসওয়ার্ড মেলেনি।'; return; }
+    btn.disabled = true; m.textContent = '';
+    const { data, error } = await sb.auth.signUp({ email: f.email.value.trim().toLowerCase(), password: f.password.value });
+    if (error || (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0)) { btn.disabled = false; m.textContent = /already|registered/i.test(error ? error.message : 'already') ? 'এই ইমেইলে আগেই অ্যাকাউন্ট আছে — লগইন করুন, তারপর কোড চাইলে সেখানে দিন।' : errMsg(error); return; }
+    if (!data.session) { btn.disabled = false; m.textContent = 'ইমেইলে পাঠানো লিংকে ক্লিক করে নিশ্চিত করুন, তারপর লগইন করে কোড দিন।'; return; }
+    await claimAndEnter(data.user, f.code.value, (msg) => { btn.disabled = false; m.textContent = msg; });
+  };
+}
+const CLAIM_MSG = { bad_code: 'কোড বা ইমেইল মেলেনি, অথবা কোডের মেয়াদ শেষ। পরিচালকের কাছে নতুন কোড চান।', busy: 'অনেকবার ভুল হয়েছে, ১ ঘণ্টা পরে আবার চেষ্টা করুন।', student: 'এটা ছাত্রদের সাইটের অ্যাকাউন্ট — পোর্টালের জন্য আলাদা ইমেইল দিন।', login: 'আবার লগইন করুন।' };
+async function claimAndEnter(user, code, fail) {
+  const { data, error } = await sb.rpc('claim_invite', { p_code: String(code || '').trim() });
+  if (error) return fail(errMsg(error));
+  if (data === 'ok' || data === 'already') { toast('স্বাগতম!'); return afterLogin(user); }
+  fail(CLAIM_MSG[data] || data);
 }
 
 function studentInviteMsg(s) {
