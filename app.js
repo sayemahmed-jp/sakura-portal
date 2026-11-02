@@ -649,7 +649,7 @@ async function viewStudent(id, tab) {
   const s = byId(S.students, id);
   if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const smap = sessionMap(); const a = attOf(s.id, smap); const paid = paidOf(s.id); const due = dueOf(s);
-  const TABS = isTeacher() ? [['info', 'তথ্য'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা']] : [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
+  const TABS = isTeacher() ? [['info', 'তথ্য'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট']] : [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
   if (isTeacher() && !TABS.some(([k]) => k === tab)) tab = 'info';
   let body = '';
   if (tab === 'info') {
@@ -699,6 +699,7 @@ async function viewStudent(id, tab) {
     <div class="row" style="margin:16px 0 10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">স্কুলে আবেদন</h2><span class="spacer"></span><button class="btn gold" id="napp">+ নতুন আবেদন</button></div>
     <div class="tw">${(() => { const ap = S.applications.filter(x => x.student_id === s.id).sort((x, y) => (y.intake || '').localeCompare(x.intake || '')); return ap.length ? appRows(ap, { showStudent: false }) : '<div class="empty">এখনো কোনো স্কুলে আবেদন হয়নি</div>'; })()}</div>`;
   }
+  if (tab === 'mock') body = mockRecordHtml(s);
   if (tab === 'hist') body = '<div id="histbox"><div class="empty">লোড হচ্ছে…</div></div>';
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
@@ -706,6 +707,8 @@ async function viewStudent(id, tab) {
   <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
+    const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
+    if (tab === 'mock') bindGo();
     if ($('#idc')) { $('#idc').onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
@@ -2407,16 +2410,19 @@ function viewMocks(q) {
   const all = (S.mock_tests || []).slice().sort((a, b) => (LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level)) || (num(a.sort_order) - num(b.sort_order)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
   const list = all.filter(t => !lv || t.level === lv);
   const hidden = all.filter(t => !t.published).length;
+  const view = q.get('v') === 'students' ? 'students' : 'tests';
+  const vtabs = `<div class="tabs"><button data-kv="tests" class="${view === 'tests' ? 'on' : ''}">টেস্টগুলো (${all.length})</button><button data-kv="students" class="${view === 'students' ? 'on' : ''}">ছাত্র অনুযায়ী ফলাফল</button></div>`;
   mount('#/mocks', `
   <div class="top"><div><h1>মক টেস্ট</h1><p>ছাত্ররা ছাত্রদের সাইটে অনলাইনে পরীক্ষা দেয়; নম্বর সাথে সাথে গোনা হয় আর "পরীক্ষা ও রেজাল্ট"-এ উঠে যায়।</p></div>
     <div class="row"><button class="btn" id="mkadd">+ নতুন মক টেস্ট</button></div></div>
   ${hidden ? `<div class="alertbar" style="margin-bottom:16px"><b>${hidden}টি মক টেস্ট লুকানো আছে</b><span>নমুনা প্রশ্নগুলো শিক্ষক একবার দেখে নিন, তারপর টেস্ট খুলে "ছাত্রদের জন্য চালু করুন" চাপুন।</span></div>` : ''}
-  <div class="tabs"><button data-kl="" class="${!lv ? 'on' : ''}">সব (${all.length})</button>${LEVELS.map(l => `<button data-kl="${l}" class="${lv === l ? 'on' : ''}">${l} (${all.filter(t => t.level === l).length})</button>`).join('')}</div>
+  ${vtabs}${view === 'students' ? viewMockStudents(q, '', null) : `<div class="tabs" style="border:none;margin-top:-8px"><button data-kl="" class="${!lv ? 'on' : ''}">সব (${all.length})</button>${LEVELS.map(l => `<button data-kl="${l}" class="${lv === l ? 'on' : ''}">${l} (${all.filter(t => t.level === l).length})</button>`).join('')}</div>
   <div class="tw">${list.length ? `<table class="stack"><tr><th>নাম</th><th>লেভেল</th><th class="num">প্রশ্ন</th><th class="num">সময়</th><th>অবস্থা</th><th class="num">যারা দিয়েছে</th><th class="num">গড়</th></tr>${list.map(t => {
     const qs = mockQs(t.id); const done = mockDone(t.id); const studs = new Set(done.map(a => a.student_id));
     const avg = done.length ? Math.round(done.reduce((a, x) => a + (num(x.total) ? num(x.score) * 100 / num(x.total) : 0), 0) / done.length) : null;
     return `<tr class="click" data-go="#/mock/${t.id}"><td data-l="নাম"><b>${esc(t.title)}</b>${t.description ? `<div class="small muted">${esc(t.description)}</div>` : ''}</td><td data-l="লেভেল">${esc(t.level)}</td><td class="num" data-l="প্রশ্ন">${qs.length}</td><td class="num" data-l="সময়">${t.duration_min} মিনিট</td><td data-l="অবস্থা">${t.published ? badge('active', 'চালু') : badge('dropped', 'লুকানো')}</td><td class="num" data-l="যারা দিয়েছে">${studs.size} জন</td><td class="num" data-l="গড়">${avg == null ? '—' : avg + '%'}</td></tr>`;
-  }).join('')}</table>` : '<div class="empty">এখনো কোনো মক টেস্ট নেই</div>'}</div>`, () => {
+  }).join('')}</table>` : '<div class="empty">এখনো কোনো মক টেস্ট নেই</div>'}</div>`}`, () => {
+    $$('[data-kv]').forEach(b => b.onclick = () => { location.hash = '#/mocks' + (b.dataset.kv === 'students' ? '?v=students' : ''); });
     bindGo();
     $$('[data-kl]').forEach(b => b.onclick = () => { location.hash = '#/mocks' + (b.dataset.kl ? '?l=' + b.dataset.kl : ''); });
     $('#mkadd').onclick = () => mockTestModal(null, lv);
@@ -2473,8 +2479,8 @@ function viewMock(id, q) {
     const rows = [...byStu.entries()].map(([sid, arr]) => { const best = arr.reduce((m, a) => num(a.score) > num(m.score) ? a : m, arr[0]); const last = arr.reduce((m, a) => (a.submitted_at || '') > (m.submitted_at || '') ? a : m, arr[0]); return { s: byId(S.students, sid), sid, n: arr.length, best, last }; }).sort((a, b) => num(b.best.score) - num(a.best.score));
     const secAvg = MOCK_SEC_ORDER.map(sec => { const xs = done.map(a => (a.sections || {})[sec]).filter(Boolean); const tot = xs.reduce((a, x) => a + num(x.total), 0); return [sec, tot ? Math.round(xs.reduce((a, x) => a + num(x.score), 0) * 100 / tot) : null]; });
     body = `<div class="grid g4" style="margin-bottom:14px">${secAvg.map(([sec, p]) => `<div class="card stat ${p != null && p < t.pass_pct ? 'red' : ''}"><div class="l">${MOCK_SEC[sec]}</div><div class="v">${p == null ? '—' : p + '%'}</div><div class="s">সব চেষ্টার গড়</div></div>`).join('')}</div>
-    <div class="tw">${rows.length ? `<table class="stack"><tr><th>ছাত্র</th><th class="num">কতবার</th><th class="num">সেরা নম্বর</th><th>ভাগ অনুযায়ী (সেরা চেষ্টা)</th><th>শেষ দিয়েছে</th><th></th></tr>${rows.map(r => { const p = num(r.best.total) ? Math.round(num(r.best.score) * 100 / num(r.best.total)) : 0;
-      return `<tr class="click" data-go="#/student/${r.sid}?t=exams"><td data-l="ছাত্র">${esc(r.s ? studentName(r.s) : '—')}<div class="small muted">${esc(r.s ? r.s.admission_no : '')}</div></td><td class="num" data-l="কতবার">${r.n}</td><td class="num" data-l="সেরা নম্বর"><b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(r.best.score)}/${num(r.best.total)}</b> <span class="small muted">${p}%</span></td><td data-l="ভাগ" class="small">${MOCK_SEC_ORDER.filter(sec => (r.best.sections || {})[sec]).map(sec => `${MOCK_SEC[sec].split(' ')[0]} ${r.best.sections[sec].score}/${r.best.sections[sec].total}`).join(' · ')}</td><td data-l="শেষ দিয়েছে">${fmtDT(r.last.submitted_at)}</td><td>${isAdmin() ? `<button class="btn sm ghost" data-reset="${r.sid}" data-stop style="color:var(--red)">চেষ্টা মুছুন</button>` : ''}</td></tr>`; }).join('')}</table>` : '<div class="empty">এখনো কেউ এই টেস্ট দেয়নি</div>'}</div>`;
+    <div class="tw">${rows.length ? `<table class="stack"><tr><th>ছাত্র</th><th class="num">কতবার</th><th class="num">পাতা ছেড়েছে</th><th class="num">সেরা নম্বর</th><th>ভাগ অনুযায়ী (সেরা চেষ্টা)</th><th>শেষ দিয়েছে</th><th></th></tr>${rows.map(r => { const p = num(r.best.total) ? Math.round(num(r.best.score) * 100 / num(r.best.total)) : 0;
+      return `<tr class="click" data-go="#/student/${r.sid}?t=exams"><td data-l="ছাত্র">${esc(r.s ? studentName(r.s) : '—')}<div class="small muted">${esc(r.s ? r.s.admission_no : '')}</div></td><td class="num" data-l="কতবার">${r.n}</td><td class="num" data-l="পাতা ছেড়েছে">${(() => { const k = (S.mock_attempts || []).filter(a => a.test_id === t.id && a.student_id === r.sid && a.end_reason === 'left').length; return k ? `<b style="color:var(--red)">${k}</b>` : '0'; })()}</td><td class="num" data-l="সেরা নম্বর"><b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(r.best.score)}/${num(r.best.total)}</b> <span class="small muted">${p}%</span></td><td data-l="ভাগ" class="small">${MOCK_SEC_ORDER.filter(sec => (r.best.sections || {})[sec]).map(sec => `${MOCK_SEC[sec].split(' ')[0]} ${r.best.sections[sec].score}/${r.best.sections[sec].total}`).join(' · ')}</td><td data-l="শেষ দিয়েছে">${fmtDT(r.last.submitted_at)}</td><td>${isAdmin() ? `<button class="btn sm ghost" data-reset="${r.sid}" data-stop style="color:var(--red)">চেষ্টা মুছুন</button>` : ''}</td></tr>`; }).join('')}</table>` : '<div class="empty">এখনো কেউ এই টেস্ট দেয়নি</div>'}</div>`;
   }
   mount('#/mocks', `
   <div class="top"><div><h1>${esc(t.title)}</h1><p>${esc(t.level)} · ${t.duration_min} মিনিট · পাস ${t.pass_pct}% · ${qs.length}টি প্রশ্ন (${MOCK_SEC_ORDER.map(s => `${MOCK_SEC[s].split(' ')[0]} ${cnt[s]}`).join(', ')})${t.max_attempts ? ` · সর্বোচ্চ ${t.max_attempts} বার` : ''}</p><div class="row" style="margin-top:4px">${t.published ? badge('active', 'ছাত্রদের জন্য চালু') : badge('dropped', 'লুকানো — ছাত্ররা দেখে না')}</div></div>
@@ -2717,6 +2723,62 @@ async function claimAndEnter(user, code, fail) {
   if (error) return fail(errMsg(error));
   if (data === 'ok' || data === 'already') { toast('স্বাগতম!'); return afterLogin(user); }
   fail(CLAIM_MSG[data] || data);
+}
+
+// ------------------------------------------------------------------ mock test records (student profile, mark sheet, per-student summary)
+const END_NAME = { submit: 'নিজে জমা দিয়েছে', timeout: 'সময় শেষ', left: 'পাতা ছেড়ে গেছে' };
+const endBadge = (r) => r === 'left' ? badge('due', '⚠ পাতা ছেড়ে গেছে') : r === 'timeout' ? badge('trial', 'সময় শেষ') : badge('active', 'জমা দিয়েছে');
+function attemptsOf(sid) { return (S.mock_attempts || []).filter(a => a.student_id === sid && a.submitted_at).sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || '')); }
+function attemptRow(a) {
+  const t = byId(S.mock_tests || [], a.test_id) || {}; const total = num(a.total), score = num(a.score);
+  const answered = a.answered != null ? num(a.answered) : Object.keys(a.answers || {}).length;
+  return { a, t, total, score, wrong: Math.max(0, answered - score), blank: Math.max(0, total - answered), pct: total ? Math.round(score * 100 / total) : 0,
+    mins: a.started_at && a.submitted_at ? Math.max(0, Math.round((Date.parse(a.submitted_at) - Date.parse(a.started_at)) / 60000)) : null, pass: total && score * 100 >= num(t.pass_pct || 60) * total };
+}
+function mockSummary(rows) {
+  const tests = new Set(rows.map(r => r.a.test_id)).size; const avg = rows.length ? Math.round(rows.reduce((x, r) => x + r.pct, 0) / rows.length) : null;
+  const best = rows.length ? Math.max(...rows.map(r => r.pct)) : null; const left = rows.filter(r => r.a.end_reason === 'left').length; const passed = rows.filter(r => r.pass).length;
+  return { n: rows.length, tests, avg, best, left, passed, last: rows[0] ? rows[0].a.submitted_at : null };
+}
+function mockRecordHtml(s) {
+  const rows = attemptsOf(s.id).map(attemptRow); const m = mockSummary(rows);
+  if (!rows.length) return '<div class="card"><div class="empty">এই ছাত্র এখনো অনলাইনে কোনো মক টেস্ট দেয়নি।</div></div>';
+  return `<div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">মোট চেষ্টা</div><div class="v">${m.n}</div><div class="s">${m.tests}টি আলাদা টেস্ট · পাস ${m.passed} বার</div></div>
+    <div class="card stat"><div class="l">গড় নম্বর</div><div class="v">${m.avg}%</div></div>
+    <div class="card stat green"><div class="l">সেরা নম্বর</div><div class="v">${m.best}%</div></div>
+    <div class="card stat ${m.left ? 'red' : ''}"><div class="l">পাতা ছেড়ে গেছে</div><div class="v">${m.left}</div><div class="s">${m.left ? 'পরীক্ষার মাঝে অন্য অ্যাপ/ট্যাবে গিয়েছিল' : 'কোনো সন্দেহজনক কিছু নেই'}</div></div></div>
+  <div class="row" style="margin-bottom:10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">সব চেষ্টা</h2><span class="spacer"></span><button class="btn ghost" id="pms">মার্কশিট প্রিন্ট</button></div>
+  <div class="tw"><table class="stack"><tr><th>তারিখ ও সময়</th><th>টেস্ট</th><th class="num">নম্বর</th><th>সঠিক · ভুল · বাদ</th><th class="num">সময় লেগেছে</th><th>কীভাবে শেষ</th></tr>
+  ${rows.map(r => `<tr class="click" data-go="#/mock/${r.a.test_id}?t=res"><td data-l="তারিখ">${fmtDT(r.a.submitted_at)}</td><td data-l="টেস্ট"><b>${esc(r.t.title || '—')}</b> <span class="small muted">${esc(r.t.level || '')}</span></td>
+    <td class="num" data-l="নম্বর"><b style="color:${r.pass ? 'var(--green)' : 'var(--red)'}">${r.score}/${r.total}</b> <span class="small muted">${r.pct}%</span></td>
+    <td data-l="সঠিক · ভুল · বাদ"><span style="color:var(--green)">${r.score}</span> · <span style="color:var(--red)">${r.wrong}</span> · <span class="muted">${r.blank}</span></td>
+    <td class="num" data-l="সময় লেগেছে">${r.mins == null ? '—' : r.mins + ' মিনিট'}</td><td data-l="কীভাবে শেষ">${endBadge(r.a.end_reason)}</td></tr>`).join('')}</table></div>
+  <p class="small muted" style="margin-top:8px">প্রতিটা টেস্টের সেরা নম্বর "পরীক্ষা" ট্যাবেও ওঠে। "পাতা ছেড়ে গেছে" মানে পরীক্ষা চলার সময় ছাত্র অন্য অ্যাপ বা ট্যাবে গিয়েছিল, তাই পরীক্ষা নিজে থেকে জমা হয়ে গেছে।</p>`;
+}
+function printMockSheet(s) {
+  const rows = attemptsOf(s.id).map(attemptRow).reverse(); const m = mockSummary([...rows].reverse());
+  printWindow('Mark sheet ' + (s.name_en || s.name_bn || ''), `<div style="border:1.5px solid #A3843A">${headHtml()}
+  <div style="padding:16px 20px"><div style="text-align:center;margin-bottom:12px"><div style="font:700 11px 'Shippori Mincho B1';letter-spacing:4px;color:#A3843A">MOCK TEST MARK SHEET · 模擬試験成績表</div><div style="font:800 20px 'Noto Serif Bengali';color:#1B2945">অনলাইন মক টেস্টের মার্কশিট</div></div>
+  <table style="margin-bottom:12px"><tr><th>ছাত্রের নাম</th><td>${esc(s.name_bn || '')} ${s.name_en ? '(' + esc(s.name_en) + ')' : ''}</td></tr><tr><th>ভর্তি নম্বর · লেভেল · ব্যাচ</th><td>${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td></tr>
+  <tr><th>সারাংশ</th><td>মোট ${m.n}টি চেষ্টা (${m.tests}টি টেস্ট) · গড় ${m.avg ?? '—'}% · সেরা ${m.best ?? '—'}% · পাস ${m.passed} বার${m.left ? ` · পাতা ছেড়ে গেছে ${m.left} বার` : ''}</td></tr></table>
+  <table><tr style="background:#1B2945;color:#fff"><th style="width:auto;background:#1B2945;color:#fff">#</th><th style="width:auto;background:#1B2945;color:#fff">তারিখ</th><th style="width:auto;background:#1B2945;color:#fff">টেস্ট</th><th style="width:auto;background:#1B2945;color:#fff">নম্বর</th><th style="width:auto;background:#1B2945;color:#fff">%</th><th style="width:auto;background:#1B2945;color:#fff">সঠিক/ভুল/বাদ</th><th style="width:auto;background:#1B2945;color:#fff">ফল</th><th style="width:auto;background:#1B2945;color:#fff">মন্তব্য</th></tr>
+  ${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${fmtDT(r.a.submitted_at).slice(0, 10)}</td><td>${esc(r.t.title || '')}</td><td><b>${r.score}/${r.total}</b></td><td>${r.pct}%</td><td>${r.score} / ${r.wrong} / ${r.blank}</td><td style="color:${r.pass ? '#2E7D4F' : '#B8382C'};font-weight:700">${r.pass ? 'পাস' : 'ফেল'}</td><td style="font-size:12px">${r.a.end_reason === 'left' ? 'পাতা ছেড়ে গেছে' : r.a.end_reason === 'timeout' ? 'সময় শেষ' : ''}</td></tr>`).join('') || '<tr><td colspan="8" style="text-align:center">কোনো চেষ্টা নেই</td></tr>'}</table>
+  <div style="display:flex;justify-content:space-between;margin-top:46px;font-size:12.5px"><div style="border-top:1px dotted #8A7F6C;width:36%;padding-top:4px">শিক্ষকের স্বাক্ষর</div><div style="border-top:1px dotted #8A7F6C;width:36%;padding-top:4px;text-align:right">পরিচালকের স্বাক্ষর · ${esc(S.settings.director_en || '')}</div></div>
+  <div style="font-size:11px;color:#8A7F6C;margin-top:12px">প্রিন্টের তারিখ ${fmtD(todayISO())} · Sakura Portal</div></div></div>`);
+}
+function viewMockStudents(q, tabs, bind) {
+  const byStu = new Map(); for (const a of (S.mock_attempts || []).filter(a => a.submitted_at)) { const arr = byStu.get(a.student_id) || []; arr.push(attemptRow(a)); byStu.set(a.student_id, arr); }
+  const rows = [...byStu.entries()].map(([sid, rs]) => ({ s: byId(S.students, sid), sid, m: mockSummary(rs.sort((a, b) => (b.a.submitted_at || '').localeCompare(a.a.submitted_at || ''))) })).sort((a, b) => (b.m.last || '').localeCompare(a.m.last || ''));
+  const quiet = S.students.filter(s => (s.status === 'active' || s.status === 'trial') && !byStu.has(s.id));
+  return `${tabs}<div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">মক টেস্ট দিয়েছে</div><div class="v">${rows.length} জন</div><div class="s">চলমান ${S.students.filter(s => s.status === 'active' || s.status === 'trial').length} জনের মধ্যে</div></div>
+    <div class="card stat"><div class="l">মোট চেষ্টা</div><div class="v">${rows.reduce((x, r) => x + r.m.n, 0)}</div></div>
+    <div class="card stat"><div class="l">গড় নম্বর</div><div class="v">${rows.length ? Math.round(rows.reduce((x, r) => x + r.m.avg, 0) / rows.length) + '%' : '—'}</div></div>
+    <div class="card stat ${rows.some(r => r.m.left) ? 'red' : ''}"><div class="l">পাতা ছেড়ে গেছে</div><div class="v">${rows.reduce((x, r) => x + r.m.left, 0)}</div><div class="s">${rows.filter(r => r.m.left).length} জন ছাত্রের</div></div></div>
+  <div class="tw">${rows.length ? `<table class="stack"><tr><th>ছাত্র</th><th class="num">চেষ্টা</th><th class="num">টেস্ট</th><th class="num">গড়</th><th class="num">সেরা</th><th class="num">পাতা ছেড়েছে</th><th>শেষ দিয়েছে</th></tr>
+    ${rows.map(r => `<tr class="click" data-go="#/student/${r.sid}?t=mock"><td data-l="ছাত্র"><b>${esc(r.s ? studentName(r.s) : '—')}</b><div class="small muted">${esc(r.s ? r.s.admission_no + ' · ' + r.s.current_level : '')}</div></td><td class="num" data-l="চেষ্টা">${r.m.n}</td><td class="num" data-l="টেস্ট">${r.m.tests}</td><td class="num" data-l="গড়">${r.m.avg}%</td><td class="num" data-l="সেরা"><b>${r.m.best}%</b></td><td class="num" data-l="পাতা ছেড়েছে">${r.m.left ? `<b style="color:var(--red)">${r.m.left}</b>` : '0'}</td><td data-l="শেষ দিয়েছে">${fmtDT(r.m.last)}</td></tr>`).join('')}</table>` : '<div class="empty">এখনো কোনো ছাত্র অনলাইনে মক টেস্ট দেয়নি</div>'}</div>
+  ${quiet.length ? `<details style="margin-top:12px"><summary class="small muted">যারা এখনো একবারও দেয়নি (${quiet.length} জন)</summary><p class="small">${quiet.map(s => esc(studentName(s))).join(' · ')}</p></details>` : ''}`;
 }
 
 function studentInviteMsg(s) {

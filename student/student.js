@@ -85,12 +85,14 @@ const Demo = {
       return { id: t.id, title: t.title, level: t.level, description: t.description, duration_min: t.duration_min, pass_pct: t.pass_pct, max_attempts: t.max_attempts, questions: this.qsOf(t.id).length, attempts: done.length, best: done.length ? Math.max(...done.map(a => a.score)) : null, last_attempt: done[0] ? done[0].id : null, open_attempt: open ? open.id : null };
     });
   },
-  grade(aid) {
+  grade(aid, reason = 'submit') {
     const all = this.read('mock_attempts'); const a = all.find(x => x.id === aid); const t = this.read('mock_tests').find(x => x.id === a.test_id);
     if (!a.submitted_at) {
       let sc = 0, tot = 0; const secs = {};
-      for (const q of this.qsOf(t.id)) { const ok = String(a.answers[q.id]) === String(q.correct); tot++; if (ok) sc++; const x = secs[q.section] || (secs[q.section] = { score: 0, total: 0 }); x.total++; if (ok) x.score++; }
-      Object.assign(a, { submitted_at: new Date(Math.min(Date.now(), Date.parse(a.deadline) + 120000)).toISOString(), score: sc, total: tot, sections: secs }); this.write('mock_attempts', all);
+      let ans = 0;
+      for (const q of this.qsOf(t.id)) { const v = a.answers[q.id]; const ok = v != null && String(v) === String(q.correct); tot++; if (ok) sc++; if (v != null) ans++; const x = secs[q.section] || (secs[q.section] = { score: 0, total: 0 }); x.total++; if (ok) x.score++; }
+      const late = Date.now() > Date.parse(a.deadline) + 30000;
+      Object.assign(a, { submitted_at: new Date(Math.min(Date.now(), Date.parse(a.deadline) + 120000)).toISOString(), score: sc, total: tot, answered: ans, sections: secs, end_reason: late && reason !== 'left' ? 'timeout' : reason }); this.write('mock_attempts', all);
       const exams = this.read('exams'); let ex = exams.find(e => e.id === t.exam_id);
       if (!ex) { ex = { id: 'ex-' + t.id, exam_date: new Date().toISOString().slice(0, 10), title: 'অনলাইন মক: ' + t.title, type: 'mock', level: t.level, batch: 'all', max_marks: tot, pass_marks: Math.ceil(tot * t.pass_pct / 100), created_at: new Date().toISOString() }; exams.push(ex); this.write('exams', exams); const ts = this.read('mock_tests'); ts.find(x => x.id === t.id).exam_id = ex.id; this.write('mock_tests', ts); }
       const best = Math.max(...all.filter(x => x.test_id === t.id && x.student_id === a.student_id && x.submitted_at).map(x => x.score));
@@ -101,23 +103,24 @@ const Demo = {
   },
   review(aid) {
     const a = this.read('mock_attempts').find(x => x.id === aid); const t = this.read('mock_tests').find(x => x.id === a.test_id);
-    return { attempt_id: a.id, test: { id: t.id, title: t.title, level: t.level, pass_pct: t.pass_pct }, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, sections: a.sections,
+    return { attempt_id: a.id, test: { id: t.id, title: t.title, level: t.level, pass_pct: t.pass_pct }, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason, sections: a.sections,
       passed: a.total > 0 && a.score * 100 >= t.pass_pct * a.total, show_answers: t.show_answers !== false,
       questions: t.show_answers === false ? [] : this.qsOf(t.id).map(q => ({ id: q.id, section: q.section, passage: q.passage, question: q.question, options: q.options, script: q.script, correct: q.correct, explanation: q.explanation, mine: a.answers[q.id] ?? null })) };
   },
   mockStart(id) {
     const s = this.student(); const t = this.testFor(s, id);
-    this.read('mock_attempts').filter(a => a.test_id === t.id && a.student_id === s.id && !a.submitted_at && Date.parse(a.deadline) + 120000 < Date.now()).forEach(a => this.grade(a.id));
-    let all = this.read('mock_attempts'); let a = all.find(x => x.test_id === t.id && x.student_id === s.id && !x.submitted_at);
-    if (!a) {
-      if (t.max_attempts && all.filter(x => x.test_id === t.id && x.student_id === s.id && x.submitted_at).length >= t.max_attempts) throw new Error('limit');
-      a = { id: 'att-' + Date.now(), test_id: t.id, student_id: s.id, started_at: new Date().toISOString(), deadline: new Date(Date.now() + t.duration_min * 60000).toISOString(), submitted_at: null, answers: {} }; all.push(a); this.write('mock_attempts', all);
-    }
-    return { attempt_id: a.id, deadline: a.deadline, now: new Date().toISOString(), answers: a.answers, test: { id: t.id, title: t.title, level: t.level, duration_min: t.duration_min, pass_pct: t.pass_pct },
+    let closed = null;
+    this.read('mock_attempts').filter(a => a.student_id === s.id && !a.submitted_at).forEach(a => { this.grade(a.id, Date.parse(a.deadline) < Date.now() ? 'timeout' : 'left'); closed = closed || a.id; });
+    const all = this.read('mock_attempts');
+    if (t.max_attempts && all.filter(x => x.test_id === t.id && x.student_id === s.id && x.submitted_at).length >= t.max_attempts) throw new Error('limit');
+    const a = { id: 'att-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), test_id: t.id, student_id: s.id, started_at: new Date().toISOString(), deadline: new Date(Date.now() + t.duration_min * 60000).toISOString(), submitted_at: null, answers: {} }; all.push(a); this.write('mock_attempts', all);
+    return { attempt_id: a.id, deadline: a.deadline, now: new Date().toISOString(), answers: a.answers, closed_previous: closed, test: { id: t.id, title: t.title, level: t.level, duration_min: t.duration_min, pass_pct: t.pass_pct },
       questions: this.qsOf(t.id).map(q => ({ id: q.id, section: q.section, passage: q.passage, question: q.question, options: q.options, script: q.script, audio_path: q.audio_path || null })) };
   },
   mockSave(aid, answers) { const s = this.student(); const all = this.read('mock_attempts'); const a = all.find(x => x.id === aid && x.student_id === s.id && !x.submitted_at && Date.now() <= Date.parse(x.deadline) + 120000); if (!a) return 'closed'; a.answers = answers || {}; this.write('mock_attempts', all); return 'ok'; },
-  mockSubmit(aid, answers) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id)) throw new Error('not_found'); this.mockSave(aid, answers); return this.grade(aid); },
+  mockSubmit(aid, answers, reason = 'submit') { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id)) throw new Error('not_found'); this.mockSave(aid, answers); return this.grade(aid, reason); },
+  mockLeave(aid, answers) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && !x.submitted_at)) return 'closed'; this.mockSave(aid, answers); this.grade(aid, 'left'); return 'ok'; },
+  mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason }; }); },
   mockReview(aid) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && x.submitted_at)) throw new Error('not_found'); return this.review(aid); },
 };
 const API = {
@@ -135,9 +138,17 @@ const API = {
   async reset(email) { if (DEMO) return; const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; },
   async newPassword(pw) { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw error; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
-  async mockStart(id) { if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
+  async mockStart(id) { if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
   async mockSave(aid, ans) { if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
-  async mockSubmit(aid, ans) { if (DEMO) return Demo.mockSubmit(aid, ans); const { data, error } = await sb.rpc('student_mock_submit', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
+  async mockSubmit(aid, ans, reason = 'submit') { if (DEMO) return Demo.mockSubmit(aid, ans, reason); const { data, error } = await sb.rpc('student_mock_submit', { p_attempt: aid, p_answers: ans, p_reason: reason }); if (error) throw error; return data; },
+  async mockLeave(aid, ans) { if (DEMO) return Demo.mockLeave(aid, ans); const { data, error } = await sb.rpc('student_mock_leave', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
+  async mockHistory() { if (DEMO) return Demo.mockHistory(); const { data, error } = await sb.rpc('student_mock_history'); if (error) throw error; return data || []; },
+  mockLeaveBeacon(aid, ans) { // keepalive request: still delivered while the tab is being hidden or closed
+    if (DEMO) { try { Demo.mockLeave(aid, ans); } catch (e) {} return; }
+    const tok = API._token; if (!tok) return;
+    try { fetch(CFG.SUPABASE_URL + '/rest/v1/rpc/student_mock_leave', { method: 'POST', keepalive: true, headers: { apikey: CFG.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_attempt: aid, p_answers: ans }) }).catch(() => {}); } catch (e) {}
+  },
+  _token: null,
   async mockReview(aid) { if (DEMO) return Demo.mockReview(aid); const { data, error } = await sb.rpc('student_mock_review', { p_attempt: aid }); if (error) throw error; return data; },
   async signOut() { if (DEMO) { localStorage.removeItem('sakura_demo_student_user'); return; } await sb.auth.signOut(); }
 };
@@ -245,13 +256,13 @@ function renderHome(d, user) {
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
     : `<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB !== 'mock' ? 'on' : ''}">📚 পড়ার উপকরণ (${mats.length})</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+      ${HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
-  $$('[data-start]').forEach(b => b.onclick = () => startMock(b.dataset.start));
+  $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
   $$('[data-open]').forEach(b => b.onclick = async () => {
@@ -292,12 +303,18 @@ function speakJa(text, onEnd) {
 }
 if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices(); }
 
+const localD = (iso) => { if (!iso) return '—'; const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`; };
+function historyHtml(h) {
+  if (!h.length) return '';
+  return `<h2 class="lvl" style="margin-top:26px">আমার ফলাফল (${h.length})</h2><div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>টেস্ট</th><th class="num">নম্বর</th><th>সঠিক · ভুল · বাদ</th><th></th></tr>${h.map(a => { const cn = attemptCounts(a); const p = a.total ? Math.round(a.score * 100 / a.total) : 0;
+    return `<tr data-rev="${esc(a.attempt_id)}"><td>${localD(a.submitted_at)}</td><td>${esc(a.title)}${a.end_reason === 'left' ? ' <span class="lefttag">পাতা ছেড়েছিলেন</span>' : a.end_reason === 'timeout' ? ' <span class="small muted">(সময় শেষ)</span>' : ''}</td><td class="num"><b style="color:${p >= a.pass_pct ? 'var(--green)' : 'var(--red)'}">${a.score}/${a.total}</b><div class="small muted">${p}%</div></td><td class="small">${cn.score} · ${cn.wrong} · ${cn.blank}</td><td>›</td></tr>`; }).join('')}</table></div>`;
+}
 function mockListHtml(list) {
   if (!list.length) return '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো মক টেস্ট চালু করা হয়নি।</div></div>';
   return `<div class="mlist">${list.map(t => { const p = t.best != null && t.questions ? Math.round(t.best * 100 / t.questions) : null; const left = t.max_attempts ? t.max_attempts - t.attempts : null;
     return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b><div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
       ${t.attempts ? `<div class="small" style="margin-top:2px">দিয়েছেন ${t.attempts} বার · সেরা <b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${t.best}/${t.questions} (${p}%)</b></div>` : ''}</div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${t.open_attempt ? `<button class="btn sm gold" data-start="${esc(t.id)}">চালিয়ে যান</button>` : left === 0 ? '' : `<button class="btn sm" data-start="${esc(t.id)}">${t.attempts ? 'আবার দিন' : 'শুরু করুন'}</button>`}${t.last_attempt ? `<button class="btn sm ghost" data-rev="${esc(t.last_attempt)}">ফলাফল</button>` : ''}</div></div>`; }).join('')}</div>`;
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${left === 0 ? '' : `<button class="btn sm" data-start="${esc(t.id)}">${t.attempts ? 'আবার দিন' : 'শুরু করুন'}</button>`}${t.last_attempt ? `<button class="btn sm ghost" data-rev="${esc(t.last_attempt)}">ফলাফল</button>` : ''}</div></div>`; }).join('')}</div>`;
 }
 
 function confirmOverlay(text, ok = 'হ্যাঁ') {
@@ -310,9 +327,16 @@ function confirmOverlay(text, ok = 'হ্যাঁ') {
 }
 
 let EXAM = null;
+const END_REASON = { submit: 'নিজে জমা দিয়েছেন', timeout: 'সময় শেষ হয়ে জমা হয়েছে', left: 'পরীক্ষার পাতা ছেড়ে যাওয়ায় জমা হয়েছে' };
+const EXAM_RULES = 'পরীক্ষা শুরু হলে:\n• অন্য অ্যাপ বা ট্যাবে গেলে, ফোন লক করলে, বা পাতা বন্ধ/রিফ্রেশ করলে পরীক্ষা সঙ্গে সঙ্গে জমা হয়ে শেষ হয়ে যাবে।\n• তখন পর্যন্ত যা উত্তর দিয়েছেন, সেটাই গোনা হবে; বাকিগুলো "উত্তর দেননি" ধরা হবে।\n• ফোনে কল এলেও পরীক্ষা শেষ হয়ে যেতে পারে — চুপচাপ জায়গায় বসে দিন।\n• প্রতিবার শুরু করা একটা নতুন চেষ্টা হিসেবে গোনা হয়, আর শিক্ষক সব চেষ্টা দেখতে পান।';
+async function askStartMock(id) {
+  if (!(await confirmOverlay(EXAM_RULES, 'বুঝেছি, শুরু করুন'))) return;
+  startMock(id);
+}
 async function startMock(id) {
   $('#app').innerHTML = '<div class="boot">টেস্ট লোড হচ্ছে…</div>';
-  try { renderExam(await API.mockStart(id)); } catch (e) { toast(mockErr(e), true); start(); }
+  try { const d = await API.mockStart(id); if (d.closed_previous) toast('আগের অসমাপ্ত পরীক্ষাটি জমা হয়ে গেছে — "আমার ফলাফল"-এ দেখুন'); renderExam(d); }
+  catch (e) { toast(mockErr(e), true); start(); }
 }
 function renderExam(d) {
   const qs = d.questions || []; const answers = { ...(d.answers || {}) };
@@ -329,11 +353,11 @@ function renderExam(d) {
       ${o.map((op, i) => `<label class="opt ${String(answers[q.id]) === String(i) ? 'sel' : ''}"><input type="radio" name="a-${esc(q.id)}" value="${i}" ${String(answers[q.id]) === String(i) ? 'checked' : ''}><span class="ab">${ABCD[i]}</span><span>${esc(op)}</span></label>`).join('')}</div>`;
   }
   $('#app').innerHTML = `<div class="xbar"><div class="xin"><div style="min-width:0"><b class="xt">${esc(d.test.title)}</b><small id="xcount"></small></div><span class="timer" id="xtimer"></span><button class="btn sm gold" id="xsub">জমা দিন</button></div></div>
-    <div class="st" style="padding-top:8px"><p class="small muted">প্রতিটা প্রশ্নের একটা উত্তর বাছাই করুন। উত্তর নিজে থেকে সেভ হয়। সময় শেষ হলে নিজে থেকেই জমা হয়ে যাবে।</p>${html}
+    <div class="st" style="padding-top:8px"><div class="warnline">⚠️ এই পাতা ছেড়ে গেলে (অন্য অ্যাপ/ট্যাব, ফোন লক, রিফ্রেশ) পরীক্ষা সঙ্গে সঙ্গে জমা হয়ে যাবে।</div>${html}
     <button class="btn" id="xsub2" style="width:100%;justify-content:center;margin-top:16px">জমা দিন</button></div>`;
-  const count = () => { const a = qs.filter(q => answers[q.id] != null).length; $('#xcount').textContent = ` · উত্তর দিয়েছেন ${a}/${qs.length}`; return a; };
+  const count = () => { const a = qs.filter(q => answers[q.id] != null).length; const el = $('#xcount'); if (el) el.textContent = ` · উত্তর দিয়েছেন ${a}/${qs.length}`; return a; };
   count();
-  let saveT = null; const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { API.mockSave(EXAM.id, answers).catch(() => {}); }, 1500); };
+  let saveT = null; const save = () => { clearTimeout(saveT); saveT = setTimeout(() => { if (!EXAM.done) API.mockSave(EXAM.id, answers).catch(() => {}); }, 1200); };
   $$('.opt input').forEach(inp => inp.onchange = () => {
     const qid = inp.name.slice(2); answers[qid] = Number(inp.value);
     $$(`input[name="${CSS.escape(inp.name)}"]`).forEach(x => x.closest('.opt').classList.toggle('sel', x.checked));
@@ -347,24 +371,53 @@ function renderExam(d) {
     } catch (e) { toast(errMsg(e), true); }
     setTimeout(() => { b.disabled = false; }, 1200);
   });
+  // ---- leaving the page ends the exam (anti-cheating)
+  let blurT = null, warnEl = null;
+  const stopWatch = () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', onHide); window.removeEventListener('blur', onBlur); window.removeEventListener('focus', onFocus); clearTimeout(blurT); if (warnEl) warnEl.remove(); };
+  const endNow = (reason) => { EXAM.done = true; clearInterval(tick); clearTimeout(saveT); window.onbeforeunload = null; if ('speechSynthesis' in window) speechSynthesis.cancel(); stopWatch(); };
+  const leave = () => {
+    if (EXAM.done) return; endNow('left');
+    API.mockLeaveBeacon(EXAM.id, answers);                 // reaches the server even if the page is closing
+    $('#app').innerHTML = '<div class="boot">আপনি পরীক্ষার পাতা ছেড়ে গিয়েছিলেন — পরীক্ষা জমা হয়ে গেছে।</div>';
+    const showIt = async () => { if (document.hidden) return; document.removeEventListener('visibilitychange', showIt);
+      try { await API.mockLeave(EXAM.id, answers).catch(() => {}); renderResult(await API.mockReview(EXAM.id)); } catch (e) { toast(mockErr(e), true); HOME_TAB = 'mock'; start(); } };
+    if (document.hidden) document.addEventListener('visibilitychange', showIt); else showIt();
+  };
+  function onVis() { if (document.hidden) leave(); }
+  function onHide() { leave(); }
+  function onBlur() {   // a window switch on a computer: 5 seconds to come back
+    if (EXAM.done || warnEl) return;
+    warnEl = document.createElement('div'); warnEl.className = 'ovl'; warnEl.innerHTML = '<div class="card" style="max-width:340px;text-align:center"><b style="color:var(--red)">পরীক্ষার পাতায় ফিরে আসুন!</b><p style="margin:8px 0 0">৫ সেকেন্ডের মধ্যে না ফিরলে পরীক্ষা জমা হয়ে যাবে।</p></div>';
+    document.body.appendChild(warnEl); blurT = setTimeout(leave, 5000);
+  }
+  function onFocus() { clearTimeout(blurT); if (warnEl) { warnEl.remove(); warnEl = null; } }
+  document.addEventListener('visibilitychange', onVis); window.addEventListener('pagehide', onHide); window.addEventListener('blur', onBlur); window.addEventListener('focus', onFocus);
   const finish = async (auto) => {
     if (EXAM.done) return;
-    if (!auto) { const left = qs.length - count(); if (!(await confirmOverlay(left ? `${left}টি প্রশ্নের উত্তর দেওয়া হয়নি। তবুও জমা দেবেন?` : 'জমা দিলে আর উত্তর বদলানো যাবে না। জমা দেবেন?', 'জমা দিন'))) return; }
-    EXAM.done = true; clearInterval(tick); clearTimeout(saveT); window.onbeforeunload = null; if ('speechSynthesis' in window) speechSynthesis.cancel();
+    if (!auto) { const left = qs.length - count(); if (!(await confirmOverlay(left ? `${left}টি প্রশ্নের উত্তর দেওয়া হয়নি। তবুও জমা দেবেন?` : 'জমা দিলে আর উত্তর বদলানো যাবে না। জমা দেবেন?', 'জমা দিন'))) return; if (EXAM.done) return; }
+    endNow(auto ? 'timeout' : 'submit');
     $('#app').innerHTML = `<div class="boot">${auto ? 'সময় শেষ — জমা হচ্ছে…' : 'জমা হচ্ছে…'}</div>`;
-    try { renderResult(await API.mockSubmit(EXAM.id, answers)); }
-    catch (e) { EXAM.done = false; toast(mockErr(e) + ' — ইন্টারনেট দেখে আবার "জমা দিন" চাপুন', true); renderExamRetry(d, answers); }
+    let tries = 0;
+    const go = async () => { try { renderResult(await API.mockSubmit(EXAM.id, answers, auto ? 'timeout' : 'submit')); }
+      catch (e) { if (++tries < 4) return setTimeout(go, 2500); $('#app').innerHTML = `<div class="st"><div class="card lock"><b>জমা দেওয়া যায়নি</b><p>${esc(mockErr(e))}</p><p class="small muted">আপনার উত্তর সেভ করা আছে। ইন্টারনেট ঠিক হলে "আবার চেষ্টা" চাপুন।</p><button class="btn" id="retry">আবার চেষ্টা</button></div></div>`; $('#retry').onclick = () => { tries = 0; $('#app').innerHTML = '<div class="boot">জমা হচ্ছে…</div>'; go(); }; } };
+    go();
   };
   const tick = setInterval(() => { const left = deadline - (Date.now() + offset); const el = $('#xtimer'); if (!el) return clearInterval(tick); el.textContent = '⏱ ' + fmtClock(left); el.classList.toggle('low', left < 5 * 60000); if (left <= 0) finish(true); }, 1000);
   $('#xtimer').textContent = '⏱ ' + fmtClock(deadline - (Date.now() + offset));
   $('#xsub').onclick = () => finish(false); $('#xsub2').onclick = () => finish(false);
   window.onbeforeunload = (e) => { if (EXAM && !EXAM.done) { e.preventDefault(); e.returnValue = ''; } };
 }
-function renderExamRetry(d, answers) { renderExam({ ...d, answers, now: new Date(Date.now()).toISOString(), deadline: d.deadline }); }
+
+function attemptCounts(r) {
+  const total = Number(r.total) || 0, score = Number(r.score) || 0;
+  const answered = r.answered != null ? Number(r.answered) : (r.questions || []).filter(q => q.mine != null).length;
+  return { score, wrong: Math.max(0, answered - score), blank: Math.max(0, total - answered), total };
+}
+const minsBetween = (a, b) => { const m = Math.max(0, Math.round((Date.parse(b) - Date.parse(a)) / 60000)); return m < 1 ? '১ মিনিটের কম' : m + ' মিনিট'; };
 
 function renderResult(r) {
   EXAM = null; window.onbeforeunload = null;
-  const p = r.total ? Math.round(r.score * 100 / r.total) : 0; const secs = r.sections || {};
+  const p = r.total ? Math.round(r.score * 100 / r.total) : 0; const secs = r.sections || {}; const cn = attemptCounts(r);
   let rev = ''; let sec = null, pas = null, n = 0;
   for (const q of r.questions || []) {
     if (q.section !== sec) { sec = q.section; pas = null; rev += `<div class="lvl">${esc(SEC[sec] || sec)}</div>`; }
@@ -378,7 +431,10 @@ function renderResult(r) {
   $('#app').innerHTML = `<div class="st">
     <div class="card ${r.passed ? 'open' : 'lock'}" style="text-align:center;padding:20px"><div class="small muted">${esc(r.test.title)}</div>
       <div style="font:800 40px 'Noto Serif Bengali';color:${r.passed ? 'var(--green)' : 'var(--red)'};margin:6px 0">${r.score}/${r.total}</div>
-      <div><b>${p}%</b> · ${r.passed ? '🎉 পাস' : `পাস করতে ${r.test.pass_pct}% লাগে — আবার চেষ্টা করুন`}</div></div>
+      <div><b>${p}%</b> · ${r.passed ? '🎉 পাস' : `পাস করতে ${r.test.pass_pct}% লাগে — আবার চেষ্টা করুন`}</div>
+      <div class="cnt"><span class="c-ok">✓ সঠিক <b>${cn.score}</b></span><span class="c-bad">✗ ভুল <b>${cn.wrong}</b></span><span class="c-bl">— উত্তর দেননি <b>${cn.blank}</b></span></div>
+      <div class="small muted" style="margin-top:6px">${r.end_reason ? esc(END_REASON[r.end_reason] || '') + ' · ' : ''}${r.started_at && r.submitted_at ? 'সময় লেগেছে ' + minsBetween(r.started_at, r.submitted_at) : ''}</div></div>
+    ${r.end_reason === 'left' ? '<div class="card lock" style="padding:12px 16px"><b>পরীক্ষার পাতা ছেড়ে যাওয়ায় পরীক্ষা শেষ হয়েছে।</b> <span class="muted">শিক্ষক এটা দেখতে পান। পরের বার শেষ পর্যন্ত পাতায় থাকুন।</span></div>' : ''}
     <div class="card"><h2 style="margin-top:0">ভাগ অনুযায়ী</h2><table style="width:100%"><tbody>${['vocab', 'grammar', 'reading', 'listening'].filter(s => secs[s]).map(s => { const x = secs[s]; const sp = x.total ? Math.round(x.score * 100 / x.total) : 0; return `<tr><td>${SEC[s]}</td><td class="num"><b>${x.score}/${x.total}</b></td><td style="width:40%"><div class="bar"><span style="width:${sp}%;background:${sp >= r.test.pass_pct ? 'var(--green)' : 'var(--red)'}"></span></div></td></tr>`; }).join('')}</tbody></table>
       <p class="small muted" style="margin:8px 0 0">এই নম্বর আপনার শিক্ষকের কাছেও চলে গেছে।</p></div>
     <div class="row" style="gap:8px;margin:12px 0"><button class="btn" id="back">‹ সব মক টেস্ট</button></div>
@@ -403,7 +459,7 @@ async function start() {
     const d = await API.me();
     if (!d) return renderAuth();
     if (!d.linked) return renderLink(d, user);
-    if (!d.blocked) { try { d.mocks = await API.mockList(); } catch (e) { d.mocks = []; console.warn(e); } }
+    if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
@@ -411,6 +467,6 @@ async function start() {
   }
 }
 
-if (sb) sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') renderNewPassword(); });
+if (sb) sb.auth.onAuthStateChange((ev, session) => { if (session) API._token = session.access_token; if (ev === 'PASSWORD_RECOVERY') renderNewPassword(); });
 if (!DEMO && /type=recovery/.test(location.hash)) setTimeout(() => { if (!$('#npf')) start(); }, 5000); // the recovery event above shows the new-password form
 else start();
