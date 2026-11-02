@@ -149,8 +149,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials'];
-const OPTIONAL_TABLES = ['materials', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts'];
+const OPTIONAL_TABLES = ['materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -173,6 +173,7 @@ const Local = {
     const rows = this.read('audit_log').filter(e => e.at >= lo && e.at <= hi && (!student || e.student_id === student) && (!a || e.action === a) && (!u || e.user_name === u) && (!t || (t === 'money' ? MONEY_TABLES.includes(e.table_name) && e.action !== 'insert' : e.table_name === t))).sort((x, y) => y.at.localeCompare(x.at));
     return { rows: rows.slice(0, limit), more: rows.length > limit };
   },
+  async insertMany(t, rows) { const out = []; for (const r of rows) out.push(await this.insert(t, r)); return out; },
   async insert(t, row) { const rows = this.read(t); const r = { id: uuid(), created_at: new Date().toISOString(), ...row }; this.check(t, rows, r); rows.push(r); this.write(t, rows); this.log('insert', t, null, r); return r; },
   async update(t, id, patch) { const rows = this.read(t); const i = rows.findIndex(r => r.id === id); if (i < 0) throw new Error('not found'); const old = rows[i]; const r = { ...rows[i], ...patch }; this.check(t, rows, r); rows[i] = r; this.write(t, rows); this.log('update', t, old, r); return r; },
   async remove(t, id) {
@@ -217,6 +218,7 @@ const Remote = {
     return out;
   },
   async insert(t, row) { const { data, error } = await sb.from(t).insert(row).select().single(); if (error) throw error; return data; },
+  async insertMany(t, rows) { const out = []; for (let i = 0; i < rows.length; i += 200) { const { data, error } = await sb.from(t).insert(rows.slice(i, i + 200)).select(); if (error) throw error; out.push(...data); } return out; },
   async update(t, id, patch) { const { data, error } = await sb.from(t).update(patch).eq('id', id).select().single(); if (error) throw error; return data; },
   async remove(t, id) { const { error } = await sb.from(t).delete().eq('id', id); if (error) throw error; },
   async upsertResults(rows) { const { data, error } = await sb.from('exam_results').upsert(rows, { onConflict: 'exam_id,student_id' }).select(); if (error) throw error; return data; },
@@ -376,7 +378,7 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
@@ -420,6 +422,8 @@ function render() {
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'materials') return viewMaterials(q);
+  if (p[0] === 'mocks') return viewMocks(q);
+  if (p[0] === 'mock') return viewMock(p[1], q);
   if (p[0] === 'settings') return viewSettings();
   return viewDashboard();
 }
@@ -2280,8 +2284,210 @@ function materialModal(m, presetLevel) {
   };
 }
 
+// ------------------------------------------------------------------ online mock tests (v15 database)
+const MOCK_SEC = { vocab: 'শব্দ ও কানজি', grammar: 'ব্যাকরণ', reading: 'পড়া (読解)', listening: 'শোনা (聴解)' };
+const MOCK_SEC_ORDER = ['vocab', 'grammar', 'reading', 'listening'];
+const ABCD = ['ক', 'খ', 'গ', 'ঘ'];
+const mockQs = (tid) => (S.mock_questions || []).filter(q => q.test_id === tid).sort((a, b) => (MOCK_SEC_ORDER.indexOf(a.section) - MOCK_SEC_ORDER.indexOf(b.section)) || (num(a.sort_order) - num(b.sort_order)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
+const mockDone = (tid) => (S.mock_attempts || []).filter(a => a.test_id === tid && a.submitted_at);
+const mockOpts = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
+function speakJa(text) { // reads a listening script aloud with the device's Japanese voice
+  if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে কথা বলার সুবিধা নেই', true);
+  speechSynthesis.cancel();
+  const clean = String(text || '').split('\n').map(l => l.replace(/^[^：:\s]{1,6}[：:]\s*/, '')).join('。');
+  const u = new SpeechSynthesisUtterance(clean); u.lang = 'ja-JP'; u.rate = 0.9;
+  const v = speechSynthesis.getVoices().find(x => /^ja/i.test(x.lang)); if (v) u.voice = v; else toast('এই ডিভাইসে জাপানি ভয়েস পাওয়া যায়নি — শব্দ না এলে ফোনের Text-to-Speech-এ জাপানি যোগ করুন');
+  speechSynthesis.speak(u);
+}
+function parseCsv(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  text = String(text || '').replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+    if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; } else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => String(x).trim() !== ''));
+}
+
+function viewMocks(q) {
+  const lv = LEVELS.includes(q.get('l')) ? q.get('l') : '';
+  const all = (S.mock_tests || []).slice().sort((a, b) => (LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level)) || (num(a.sort_order) - num(b.sort_order)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
+  const list = all.filter(t => !lv || t.level === lv);
+  const hidden = all.filter(t => !t.published).length;
+  mount('#/mocks', `
+  <div class="top"><div><h1>মক টেস্ট</h1><p>ছাত্ররা ছাত্রদের সাইটে অনলাইনে পরীক্ষা দেয়; নম্বর সাথে সাথে গোনা হয় আর "পরীক্ষা ও রেজাল্ট"-এ উঠে যায়।</p></div>
+    <div class="row"><button class="btn" id="mkadd">+ নতুন মক টেস্ট</button></div></div>
+  ${hidden ? `<div class="alertbar" style="margin-bottom:16px"><b>${hidden}টি মক টেস্ট লুকানো আছে</b><span>নমুনা প্রশ্নগুলো শিক্ষক একবার দেখে নিন, তারপর টেস্ট খুলে "ছাত্রদের জন্য চালু করুন" চাপুন।</span></div>` : ''}
+  <div class="tabs"><button data-kl="" class="${!lv ? 'on' : ''}">সব (${all.length})</button>${LEVELS.map(l => `<button data-kl="${l}" class="${lv === l ? 'on' : ''}">${l} (${all.filter(t => t.level === l).length})</button>`).join('')}</div>
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>নাম</th><th>লেভেল</th><th class="num">প্রশ্ন</th><th class="num">সময়</th><th>অবস্থা</th><th class="num">যারা দিয়েছে</th><th class="num">গড়</th></tr>${list.map(t => {
+    const qs = mockQs(t.id); const done = mockDone(t.id); const studs = new Set(done.map(a => a.student_id));
+    const avg = done.length ? Math.round(done.reduce((a, x) => a + (num(x.total) ? num(x.score) * 100 / num(x.total) : 0), 0) / done.length) : null;
+    return `<tr class="click" data-go="#/mock/${t.id}"><td data-l="নাম"><b>${esc(t.title)}</b>${t.description ? `<div class="small muted">${esc(t.description)}</div>` : ''}</td><td data-l="লেভেল">${esc(t.level)}</td><td class="num" data-l="প্রশ্ন">${qs.length}</td><td class="num" data-l="সময়">${t.duration_min} মিনিট</td><td data-l="অবস্থা">${t.published ? badge('active', 'চালু') : badge('dropped', 'লুকানো')}</td><td class="num" data-l="যারা দিয়েছে">${studs.size} জন</td><td class="num" data-l="গড়">${avg == null ? '—' : avg + '%'}</td></tr>`;
+  }).join('')}</table>` : '<div class="empty">এখনো কোনো মক টেস্ট নেই</div>'}</div>`, () => {
+    bindGo();
+    $$('[data-kl]').forEach(b => b.onclick = () => { location.hash = '#/mocks' + (b.dataset.kl ? '?l=' + b.dataset.kl : ''); });
+    $('#mkadd').onclick = () => mockTestModal(null, lv);
+  });
+}
+
+function mockTestModal(t, presetLevel) {
+  const v = t || { level: presetLevel || 'N5', duration_min: 40, pass_pct: 60, show_answers: true, published: false };
+  openModal(`<h2>${t ? 'মক টেস্টের তথ্য' : 'নতুন মক টেস্ট'}</h2>
+  <form id="mkf" class="form">
+    <label class="f full">নাম<input name="title" required maxlength="100" value="${esc(v.title || '')}" placeholder="যেমন: N5 মক টেস্ট ৪"></label>
+    <label class="f">লেভেল<select name="level">${LEVELS.map(l => `<option ${v.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">সময় (মিনিট)<input name="duration_min" type="number" min="1" max="300" required value="${esc(v.duration_min)}"></label>
+    <label class="f">পাস নম্বর (%)<input name="pass_pct" type="number" min="0" max="100" required value="${esc(v.pass_pct)}"></label>
+    <label class="f">কতবার দেওয়া যাবে (খালি = যতবার খুশি)<input name="max_attempts" type="number" min="1" value="${esc(v.max_attempts || '')}"></label>
+    <label class="f full">ছোট বর্ণনা<input name="description" maxlength="200" value="${esc(v.description || '')}"></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="show_answers" type="checkbox" ${v.show_answers === false ? '' : 'checked'} style="width:auto"> জমা দেওয়ার পর সঠিক উত্তর আর ব্যাখ্যা দেখাবে</label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published ? 'checked' : ''} style="width:auto"> ছাত্রদের জন্য চালু</label>
+    <div class="full row" style="justify-content:flex-end">${t && isAdmin() ? '<button type="button" class="btn ghost" id="mkdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mkc">বাতিল</button><button class="btn" type="submit">${t ? 'সংরক্ষণ' : 'তৈরি করুন'}</button></div>
+  </form>`);
+  const f = $('#mkf'); $('#mkc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const d = { title: f.title.value.trim(), level: f.level.value, duration_min: Math.max(1, Math.round(num(f.duration_min.value))), pass_pct: Math.min(100, Math.max(0, Math.round(num(f.pass_pct.value)))), max_attempts: f.max_attempts.value ? Math.max(1, Math.round(num(f.max_attempts.value))) : null, description: f.description.value.trim(), show_answers: f.show_answers.checked, published: f.published.checked };
+    if (!t) d.sort_order = (S.mock_tests || []).filter(x => x.level === d.level).reduce((a, x) => Math.max(a, num(x.sort_order)), 0) + 1;
+    try { const row = t ? await API.update('mock_tests', t.id, d) : await API.insert('mock_tests', d); putLocal('mock_tests', row); closeModal(); toast(t ? 'সংরক্ষণ হয়েছে' : 'তৈরি হয়েছে — এবার প্রশ্ন যোগ করুন'); location.hash = '#/mock/' + row.id; render(); }
+    catch (err) { btn.disabled = false; toast(errMsg(err), true); }
+  };
+  const del = $('#mkdel'); if (del) del.onclick = async () => {
+    closeModal(); if (!(await confirmBox(`"${t.title}" আর এর সব প্রশ্ন ও ছাত্রদের দেওয়া উত্তর মুছে যাবে। "পরীক্ষা ও রেজাল্ট"-এ ওঠা নম্বর থেকে যাবে।`))) return;
+    try { await API.remove('mock_tests', t.id); S.mock_tests = S.mock_tests.filter(x => x.id !== t.id); S.mock_questions = S.mock_questions.filter(x => x.test_id !== t.id); S.mock_attempts = S.mock_attempts.filter(x => x.test_id !== t.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/mocks'; } catch (e) { toast(errMsg(e), true); }
+  };
+}
+
+function viewMock(id, q) {
+  const t = byId(S.mock_tests || [], id);
+  if (!t) return mount('#/mocks', '<div class="empty">মক টেস্ট পাওয়া যায়নি</div>');
+  const tab = q.get('t') === 'res' ? 'res' : 'qs';
+  const qs = mockQs(t.id); const done = mockDone(t.id);
+  const cnt = Object.fromEntries(MOCK_SEC_ORDER.map(s => [s, qs.filter(x => x.section === s).length]));
+  let body = '';
+  if (tab === 'qs') {
+    let n = 0; let lastPassage = null;
+    body = MOCK_SEC_ORDER.map(sec => { const items = qs.filter(x => x.section === sec); lastPassage = null;
+      return `<div class="row" style="margin:18px 0 8px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">${MOCK_SEC[sec]} <span class="small muted">(${items.length})</span></h2><span class="spacer"></span><button class="btn sm ghost" data-qadd="${sec}">+ প্রশ্ন</button></div>
+      ${items.length ? items.map(x => { n++; const o = mockOpts(x); const showP = x.passage && x.passage !== lastPassage; lastPassage = x.passage;
+        return `${showP ? `<div class="card" style="padding:10px 14px;margin-bottom:6px;background:var(--soft);white-space:pre-line;font-size:14.5px">${esc(x.passage)}</div>` : ''}
+        <div class="card click" data-qe="${x.id}" style="padding:12px 14px;margin-bottom:8px"><div class="row" style="align-items:flex-start;gap:10px"><b style="color:var(--muted)">${n}.</b><div style="flex:1;min-width:0"><div style="white-space:pre-line">${esc(x.question)}</div>
+          ${x.section === 'listening' ? `<div class="small muted" style="margin-top:4px">🔊 ${x.audio_path ? 'অডিও ফাইল আছে' : 'জাপানি ভয়েসে পড়ে শোনানো হবে'} ${x.script ? `<button class="btn sm ghost" data-say="${x.id}" data-stop style="margin-left:6px">▶ শুনুন</button>` : ''}</div>` : ''}
+          <ol style="margin:6px 0 0;padding-left:0;list-style:none">${o.map((op, i) => `<li style="${i === num(x.correct) ? 'color:var(--green);font-weight:700' : ''}">${ABCD[i]}) ${esc(op)}${i === num(x.correct) ? ' ✓' : ''}</li>`).join('')}</ol>
+          ${x.explanation ? `<div class="small muted" style="margin-top:6px">ব্যাখ্যা: ${esc(x.explanation)}</div>` : ''}</div></div></div>`; }).join('') : '<div class="empty" style="padding:12px">এই ভাগে প্রশ্ন নেই</div>'}`; }).join('');
+  } else {
+    const byStu = new Map(); for (const a of done) { const arr = byStu.get(a.student_id) || []; arr.push(a); byStu.set(a.student_id, arr); }
+    const rows = [...byStu.entries()].map(([sid, arr]) => { const best = arr.reduce((m, a) => num(a.score) > num(m.score) ? a : m, arr[0]); const last = arr.reduce((m, a) => (a.submitted_at || '') > (m.submitted_at || '') ? a : m, arr[0]); return { s: byId(S.students, sid), sid, n: arr.length, best, last }; }).sort((a, b) => num(b.best.score) - num(a.best.score));
+    const secAvg = MOCK_SEC_ORDER.map(sec => { const xs = done.map(a => (a.sections || {})[sec]).filter(Boolean); const tot = xs.reduce((a, x) => a + num(x.total), 0); return [sec, tot ? Math.round(xs.reduce((a, x) => a + num(x.score), 0) * 100 / tot) : null]; });
+    body = `<div class="grid g4" style="margin-bottom:14px">${secAvg.map(([sec, p]) => `<div class="card stat ${p != null && p < t.pass_pct ? 'red' : ''}"><div class="l">${MOCK_SEC[sec]}</div><div class="v">${p == null ? '—' : p + '%'}</div><div class="s">সব চেষ্টার গড়</div></div>`).join('')}</div>
+    <div class="tw">${rows.length ? `<table class="stack"><tr><th>ছাত্র</th><th class="num">কতবার</th><th class="num">সেরা নম্বর</th><th>ভাগ অনুযায়ী (সেরা চেষ্টা)</th><th>শেষ দিয়েছে</th><th></th></tr>${rows.map(r => { const p = num(r.best.total) ? Math.round(num(r.best.score) * 100 / num(r.best.total)) : 0;
+      return `<tr class="click" data-go="#/student/${r.sid}?t=exams"><td data-l="ছাত্র">${esc(r.s ? studentName(r.s) : '—')}<div class="small muted">${esc(r.s ? r.s.admission_no : '')}</div></td><td class="num" data-l="কতবার">${r.n}</td><td class="num" data-l="সেরা নম্বর"><b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(r.best.score)}/${num(r.best.total)}</b> <span class="small muted">${p}%</span></td><td data-l="ভাগ" class="small">${MOCK_SEC_ORDER.filter(sec => (r.best.sections || {})[sec]).map(sec => `${MOCK_SEC[sec].split(' ')[0]} ${r.best.sections[sec].score}/${r.best.sections[sec].total}`).join(' · ')}</td><td data-l="শেষ দিয়েছে">${fmtDT(r.last.submitted_at)}</td><td>${isAdmin() ? `<button class="btn sm ghost" data-reset="${r.sid}" data-stop style="color:var(--red)">চেষ্টা মুছুন</button>` : ''}</td></tr>`; }).join('')}</table>` : '<div class="empty">এখনো কেউ এই টেস্ট দেয়নি</div>'}</div>`;
+  }
+  mount('#/mocks', `
+  <div class="top"><div><h1>${esc(t.title)}</h1><p>${esc(t.level)} · ${t.duration_min} মিনিট · পাস ${t.pass_pct}% · ${qs.length}টি প্রশ্ন (${MOCK_SEC_ORDER.map(s => `${MOCK_SEC[s].split(' ')[0]} ${cnt[s]}`).join(', ')})${t.max_attempts ? ` · সর্বোচ্চ ${t.max_attempts} বার` : ''}</p><div class="row" style="margin-top:4px">${t.published ? badge('active', 'ছাত্রদের জন্য চালু') : badge('dropped', 'লুকানো — ছাত্ররা দেখে না')}</div></div>
+    <div class="row"><a class="btn ghost" href="#/mocks">‹ সব মক টেস্ট</a><button class="btn ghost" id="mkedit">তথ্য বদলান</button><button class="btn ghost" id="mkcsv">CSV থেকে প্রশ্ন</button><button class="btn ${t.published ? 'ghost' : 'gold'}" id="mkpub">${t.published ? 'লুকিয়ে রাখুন' : 'ছাত্রদের জন্য চালু করুন'}</button></div></div>
+  <div class="tabs"><button data-mt="qs" class="${tab === 'qs' ? 'on' : ''}">প্রশ্ন (${qs.length})</button><button data-mt="res" class="${tab === 'res' ? 'on' : ''}">ফলাফল (${new Set(done.map(a => a.student_id)).size} জন)</button></div>${body}`, () => {
+    bindGo();
+    $$('[data-mt]').forEach(b => b.onclick = () => { location.hash = `#/mock/${t.id}${b.dataset.mt === 'res' ? '?t=res' : ''}`; });
+    $('#mkedit').onclick = () => mockTestModal(t);
+    $('#mkcsv').onclick = () => mockCsvModal(t);
+    $('#mkpub').onclick = async () => {
+      if (!t.published && !qs.length) return toast('আগে প্রশ্ন যোগ করুন', true);
+      try { putLocal('mock_tests', await API.update('mock_tests', t.id, { published: !t.published })); toast(t.published ? 'লুকানো হয়েছে' : 'ছাত্রদের জন্য চালু হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); }
+    };
+    $$('[data-qadd]').forEach(b => b.onclick = () => mockQuestionModal(t, null, b.dataset.qadd));
+    $$('[data-qe]').forEach(c => c.onclick = () => mockQuestionModal(t, byId(S.mock_questions, c.dataset.qe)));
+    $$('[data-say]').forEach(b => b.onclick = (e) => { e.stopPropagation(); speakJa(byId(S.mock_questions, b.dataset.say).script); });
+    $$('[data-reset]').forEach(b => b.onclick = async (e) => {
+      e.stopPropagation(); const sid = b.dataset.reset; const s = byId(S.students, sid);
+      if (!(await confirmBox(`${s ? studentName(s) : 'এই ছাত্র'}-এর এই টেস্টের সব চেষ্টা মুছে যাবে, ছাত্র আবার নতুন করে দিতে পারবে। "পরীক্ষা ও রেজাল্ট"-এর নম্বর থেকে যাবে।`, 'হ্যাঁ, মুছে দিন'))) return;
+      try { for (const a of (S.mock_attempts || []).filter(x => x.test_id === t.id && x.student_id === sid)) await API.remove('mock_attempts', a.id); S.mock_attempts = S.mock_attempts.filter(x => !(x.test_id === t.id && x.student_id === sid)); toast('মুছে ফেলা হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); }
+    });
+  });
+}
+
+function mockQuestionModal(t, x, presetSection) {
+  const v = x || { section: presetSection || 'vocab', options: ['', '', '', ''], correct: 0, sort_order: mockQs(t.id).filter(q => q.section === (presetSection || 'vocab')).reduce((a, q) => Math.max(a, num(q.sort_order)), 0) + 1 };
+  const o = mockOpts(v); while (o.length < 4) o.push('');
+  openModal(`<h2>${x ? 'প্রশ্ন বদলান' : 'নতুন প্রশ্ন'} — ${esc(t.title)}</h2>
+  <form id="mqf" class="form">
+    <label class="f">ভাগ<select name="section">${MOCK_SEC_ORDER.map(s => `<option value="${s}" ${v.section === s ? 'selected' : ''}>${MOCK_SEC[s]}</option>`).join('')}</select></label>
+    <label class="f">ক্রম<input name="sort_order" type="number" step="1" value="${esc(v.sort_order ?? 0)}"></label>
+    <label class="f full" id="mqp">পড়ার লেখা (পড়ার ভাগে; একই লেখার একাধিক প্রশ্নে হুবহু একই লেখা দিন)<textarea name="passage" rows="4">${esc(v.passage || '')}</textarea></label>
+    <label class="f full" id="mqs">শোনার স্ক্রিপ্ট (জাপানি; "女：", "男：" দিয়ে কে বলছে লিখতে পারেন — ছাত্রের ফোন এটা জাপানি ভয়েসে পড়ে শোনাবে)<textarea name="script" rows="4">${esc(v.script || '')}</textarea></label>
+    <label class="f full" id="mqa">অথবা নিজের রেকর্ড করা অডিও${v.audio_path ? ' <span class="small muted">— এখন একটা অডিও আছে; বদলাতে নতুনটা বেছে নিন</span>' : ''}<input name="audio" type="file" accept="audio/*"></label>
+    <label class="f full">প্রশ্ন (প্রথম লাইনে নির্দেশনা দিতে পারেন)<textarea name="question" rows="3" required>${esc(v.question || '')}</textarea></label>
+    ${o.slice(0, 4).map((op, i) => `<label class="f">উত্তর ${ABCD[i]}${i >= 2 ? ' (ঐচ্ছিক)' : ''}<input name="op${i}" value="${esc(op)}" ${i < 2 ? 'required' : ''}></label>`).join('')}
+    <label class="f">সঠিক উত্তর<select name="correct">${ABCD.map((l, i) => `<option value="${i}" ${num(v.correct) === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f full">ব্যাখ্যা (জমার পর ছাত্র দেখবে)<textarea name="explanation" rows="2">${esc(v.explanation || '')}</textarea></label>
+    <div class="full row" style="justify-content:flex-end">${x && isAdmin() ? '<button type="button" class="btn ghost" id="mqd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mqc">বাতিল</button><button class="btn" type="submit">${x ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
+  </form>`);
+  const f = $('#mqf'); const sync = () => { const s = f.section.value; $('#mqp').style.display = s === 'reading' ? '' : 'none'; $('#mqs').style.display = s === 'listening' ? '' : 'none'; $('#mqa').style.display = s === 'listening' ? '' : 'none'; };
+  f.section.onchange = sync; sync(); $('#mqc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const btn = f.querySelector('button[type=submit]');
+    const opts = [0, 1, 2, 3].map(i => f['op' + i].value.trim()); while (opts.length > 2 && !opts[opts.length - 1]) opts.pop();
+    if (opts.some(x => !x)) return toast('উত্তরগুলো ক থেকে পরপর লিখুন — মাঝে খালি রাখা যাবে না', true);
+    const correct = num(f.correct.value); if (correct >= opts.length) return toast('সঠিক উত্তর হিসেবে খালি ঘর বাছাই করা হয়েছে', true);
+    const sec = f.section.value;
+    const d = { test_id: t.id, section: sec, sort_order: Math.round(num(f.sort_order.value)), passage: sec === 'reading' ? f.passage.value.trim() : '', script: sec === 'listening' ? f.script.value.trim() : '', question: f.question.value.trim(), options: opts, correct, explanation: f.explanation.value.trim() };
+    const file = f.audio.files[0]; btn.disabled = true;
+    try {
+      if (sec === 'listening' && file) { if (file.size > MAT_MAX) throw new Error('অডিও সর্বোচ্চ ৫০ MB'); d.audio_path = await API.uploadTo(MAT_BUCKET, `mock/${t.id}/${Date.now()}.${((file.name.match(/\.([A-Za-z0-9]{1,8})$/) || [])[1] || 'mp3').toLowerCase()}`, file); }
+      if (sec !== 'listening') d.audio_path = null;
+      if (sec === 'listening' && !d.script && !d.audio_path && !(x && x.audio_path)) throw new Error('শোনার প্রশ্নে স্ক্রিপ্ট বা অডিও দিন');
+      const row = x ? await API.update('mock_questions', x.id, d) : await API.insert('mock_questions', d);
+      putLocal('mock_questions', row);
+      if (x && x.audio_path && row.audio_path !== x.audio_path) API.removeFile(MAT_BUCKET, x.audio_path).catch(() => {});
+      closeModal(); toast(x ? 'সংরক্ষণ হয়েছে' : 'যোগ হয়েছে'); render();
+    } catch (err) { btn.disabled = false; toast(errMsg(err), true); }
+  };
+  const del = $('#mqd'); if (del) del.onclick = async () => {
+    closeModal(); if (!(await confirmBox('এই প্রশ্নটি মুছে যাবে।'))) return;
+    try { await API.remove('mock_questions', x.id); if (x.audio_path) API.removeFile(MAT_BUCKET, x.audio_path).catch(() => {}); S.mock_questions = S.mock_questions.filter(z => z.id !== x.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e2) { toast(errMsg(e2), true); }
+  };
+}
+
+const MOCK_CSV_HEAD = ['section', 'passage', 'question', 'option1', 'option2', 'option3', 'option4', 'correct', 'explanation', 'script'];
+function mockCsvModal(t) {
+  openModal(`<h2>CSV থেকে প্রশ্ন তুলুন — ${esc(t.title)}</h2>
+    <p class="small muted">Excel বা Google Sheets-এ এই কলামগুলো রাখুন, তারপর "CSV (UTF-8)" হিসেবে সেভ করুন:<br><code>${MOCK_CSV_HEAD.join(', ')}</code><br>
+    <b>section</b> = vocab / grammar / reading / listening · <b>correct</b> = সঠিক উত্তরের নম্বর ১–৪ · <b>passage</b> শুধু পড়ার প্রশ্নে · <b>script</b> শুধু শোনার প্রশ্নে।</p>
+    <div class="row" style="gap:8px;margin:10px 0"><button class="btn ghost" id="mctpl">নমুনা ফাইল নামান</button></div>
+    <label class="f">CSV ফাইল<input type="file" id="mcfile" accept=".csv,text/csv"></label>
+    <div id="mcprev" class="small" style="margin-top:10px"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px;gap:8px"><button class="btn ghost" id="mcc">বাতিল</button><button class="btn" id="mcgo" disabled>তুলুন</button></div>`);
+  $('#mcc').onclick = closeModal;
+  $('#mctpl').onclick = () => csvDownload('sakura-mock-template.csv', [MOCK_CSV_HEAD, ['vocab', '', '【山】の よみかたは？', 'かわ', 'やま', 'うみ', 'そら', '2', '山 = やま (পাহাড়)', ''], ['grammar', '', 'でんしゃ（　）がっこうへ いきます。', 'で', 'に', 'を', 'が', '1', 'যানবাহনে で', ''], ['listening', '', '男の人は 何時に 来ますか。', '8時', '9時', '10時', '11時', '3', '১০টায় আসবে', '女：9時に 来て ください。\n男：10時でも いいですか。\n女：はい。']]);
+  let rows = [];
+  $('#mcfile').onchange = async (e) => {
+    const file = e.target.files[0]; if (!file) return; const data = parseCsv(await file.text()); const head = (data.shift() || []).map(h => h.trim().toLowerCase());
+    const col = (r, k) => { const i = head.indexOf(k); return i < 0 ? '' : String(r[i] ?? '').trim(); };
+    const errs = []; rows = [];
+    const base = mockQs(t.id).length;
+    data.forEach((r, i) => {
+      const sec = col(r, 'section').toLowerCase(); const opts = ['option1', 'option2', 'option3', 'option4'].map(k => col(r, k)); while (opts.length > 2 && !opts[opts.length - 1]) opts.pop();
+      const c = Math.round(num(col(r, 'correct'))) - 1;
+      if (!MOCK_SEC_ORDER.includes(sec)) return errs.push(`লাইন ${i + 2}: section ভুল`);
+      if (!col(r, 'question')) return errs.push(`লাইন ${i + 2}: প্রশ্ন নেই`);
+      if (opts.some(x => !x) || opts.length < 2) return errs.push(`লাইন ${i + 2}: উত্তর কম বা মাঝে খালি`);
+      if (c < 0 || c >= opts.length) return errs.push(`লাইন ${i + 2}: correct ১–${opts.length} হতে হবে`);
+      if (sec === 'listening' && !col(r, 'script')) return errs.push(`লাইন ${i + 2}: শোনার প্রশ্নে script নেই`);
+      rows.push({ test_id: t.id, section: sec, sort_order: base + rows.length + 1, passage: sec === 'reading' ? col(r, 'passage') : '', question: col(r, 'question'), options: opts, correct: c, explanation: col(r, 'explanation'), script: sec === 'listening' ? col(r, 'script') : '' });
+    });
+    $('#mcprev').innerHTML = `${rows.length}টি প্রশ্ন ঠিক আছে${errs.length ? `<div style="color:var(--red);margin-top:6px">${errs.slice(0, 8).map(esc).join('<br>')}${errs.length > 8 ? '<br>…' : ''}</div>` : ''}`;
+    $('#mcgo').disabled = !rows.length;
+  };
+  $('#mcgo').onclick = async () => {
+    $('#mcgo').disabled = true;
+    try { const made = await API.insertMany('mock_questions', rows); made.forEach(r => putLocal('mock_questions', r)); closeModal(); toast(`${made.length}টি প্রশ্ন যোগ হয়েছে`); render(); } catch (e) { $('#mcgo').disabled = false; toast(errMsg(e), true); }
+  };
+}
+
 function studentInviteMsg(s) {
-  return `আসসালামু আলাইকুম ${s.name_bn || s.name_en}। ${S.settings.institute_bn}-এর ছাত্রদের সাইটে আপনার লেভেলের নোট, শিট আর অডিও পাবেন।\n\n১. এই লিংক খুলুন: ${studentSiteUrl()}\n২. "নতুন অ্যাকাউন্ট" চেপে নিজের ইমেইল আর একটা পাসওয়ার্ড দিন।\n৩. ভর্তি নম্বর ${s.admission_no} আর ভর্তির সময় দেওয়া মোবাইল নম্বর লিখে "যুক্ত করুন" চাপুন।\n\nপুরো কোর্স ফি পরিশোধ হলে বইগুলো খুলে যাবে। কোনো সমস্যা হলে অফিসে জানান।`;
+  return `আসসালামু আলাইকুম ${s.name_bn || s.name_en}। ${S.settings.institute_bn}-এর ছাত্রদের সাইটে আপনার লেভেলের নোট, শিট, অডিও আর অনলাইন মক টেস্ট পাবেন।\n\n১. এই লিংক খুলুন: ${studentSiteUrl()}\n২. "নতুন অ্যাকাউন্ট" চেপে নিজের ইমেইল আর একটা পাসওয়ার্ড দিন।\n৩. ভর্তি নম্বর ${s.admission_no} আর ভর্তির সময় দেওয়া মোবাইল নম্বর লিখে "যুক্ত করুন" চাপুন।\n\nপুরো কোর্স ফি পরিশোধ হলে বইগুলো খুলে যাবে। কোনো সমস্যা হলে অফিসে জানান।`;
 }
 function studentSiteModal(s) {
   const why = studentAccess(s); const lv = studentLevels(s);
