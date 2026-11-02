@@ -76,6 +76,11 @@ const S = {
 };
 const isAdmin = () => S.profile && S.profile.role === 'admin';
 // pages only the director (admin) may open — the database enforces the same rules (migration v13)
+const isTeacher = () => S.profile && S.profile.role === 'teacher';
+const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
+// teachers see class work only — the database (migration v16) gives them nothing else
+const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock'];
+const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
 const ADMIN_ROUTES = ['weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
 
@@ -242,9 +247,9 @@ const Remote = {
 };
 const API = DEMO ? Local : Remote;
 
-const staffSkip = (t) => !isAdmin() && ['expenses', 'commissions'].includes(t);
+const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications'].includes(t));
 async function loadAll() {
-  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(!DEMO && t === 'teachers' && !isAdmin() ? 'teacher_list' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
+  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(DEMO ? t : t === 'teachers' && !isAdmin() ? 'teacher_list' : t === 'students' && isTeacher() ? 'student_roster' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
   for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc', 'wa_parent']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
@@ -380,11 +385,11 @@ const ICON = {
 };
 const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'chart'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'pen'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/settings', 'সেটিংস', 'gear']];
 function shell(active, inner) {
-  return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
+  return `<div class="mtop"><button id="mnav" aria-label="মেনু">☰</button><b>সাকুরা পোর্টাল</b>${!isTeacher() && computeAlerts().length ? `<a class="nb ${computeAlerts().some(a => a.level === 'red') ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${computeAlerts().length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>Sakura Portal</b><small>さくら日本語学院</small></div></div>
-    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => isAdmin() || !ADMIN_ROUTES.includes(h.slice(2))).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
-    <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${isAdmin() ? 'অ্যাডমিন' : 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${isStandalone() ? '' : '<br><button id="inst" style="margin-top:6px">📱 অ্যাপ হিসেবে ইনস্টল</button>'}</div>
+    <nav class="nav">${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red').length; return NAV.filter(([h]) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)))).map(([h, l, i]) => `<a href="${h}" class="${active === h ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[i]}</svg>${l}${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`).join(''); })()}</nav>
+    <div class="who">${esc(S.profile.name || S.user.email)}<br><span style="color:#E2C987">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span><br><button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${isStandalone() ? '' : '<br><button id="inst" style="margin-top:6px">📱 অ্যাপ হিসেবে ইনস্টল</button>'}</div>
   </aside><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}${inner}</main></div>`;
 }
 function mount(active, inner, after) {
@@ -400,6 +405,7 @@ function render() {
   const [path, query] = h.split('?'); const q = new URLSearchParams(query || '');
   const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
+  if (isTeacher() && (!TEACHER_ROUTES.includes(p[0] || '') || (p[0] === 'students' && p[1] === 'new') || (p[0] === 'student' && p[2]))) return mount('#/', TEACHER_ONLY_MSG);
   if (ADMIN_ROUTES.includes(p[0]) && !isAdmin()) return mount('#/', ADMIN_ONLY_MSG);
   if (p[0] === 'students' && p[1] === 'new') return viewStudentForm(null, q.get('lead'));
   if (p[0] === 'students') return viewStudents(q);
@@ -431,6 +437,7 @@ window.addEventListener('hashchange', render);
 
 // ------------------------------------------------------------------ dashboard
 function viewDashboard() {
+  if (isTeacher()) return viewTeacherHome();
   const smap = sessionMap(); const today = todayISO(); const m = monthISO();
   const current = S.students.filter(s => s.status === 'active' || s.status === 'trial');
   const monthIncome = incomeOf(m);
@@ -487,15 +494,15 @@ function viewStudents(q) {
     return true;
   }).sort((a, b) => (b.admission_no || '').localeCompare(a.admission_no || ''));
   mount('#/students', `
-  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}<a class="btn" href="#/students/new">+ নতুন ছাত্র</a></div></div>
+  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${isTeacher() ? '' : list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}${isTeacher() ? '' : '<a class="btn" href="#/students/new">+ নতুন ছাত্র</a>'}</div></div>
   <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
     <input class="search" name="s" placeholder="নাম, ভর্তি নম্বর বা ফোন দিয়ে খুঁজুন" value="${esc(f.s)}">
     <select name="l"><option value="">সব লেভেল</option>${LEVELS.map(l => `<option ${f.l === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <select name="b"><option value="">সব ব্যাচ</option>${Object.entries(BATCH).map(([k, v]) => `<option value="${k}" ${f.b === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <select name="st"><option value="current" ${f.st === 'current' ? 'selected' : ''}>চলমান + ট্রায়াল</option><option value="all" ${f.st === 'all' ? 'selected' : ''}>সবাই</option>${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${f.st === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <button class="btn ghost">খুঁজুন</button></form>
-  <div class="tw">${list.length ? `<table class="stack"><tr><th>ভর্তি নং</th><th>নাম</th><th>লেভেল · ব্যাচ</th><th class="hide-m">ফোন</th><th>অবস্থা</th><th class="num">বকেয়া</th><th class="hide-m">উপস্থিতি</th></tr>
-    ${list.map(s => { const due = dueOf(s); const a = attOf(s.id, smap); return `<tr class="click" data-go="#/student/${s.id}"><td class="mt" data-l=""><span><b>${esc(s.name_bn || s.name_en || '')}</b><span class="small muted"> · ${esc(s.admission_no)}</span></span></td><td class="dm">${esc(s.admission_no)}</td><td class="dm"><b>${esc(s.name_bn || '')}</b><div class="small muted">${esc(s.name_en || '')}</div></td><td data-l="লেভেল · ব্যাচ">${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td class="hide-m">${esc(s.phone)}</td><td data-l="অবস্থা">${badge(s.status, STATUS[s.status] || s.status)}</td><td class="num" data-l="বকেয়া">${due ? `<span style="color:var(--red);font-weight:600">${tk(due)}</span>` : badge('paid', 'পরিশোধিত')}</td><td data-l="উপস্থিতি">${bar(a.pct)}</td></tr>`; }).join('')}</table>` : '<div class="empty">কোনো ছাত্র পাওয়া যায়নি</div>'}</div>`,
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>ভর্তি নং</th><th>নাম</th><th>লেভেল · ব্যাচ</th>${isTeacher() ? '' : '<th class="hide-m">ফোন</th>'}<th>অবস্থা</th>${isTeacher() ? '' : '<th class="num">বকেয়া</th>'}<th class="hide-m">উপস্থিতি</th></tr>
+    ${list.map(s => { const due = dueOf(s); const a = attOf(s.id, smap); return `<tr class="click" data-go="#/student/${s.id}"><td class="mt" data-l=""><span><b>${esc(s.name_bn || s.name_en || '')}</b><span class="small muted"> · ${esc(s.admission_no)}</span></span></td><td class="dm">${esc(s.admission_no)}</td><td class="dm"><b>${esc(s.name_bn || '')}</b><div class="small muted">${esc(s.name_en || '')}</div></td><td data-l="লেভেল · ব্যাচ">${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td>${isTeacher() ? '' : `<td class="hide-m">${esc(s.phone)}</td>`}<td data-l="অবস্থা">${badge(s.status, STATUS[s.status] || s.status)}</td>${isTeacher() ? '' : `<td class="num" data-l="বকেয়া">${due ? `<span style="color:var(--red);font-weight:600">${tk(due)}</span>` : badge('paid', 'পরিশোধিত')}</td>`}<td data-l="উপস্থিতি">${bar(a.pct)}</td></tr>`; }).join('')}</table>` : '<div class="empty">কোনো ছাত্র পাওয়া যায়নি</div>'}</div>`,
   () => {
     $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); const p = new URLSearchParams(Object.entries(d).filter(([, v]) => v)); location.hash = '#/students?' + p; };
     $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
@@ -558,10 +565,11 @@ async function viewStudent(id, tab) {
   const s = byId(S.students, id);
   if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const smap = sessionMap(); const a = attOf(s.id, smap); const paid = paidOf(s.id); const due = dueOf(s);
-  const TABS = [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
+  const TABS = isTeacher() ? [['info', 'তথ্য'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা']] : [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
+  if (isTeacher() && !TABS.some(([k]) => k === tab)) tab = 'info';
   let body = '';
   if (tab === 'info') {
-    const kv = [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
+    const kv = isTeacher() ? [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['প্যাকেজ', s.package], ['এখনকার লেভেল', s.current_level], ['ব্যাচ', BATCH[s.batch]], ['ক্লাস শুরু', fmtD(s.start_date)], ['অবস্থা', STATUS[s.status]]] : [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
     body = `<div class="card"><dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v || '—')}</dd>`).join('')}</dl></div>`;
   }
   if (tab === 'fees') {
@@ -610,13 +618,11 @@ async function viewStudent(id, tab) {
   if (tab === 'hist') body = '<div id="histbox"><div class="empty">লোড হচ্ছে…</div></div>';
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
-  <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}</div></div>
+  <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
+  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
-    $('#idc').onclick = () => printIdCards([s]);
-    $('#plink').onclick = () => parentLinkModal(s);
-    $('#ssite').onclick = () => studentSiteModal(s);
+    if ($('#idc')) { $('#idc').onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
@@ -1383,7 +1389,7 @@ function audValue(k, v) {
   if (['amount', 'total_fee', 'discount', 'rate', 'processing_fee', 'amount_bdt'].includes(k)) return tk(v); if (k === 'amount_yen') return yen(v);
   if (/_on$|_date$|^dob$/.test(k) && /^\d{4}-\d{2}-\d{2}/.test(String(v))) return fmtD(String(v).slice(0, 10));
   if (k === 'status') return STATUS[v] || APP_ST[v] || ATT[v] || DOC_STATUS[v] || LEAD_ST[v] || v;
-  if (k === 'method') return METHOD[v] || v; if (k === 'purpose') return PURPOSE[v] || v; if (k === 'pay_type') return PAY_TYPE[v] || v; if (k === 'role') return v === 'admin' ? 'অ্যাডমিন' : 'স্টাফ'; if (k === 'category') return EXP_CAT[v] || v; if (k === 'batch') return BATCH[v] || v;
+  if (k === 'method') return METHOD[v] || v; if (k === 'purpose') return PURPOSE[v] || v; if (k === 'pay_type') return PAY_TYPE[v] || v; if (k === 'role') return ROLE_NAME[v] || v; if (k === 'category') return EXP_CAT[v] || v; if (k === 'batch') return BATCH[v] || v;
   if (k === 'teacher_id') { const t = byId(S.teachers, v); return t ? t.name : 'শিক্ষক'; }
   if (k === 'school_id') { const t = byId(S.jp_schools, v); return t ? schoolName(t) : 'স্কুল'; }
   if (k === 'doc_type') return docLabel(v);
@@ -1750,6 +1756,7 @@ function missingAttendance(days = 14) { // past class days where a group with st
 }
 
 function holidayModal(h, preset = {}) {
+  if (isTeacher()) return toast('ছুটি ঠিক করে অফিস', true);
   const v = h || { on_date: todayISO(), type: 'institute', batch: 'all', ...preset };
   openModal(`<h2>${h ? 'ছুটির তথ্য' : 'ছুটি যোগ করুন'}</h2><form class="form" id="hf">
     <label class="f">তারিখ<input name="on_date" type="date" required value="${esc(v.on_date)}"></label>
@@ -1790,7 +1797,7 @@ function viewCalendar(q) {
   const classCount = Array.from({ length: days }, (_, i) => `${m}-${pad(i + 1, 2)}`).filter(d => !dayInfo(d).off).length;
   const lastTeacher = (lv, b) => { const x = [...S.sessions].filter(s => s.level === lv && s.batch === b && (s.teacher_id || s.teacher)).sort((p, r) => r.class_date.localeCompare(p.class_date))[0]; return x ? (byId(S.teachers, x.teacher_id) || {}).name || x.teacher : ''; };
   mount('#/calendar', `
-  <div class="top"><div><h1>ক্লাসের ক্যালেন্ডার</h1><p>ক্লাসের দিন, ছুটি, পরীক্ষা আর জাপান আবেদনের তারিখ এক জায়গায়</p></div><div class="row"><a class="btn ghost" href="#/calendar?m=${prevM}">‹</a><input type="month" id="mon" value="${esc(m)}"><a class="btn ghost" href="#/calendar?m=${nextM}">›</a><button class="btn" id="nh">+ ছুটি</button></div></div>
+  <div class="top"><div><h1>ক্লাসের ক্যালেন্ডার</h1><p>ক্লাসের দিন, ছুটি, পরীক্ষা আর জাপান আবেদনের তারিখ এক জায়গায়</p></div><div class="row"><a class="btn ghost" href="#/calendar?m=${prevM}">‹</a><input type="month" id="mon" value="${esc(m)}"><a class="btn ghost" href="#/calendar?m=${nextM}">›</a>${isTeacher() ? '' : '<button class="btn" id="nh">+ ছুটি</button>'}</div></div>
   <div class="grid g3" style="margin-bottom:14px">
     <div class="card stat"><div class="l">${monthLabel(m)}-এ ক্লাসের দিন</div><div class="v">${classCount}</div><div class="s">সাপ্তাহিক ছুটি: ${[0, 1, 2, 3, 4, 5, 6].filter(x => !classDays().includes(x)).map(x => WDAY[x] + 'বার').join(', ') || 'নেই'}</div></div>
     <div class="card stat"><div class="l">এ মাসের ছুটি</div><div class="v">${monthHol.length}</div></div>
@@ -1806,7 +1813,7 @@ function viewCalendar(q) {
       <p class="small muted" style="margin:8px 0 0">ঈদ, পূজা আর অন্য যেসব ছুটির তারিখ প্রতি বছর বদলায়, সেগুলো সরকারি ঘোষণা দেখে নিজে যোগ করুন।</p></div>
   </div>`, () => {
     $('#mon').onchange = (e) => { location.hash = '#/calendar?m=' + e.target.value; };
-    $('#nh').onclick = () => holidayModal(null);
+    if ($('#nh')) $('#nh').onclick = () => holidayModal(null);
     $$('[data-h]').forEach(tr => tr.onclick = () => holidayModal(byId(S.holidays, tr.dataset.h)));
     $$('[data-day]').forEach(c => c.onclick = () => {
       const iso = c.dataset.day; const info = dayInfo(iso);
@@ -1964,7 +1971,7 @@ function viewSettings() {
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
     ${isAdmin() ? '<div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div>' : ''}
   </form>
-  <div class="card" style="margin-top:16px"><h2>স্টাফ</h2><div class="tw"><table><tr><th>নাম</th><th>ভূমিকা</th></tr>${S.profiles.map(p => `<tr><td>${esc(p.name || '—')}</td><td>${p.role === 'admin' ? 'অ্যাডমিন' : 'স্টাফ'}</td></tr>`).join('')}</table></div>
+  <div class="card" style="margin-top:16px"><h2>স্টাফ</h2><div class="tw"><table><tr><th>নাম</th><th>ভূমিকা</th></tr>${S.profiles.map(p => `<tr><td>${esc(p.name || '—')}</td><td>${ROLE_NAME[p.role] || p.role}</td></tr>`).join('')}</table></div>
   <p class="small muted">নতুন স্টাফ যোগ করতে README-এর "স্টাফ যোগ করা" অংশ দেখুন। স্টাফরা ছাত্র ভর্তি, টাকা জমা আর হাজিরা নিতে পারবেন; মোছা আর টাকার রেকর্ড বদলানো শুধু অ্যাডমিনের কাজ।</p></div>
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
@@ -2484,6 +2491,37 @@ function mockCsvModal(t) {
     $('#mcgo').disabled = true;
     try { const made = await API.insertMany('mock_questions', rows); made.forEach(r => putLocal('mock_questions', r)); closeModal(); toast(`${made.length}টি প্রশ্ন যোগ হয়েছে`); render(); } catch (e) { $('#mcgo').disabled = false; toast(errMsg(e), true); }
   };
+}
+
+// ------------------------------------------------------------------ teacher home (teachers see class work only)
+function viewTeacherHome() {
+  const smap = sessionMap(); const today = todayISO();
+  const current = S.students.filter(s => s.status === 'active' || s.status === 'trial');
+  const todaySessions = S.sessions.filter(s => s.class_date === today).map(s => s.id);
+  const todayRecs = S.attendance.filter(a => todaySessions.includes(a.session_id));
+  const todayCame = todayRecs.filter(a => a.status === 'present' || a.status === 'late').length;
+  const low = current.map(s => ({ s, a: attOf(s.id, smap) })).filter(x => x.a.total >= 5 && x.a.pct < 80).sort((a, b) => a.a.pct - b.a.pct);
+  const groups = {}; for (const s of current) { const k = s.current_level + '|' + s.batch; groups[k] = (groups[k] || 0) + 1; }
+  const todayOff = dayInfo(today); const missAtt = missingAttendance();
+  const exams = S.exams.filter(e => e.exam_date >= today).sort((a, b) => a.exam_date.localeCompare(b.exam_date));
+  const mocks = (S.mock_attempts || []).filter(a => a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).slice(0, 8);
+  mount('#/', `
+  <div class="top"><div><h1>শিক্ষকের পাতা</h1><p>আজ ${fmtD(today)} · ${esc(S.profile.name || '')}</p></div>
+    <div class="row no-print"><a class="btn" href="#/attendance">আজকের হাজিরা</a><a class="btn ghost" href="#/exams">পরীক্ষা ও নম্বর</a><a class="btn ghost" href="#/mocks">মক টেস্ট</a><a class="btn ghost" href="#/materials">পড়ার উপকরণ</a></div></div>
+  ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
+  ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''}</span></a>` : ''}
+  <div class="grid g4">
+    <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div></div>
+    <div class="card stat"><div class="l">আজকের উপস্থিতি</div><div class="v">${todayRecs.length ? todayCame + ' / ' + todayRecs.length : '—'}</div><div class="s">${todaySessions.length ? todaySessions.length + 'টি ক্লাস' : 'আজ হাজিরা নেওয়া হয়নি'}</div></div>
+    <div class="card stat ${low.length ? 'red' : ''}"><div class="l">উপস্থিতি ৮০%-এর নিচে</div><div class="v">${low.length}</div></div>
+    <div class="card stat"><div class="l">সামনের পরীক্ষা</div><div class="v">${exams.length}</div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>ব্যাচ অনুযায়ী ছাত্র</h2><div class="tw"><table><tr><th>লেভেল</th><th>${BATCH.morning}</th><th>${BATCH.evening}</th></tr>${LEVELS.map(l => `<tr><td><b>${l}</b></td><td>${groups[l + '|morning'] || 0} জন</td><td>${groups[l + '|evening'] || 0} জন</td></tr>`).join('')}</table></div></div>
+    <div class="card"><h2>সামনের পরীক্ষা</h2>${exams.length ? `<div class="tw"><table>${exams.slice(0, 8).map(e => `<tr class="click" data-go="#/exam/${e.id}"><td>${fmtD(e.exam_date)}</td><td>${esc(e.title)}</td><td>${esc(e.level)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনে কোনো পরীক্ষা নেই</div>'}</div>
+    <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table>${low.slice(0, 10).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}</td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সবার উপস্থিতি ভালো</div>'}</div>
+    <div class="card"><h2>সাম্প্রতিক অনলাইন মক টেস্ট</h2>${mocks.length ? `<div class="tw"><table>${mocks.map(a => { const t = byId(S.mock_tests || [], a.test_id); const s = byId(S.students, a.student_id); const p = num(a.total) ? Math.round(num(a.score) * 100 / num(a.total)) : 0; return `<tr class="click" data-go="#/mock/${a.test_id}?t=res"><td>${esc(s ? studentName(s) : '—')}</td><td>${esc(t ? t.title : '')}</td><td class="num"><b style="color:${t && p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(a.score)}/${num(a.total)}</b></td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কেউ অনলাইনে মক টেস্ট দেয়নি</div>'}</div>
+  </div>`, () => bindGo());
 }
 
 function studentInviteMsg(s) {
