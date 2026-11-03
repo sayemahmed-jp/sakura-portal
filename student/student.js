@@ -262,6 +262,7 @@ function renderHome(d, user) {
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
+  $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
@@ -309,12 +310,29 @@ function historyHtml(h) {
   return `<h2 class="lvl" style="margin-top:26px">আমার ফলাফল (${h.length})</h2><div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>টেস্ট</th><th class="num">নম্বর</th><th>সঠিক · ভুল · বাদ</th><th></th></tr>${h.map(a => { const cn = attemptCounts(a); const p = a.total ? Math.round(a.score * 100 / a.total) : 0;
     return `<tr data-rev="${esc(a.attempt_id)}"><td>${localD(a.submitted_at)}</td><td>${esc(a.title)}${a.end_reason === 'left' ? ' <span class="lefttag">পাতা ছেড়েছিলেন</span>' : a.end_reason === 'timeout' ? ' <span class="small muted">(সময় শেষ)</span>' : ''}</td><td class="num"><b style="color:${p >= a.pass_pct ? 'var(--green)' : 'var(--red)'}">${a.score}/${a.total}</b><div class="small muted">${p}%</div></td><td class="small">${cn.score} · ${cn.wrong} · ${cn.blank}</td><td>›</td></tr>`; }).join('')}</table></div>`;
 }
+const MOCK_CAT = { full: 'পূর্ণ মক টেস্ট', kanji: 'কানজি', grammar: 'ব্যাকরণ', listening: 'শোনার অনুশীলন', other: 'অন্যান্য' };
+const MOCK_CAT_ORDER = ['full', 'kanji', 'grammar', 'listening', 'other'];
+let MOCK_CAT_TAB = '';
+function mockCat(t) {
+  if (MOCK_CAT[t.category] && t.category !== 'other') return t.category;
+  const x = String(t.title || '');
+  return /মক টেস্ট/.test(x) ? 'full' : /কানজি/.test(x) ? 'kanji' : /ব্যাকরণ/.test(x) ? 'grammar' : /শোনা/.test(x) ? 'listening' : 'other';
+}
+function mockRow(t) {
+  const p = t.best != null && t.questions ? Math.round(t.best * 100 / t.questions) : null; const left = t.max_attempts ? t.max_attempts - t.attempts : null;
+  return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b><div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
+      ${t.attempts ? `<div class="small" style="margin-top:2px">দিয়েছেন ${t.attempts} বার · সেরা <b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${t.best}/${t.questions} (${p}%)</b></div>` : ''}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${left === 0 ? '' : `<button class="btn sm" data-start="${esc(t.id)}">${t.attempts ? 'আবার দিন' : 'শুরু করুন'}</button>`}${t.last_attempt ? `<button class="btn sm ghost" data-rev="${esc(t.last_attempt)}">ফলাফল</button>` : ''}</div></div>`;
+}
 function mockListHtml(list) {
   if (!list.length) return '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো মক টেস্ট চালু করা হয়নি।</div></div>';
-  return `<div class="mlist">${list.map(t => { const p = t.best != null && t.questions ? Math.round(t.best * 100 / t.questions) : null; const left = t.max_attempts ? t.max_attempts - t.attempts : null;
-    return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b><div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
-      ${t.attempts ? `<div class="small" style="margin-top:2px">দিয়েছেন ${t.attempts} বার · সেরা <b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${t.best}/${t.questions} (${p}%)</b></div>` : ''}</div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${left === 0 ? '' : `<button class="btn sm" data-start="${esc(t.id)}">${t.attempts ? 'আবার দিন' : 'শুরু করুন'}</button>`}${t.last_attempt ? `<button class="btn sm ghost" data-rev="${esc(t.last_attempt)}">ফলাফল</button>` : ''}</div></div>`; }).join('')}</div>`;
+  const cats = MOCK_CAT_ORDER.filter(c => list.some(t => mockCat(t) === c));
+  const cur = cats.includes(MOCK_CAT_TAB) ? MOCK_CAT_TAB : '';
+  const shown = cur ? cats.filter(c => c === cur) : cats;
+  const levels = [...new Set(list.map(t => t.level))];
+  return `${cats.length > 1 ? `<div class="mchips"><button data-mc="" class="${!cur ? 'on' : ''}">সব (${list.length})</button>${cats.map(c => `<button data-mc="${c}" class="${cur === c ? 'on' : ''}">${MOCK_CAT[c]} (${list.filter(t => mockCat(t) === c).length})</button>`).join('')}</div>` : ''}
+  ${shown.map(c => { const xs = list.filter(t => mockCat(t) === c);
+    return `<div class="lvl">${MOCK_CAT[c]}</div>${levels.length > 1 ? levels.map(l => { const ys = xs.filter(t => t.level === l); return ys.length ? `<div class="chap">${esc(l)}</div><div class="mlist">${ys.map(mockRow).join('')}</div>` : ''; }).join('') : `<div class="mlist">${xs.map(mockRow).join('')}</div>`}`; }).join('')}`;
 }
 
 function confirmOverlay(text, ok = 'হ্যাঁ') {
