@@ -123,6 +123,57 @@ const Demo = {
   mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason }; }); },
   mockReview(aid) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && x.submitted_at)) throw new Error('not_found'); return this.review(aid); },
 };
+
+// ------------------------------------------------------------------ preview for portal logins (director / teachers)
+// A director or teacher sees the student site as a student would: every level, every material and every
+// mock test (hidden ones marked). Tests are graded in the browser; nothing is saved anywhere.
+let PREVIEW = null;
+const SEC_RANK = { vocab: 1, grammar: 2, reading: 3, listening: 4 };
+const Preview = {
+  async load(user, d) {
+    const [{ data: prof }, mats, tests] = await Promise.all([
+      sb.from('profiles').select('name, role').eq('id', user.id).maybeSingle(),
+      sb.from('materials').select('id, title, level, kind, chapter, description, file_path, file_name, size_bytes, url, published, sort_order').order('sort_order'),
+      sb.from('mock_tests').select('id, title, level, category, description, duration_min, pass_pct, max_attempts, published, show_answers, sort_order, created_at, mock_questions(count)')]);
+    if (mats.error) throw mats.error; if (tests.error) throw tests.error;
+    const lvRank = (l) => ({ all: 0, N5: 1, N4: 2, N3: 3 }[l] ?? 9);
+    const materials = (mats.data || []).sort((a, b) => (lvRank(a.level) - lvRank(b.level)) || (num(a.sort_order) - num(b.sort_order)) || String(a.chapter || '').localeCompare(String(b.chapter || '')));
+    const mocks = (tests.data || []).map(t => ({ ...t, questions: (t.mock_questions && t.mock_questions[0] ? t.mock_questions[0].count : 0), attempts: 0, best: null, last_attempt: null, hidden: !t.published }))
+      .filter(t => t.questions > 0).sort((a, b) => (lvRank(a.level) - lvRank(b.level)) || (num(a.sort_order) - num(b.sort_order)));
+    const counts = {}; materials.forEach(m => { counts[m.level] = (counts[m.level] || 0) + 1; });
+    const role = prof ? prof.role : '';
+    PREVIEW = { attempts: {}, n: 0 };
+    return { linked: true, preview: true, institute: d.institute, levels: ['N5', 'N4', 'N3'], counts, materials, mocks, history: [], fee: {},
+      student: { name_bn: prof ? prof.name : (user.email || ''), admission_no: role === 'admin' ? 'পরিচালক · প্রিভিউ' : role === 'teacher' ? 'শিক্ষক · প্রিভিউ' : 'স্টাফ · প্রিভিউ' } };
+  },
+  async start(id) {
+    const [{ data: t, error: e1 }, { data: qs, error: e2 }] = await Promise.all([
+      sb.from('mock_tests').select('*').eq('id', id).single(),
+      sb.from('mock_questions').select('*').eq('test_id', id)]);
+    if (e1) throw e1; if (e2) throw e2;
+    const list = (qs || []).sort((a, b) => ((SEC_RANK[a.section] || 9) - (SEC_RANK[b.section] || 9)) || (num(a.sort_order) - num(b.sort_order)));
+    const aid = 'preview-' + (++PREVIEW.n); const now = new Date();
+    PREVIEW.attempts[aid] = { t, qs: list, answers: {}, started_at: now.toISOString(), deadline: new Date(now.getTime() + t.duration_min * 60000).toISOString(), result: null };
+    return { attempt_id: aid, deadline: PREVIEW.attempts[aid].deadline, now: now.toISOString(), answers: {}, test: { id: t.id, title: t.title, level: t.level, duration_min: t.duration_min, pass_pct: t.pass_pct },
+      questions: list.map(q => ({ id: q.id, section: q.section, passage: q.passage, question: q.question, options: q.options, script: q.script, audio_path: q.audio_path })) };
+  },
+  save(aid, ans) { const a = PREVIEW.attempts[aid]; if (a && !a.result) a.answers = { ...ans }; return 'ok'; },
+  grade(aid, ans, reason) {
+    const a = PREVIEW.attempts[aid]; if (!a) throw new Error('not_found');
+    if (!a.result) {
+      if (ans) a.answers = { ...ans };
+      let score = 0, answered = 0; const sections = {};
+      for (const q of a.qs) { const v = a.answers[q.id]; const ok = v != null && Number(v) === Number(q.correct); if (v != null) answered++; if (ok) score++;
+        const s = sections[q.section] || (sections[q.section] = { score: 0, total: 0 }); s.total++; if (ok) s.score++; }
+      const total = a.qs.length; const late = Date.now() > Date.parse(a.deadline) + 30000;
+      a.result = { attempt_id: aid, preview: true, test: { id: a.t.id, title: a.t.title, level: a.t.level, pass_pct: a.t.pass_pct }, started_at: a.started_at, submitted_at: new Date().toISOString(),
+        score, total, answered, sections, end_reason: late && reason !== 'left' ? 'timeout' : reason, passed: total > 0 && score * 100 >= a.t.pass_pct * total, show_answers: true,
+        questions: a.qs.map(q => ({ id: q.id, section: q.section, passage: q.passage, question: q.question, options: q.options, script: q.script, correct: q.correct, explanation: q.explanation, mine: a.answers[q.id] ?? null })) };
+    }
+    return a.result;
+  }
+};
+
 const API = {
   async session() { if (DEMO) return Demo.user(); const { data } = await sb.auth.getSession(); return data.session ? data.session.user : null; },
   async me() { if (DEMO) return Demo.me(); const { data, error } = await sb.rpc('student_me'); if (error) throw error; return data; },
@@ -138,18 +189,19 @@ const API = {
   async reset(email) { if (DEMO) return; const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; },
   async newPassword(pw) { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw error; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
-  async mockStart(id) { if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
-  async mockSave(aid, ans) { if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
-  async mockSubmit(aid, ans, reason = 'submit') { if (DEMO) return Demo.mockSubmit(aid, ans, reason); const { data, error } = await sb.rpc('student_mock_submit', { p_attempt: aid, p_answers: ans, p_reason: reason }); if (error) throw error; return data; },
-  async mockLeave(aid, ans) { if (DEMO) return Demo.mockLeave(aid, ans); const { data, error } = await sb.rpc('student_mock_leave', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
+  async mockStart(id) { if (PREVIEW) return Preview.start(id); if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
+  async mockSave(aid, ans) { if (PREVIEW) return Preview.save(aid, ans); if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
+  async mockSubmit(aid, ans, reason = 'submit') { if (PREVIEW) return Preview.grade(aid, ans, reason); if (DEMO) return Demo.mockSubmit(aid, ans, reason); const { data, error } = await sb.rpc('student_mock_submit', { p_attempt: aid, p_answers: ans, p_reason: reason }); if (error) throw error; return data; },
+  async mockLeave(aid, ans) { if (PREVIEW) { Preview.grade(aid, ans, 'left'); return 'ok'; } if (DEMO) return Demo.mockLeave(aid, ans); const { data, error } = await sb.rpc('student_mock_leave', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
   async mockHistory() { if (DEMO) return Demo.mockHistory(); const { data, error } = await sb.rpc('student_mock_history'); if (error) throw error; return data || []; },
   mockLeaveBeacon(aid, ans) { // keepalive request: still delivered while the tab is being hidden or closed
+    if (PREVIEW) { try { Preview.grade(aid, ans, 'left'); } catch (e) {} return; }
     if (DEMO) { try { Demo.mockLeave(aid, ans); } catch (e) {} return; }
     const tok = API._token; if (!tok) return;
     try { fetch(CFG.SUPABASE_URL + '/rest/v1/rpc/student_mock_leave', { method: 'POST', keepalive: true, headers: { apikey: CFG.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_attempt: aid, p_answers: ans }) }).catch(() => {}); } catch (e) {}
   },
   _token: null,
-  async mockReview(aid) { if (DEMO) return Demo.mockReview(aid); const { data, error } = await sb.rpc('student_mock_review', { p_attempt: aid }); if (error) throw error; return data; },
+  async mockReview(aid) { if (PREVIEW) return Preview.grade(aid, null, 'submit'); if (DEMO) return Demo.mockReview(aid); const { data, error } = await sb.rpc('student_mock_review', { p_attempt: aid }); if (error) throw error; return data; },
   async signOut() { if (DEMO) { localStorage.removeItem('sakura_demo_student_user'); return; } await sb.auth.signOut(); }
 };
 
@@ -237,7 +289,7 @@ function matRow(m) {
     ? (kind === 'audio' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ শুনুন</button>` : kind === 'video' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ দেখুন</button>` : `<button class="btn sm" data-open="${esc(m.id)}">${kind === 'pdf' ? 'পড়ুন' : 'খুলুন'}</button>`)
     : m.url ? `<a class="btn sm" href="${esc(m.url)}" target="_blank" rel="noopener">${kind === 'video' ? '▶ দেখুন' : 'খুলুন'}</a>` : '';
   return `<div class="mat" data-q="${esc(((m.title || '') + ' ' + (m.chapter || '') + ' ' + (m.description || '')).toLowerCase())}"><div class="ic ${esc(kind)}">${esc(KIND[kind] || 'ফাইল')}</div>
-    <div class="bd"><b>${esc(m.title)}</b>${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}${m.size_bytes ? `<div class="small muted">${fmtSize(m.size_bytes)}</div>` : ''}<div class="player" id="pl-${esc(m.id)}"></div></div>
+    <div class="bd"><b>${esc(m.title)}</b>${m.published === false ? ' <span class="hidtag">লুকানো</span>' : ''}${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}${m.size_bytes ? `<div class="small muted">${fmtSize(m.size_bytes)}</div>` : ''}<div class="player" id="pl-${esc(m.id)}"></div></div>
     <div>${action}</div></div>`;
 }
 
@@ -251,6 +303,7 @@ function renderHome(d, user) {
   const counts = d.counts || {}; const total = Object.values(counts).reduce((a, b) => a + num(b), 0);
   $('#app').innerHTML = `<div class="st">
     <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><button class="out" id="lo">লগআউট</button></div>
+    ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -320,7 +373,7 @@ function mockCat(t) {
 }
 function mockRow(t) {
   const p = t.best != null && t.questions ? Math.round(t.best * 100 / t.questions) : null; const left = t.max_attempts ? t.max_attempts - t.attempts : null;
-  return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b><div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
+  return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b>${t.hidden ? ' <span class="hidtag">লুকানো</span>' : ''}<div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
       ${t.attempts ? `<div class="small" style="margin-top:2px">দিয়েছেন ${t.attempts} বার · সেরা <b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${t.best}/${t.questions} (${p}%)</b></div>` : ''}</div>
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">${left === 0 ? '' : `<button class="btn sm" data-start="${esc(t.id)}">${t.attempts ? 'আবার দিন' : 'শুরু করুন'}</button>`}${t.last_attempt ? `<button class="btn sm ghost" data-rev="${esc(t.last_attempt)}">ফলাফল</button>` : ''}</div></div>`;
 }
@@ -348,7 +401,7 @@ let EXAM = null;
 const END_REASON = { submit: 'নিজে জমা দিয়েছেন', timeout: 'সময় শেষ হয়ে জমা হয়েছে', left: 'পরীক্ষার পাতা ছেড়ে যাওয়ায় জমা হয়েছে' };
 const EXAM_RULES = 'পরীক্ষা শুরু হলে:\n• অন্য অ্যাপ বা ট্যাবে গেলে, ফোন লক করলে, বা পাতা বন্ধ/রিফ্রেশ করলে পরীক্ষা সঙ্গে সঙ্গে জমা হয়ে শেষ হয়ে যাবে।\n• তখন পর্যন্ত যা উত্তর দিয়েছেন, সেটাই গোনা হবে; বাকিগুলো "উত্তর দেননি" ধরা হবে।\n• ফোনে কল এলেও পরীক্ষা শেষ হয়ে যেতে পারে — চুপচাপ জায়গায় বসে দিন।\n• প্রতিবার শুরু করা একটা নতুন চেষ্টা হিসেবে গোনা হয়, আর শিক্ষক সব চেষ্টা দেখতে পান।';
 async function askStartMock(id) {
-  if (!(await confirmOverlay(EXAM_RULES, 'বুঝেছি, শুরু করুন'))) return;
+  if (!(await confirmOverlay(PREVIEW ? EXAM_RULES + '\n\n(প্রিভিউ: ছাত্রের মতোই চলবে, তবে নম্বর কোথাও জমা হবে না।)' : EXAM_RULES, 'বুঝেছি, শুরু করুন'))) return;
   startMock(id);
 }
 async function startMock(id) {
@@ -454,7 +507,7 @@ function renderResult(r) {
       <div class="small muted" style="margin-top:6px">${r.end_reason ? esc(END_REASON[r.end_reason] || '') + ' · ' : ''}${r.started_at && r.submitted_at ? 'সময় লেগেছে ' + minsBetween(r.started_at, r.submitted_at) : ''}</div></div>
     ${r.end_reason === 'left' ? '<div class="card lock" style="padding:12px 16px"><b>পরীক্ষার পাতা ছেড়ে যাওয়ায় পরীক্ষা শেষ হয়েছে।</b> <span class="muted">শিক্ষক এটা দেখতে পান। পরের বার শেষ পর্যন্ত পাতায় থাকুন।</span></div>' : ''}
     <div class="card"><h2 style="margin-top:0">ভাগ অনুযায়ী</h2><table style="width:100%"><tbody>${['vocab', 'grammar', 'reading', 'listening'].filter(s => secs[s]).map(s => { const x = secs[s]; const sp = x.total ? Math.round(x.score * 100 / x.total) : 0; return `<tr><td>${SEC[s]}</td><td class="num"><b>${x.score}/${x.total}</b></td><td style="width:40%"><div class="bar"><span style="width:${sp}%;background:${sp >= r.test.pass_pct ? 'var(--green)' : 'var(--red)'}"></span></div></td></tr>`; }).join('')}</tbody></table>
-      <p class="small muted" style="margin:8px 0 0">এই নম্বর আপনার শিক্ষকের কাছেও চলে গেছে।</p></div>
+      <p class="small muted" style="margin:8px 0 0">${r.preview ? 'প্রিভিউ — এই নম্বর কোথাও জমা হয়নি।' : 'এই নম্বর আপনার শিক্ষকের কাছেও চলে গেছে।'}</p></div>
     <div class="row" style="gap:8px;margin:12px 0"><button class="btn" id="back">‹ সব মক টেস্ট</button></div>
     ${r.show_answers ? `<h2 style="font:800 18px 'Noto Serif Bengali';color:var(--navy)">উত্তর মিলিয়ে দেখুন</h2>${rev}` : '<p class="muted">এই টেস্টের সঠিক উত্তর দেখানো হয় না।</p>'}
     <button class="btn" id="back2" style="width:100%;justify-content:center;margin-top:16px">‹ সব মক টেস্ট</button></div>`;
@@ -470,12 +523,13 @@ async function showReview(aid) {
 
 let HOME_TAB = 'mat';
 async function start() {
-  $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>';
+  $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; PREVIEW = null;
   try {
     const user = await API.session();
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
+    if (!d.linked && d.staff && !DEMO) return renderHome(await Preview.load(user, d), user);
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     renderHome(d, user);
