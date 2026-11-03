@@ -2268,20 +2268,23 @@ function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(
 // ------------------------------------------------------------------ study materials & student site (v14 database)
 const MAT_BUCKET = 'materials';
 const MAT_LEVEL = { all: 'সব লেভেল', N5: 'N5', N4: 'N4', N3: 'N3' };
-const MAT_KIND = { pdf: 'PDF', audio: 'অডিও', video: 'ভিডিও', image: 'ছবি', link: 'লিংক', file: 'ফাইল' };
+const MAT_KIND = { book: 'বই', pdf: 'PDF', audio: 'অডিও', video: 'ভিডিও', image: 'ছবি', link: 'লিংক', file: 'ফাইল' };
 const MAT_MAX = 50 * 1024 * 1024; // Supabase free plan: 50 MB per file, 1 GB in total
 const studentSiteUrl = () => location.origin + location.pathname.replace(/[^/]*$/, '') + 'student/';
 const fmtSize = (b) => !num(b) ? '' : num(b) >= 1048576 ? (num(b) / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(num(b) / 1024)) + ' KB';
-function matKindOf(file) { const t = file.type || ''; if (t === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf'; if (t.startsWith('audio/')) return 'audio'; if (t.startsWith('video/')) return 'video'; if (t.startsWith('image/')) return 'image'; return 'file'; }
+function matKindOf(file) { const t = file.type || ''; if (t === 'text/html' || /\.html?$/i.test(file.name)) return 'book'; if (t === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf'; if (t.startsWith('audio/')) return 'audio'; if (t.startsWith('video/')) return 'video'; if (t.startsWith('image/')) return 'image'; return 'file'; }
 function studentAccess(s) { // the same rule the database uses (student_block_reason)
   if (s.portal_blocked) return 'blocked'; if (s.status === 'dropped') return 'dropped'; if (dueOf(s) > 0) return 'due'; return null;
 }
 const ACCESS_WHY = { blocked: 'অফিস থেকে বন্ধ রাখা হয়েছে', dropped: 'ছাত্রের অবস্থা "বাদ দিয়েছে"', due: 'পুরো কোর্স ফি এখনো পরিশোধ হয়নি' };
 const studentLevels = (s) => [...new Set([...(s.package || '').split('+'), s.current_level].filter(x => LEVELS.includes(x)))];
+// an HTML book is kept in private storage; storage serves it as plain text, so it is opened from a local copy
+async function bookBlobUrl(u) { const r = await fetch(u); if (!r.ok) throw new Error('বইটি খোলা যায়নি (' + r.status + ')'); return URL.createObjectURL(new Blob([await r.text()], { type: 'text/html;charset=utf-8' })); }
 async function openMaterial(m) {
   if (!m.file_path) { if (m.url) window.open(m.url, '_blank', 'noopener'); return; }
   const w = window.open('', '_blank');
-  try { const u = await API.fileUrlFrom(MAT_BUCKET, m.file_path); if (!u) throw new Error('ফাইল পাওয়া যায়নি'); if (w) w.location = u; else location.href = u; } catch (e) { if (w) w.close(); toast(errMsg(e), true); }
+  try { const u = await API.fileUrlFrom(MAT_BUCKET, m.file_path); if (!u) throw new Error('ফাইল পাওয়া যায়নি');
+    const go = m.kind === 'book' ? await bookBlobUrl(u) : u; if (w) w.location = go; else location.href = go; } catch (e) { if (w) w.close(); toast(errMsg(e), true); }
 }
 
 function viewMaterials(q) {
@@ -2333,8 +2336,8 @@ function materialModal(m, presetLevel) {
     <label class="f">লেভেল<select name="level">${Object.entries(MAT_LEVEL).map(([k, l]) => `<option value="${k}" ${v.level === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="f">অধ্যায় / পাঠ<input name="chapter" maxlength="60" value="${esc(v.chapter || '')}" placeholder="যেমন: পাঠ ৩"></label>
     <label class="f">ক্রম (ছোট সংখ্যা আগে)<input name="sort_order" type="number" step="1" value="${esc(v.sort_order ?? 0)}"></label>
-    <label class="f">কী দেবেন<select name="src"><option value="file" ${isLink ? '' : 'selected'}>ফাইল আপলোড (PDF, অডিও, ভিডিও, ছবি)</option><option value="link" ${isLink ? 'selected' : ''}>লিংক (YouTube, Google Drive ইত্যাদি)</option></select></label>
-    <label class="f full" id="mfile">ফাইল${m && m.file_path ? ` <span class="small muted">— এখন আছে: ${esc(m.file_name || 'ফাইল')} ${fmtSize(m.size_bytes)}; বদলাতে চাইলে নতুনটা বেছে নিন</span>` : ''}<input name="file" type="file" accept=".pdf,application/pdf,audio/*,video/*,image/*"></label>
+    <label class="f">কী দেবেন<select name="src"><option value="file" ${isLink ? '' : 'selected'}>ফাইল আপলোড (PDF, অডিও, ভিডিও, ছবি, HTML বই)</option><option value="link" ${isLink ? 'selected' : ''}>লিংক (YouTube, Google Drive ইত্যাদি)</option></select></label>
+    <label class="f full" id="mfile">ফাইল${m && m.file_path ? ` <span class="small muted">— এখন আছে: ${esc(m.file_name || 'ফাইল')} ${fmtSize(m.size_bytes)}; বদলাতে চাইলে নতুনটা বেছে নিন</span>` : ''}<input name="file" type="file" accept=".pdf,application/pdf,audio/*,video/*,image/*,.html,text/html"></label>
     <label class="f full" id="mlink">লিংক<input name="url" type="url" value="${esc(v.url || '')}" placeholder="https://youtu.be/…"></label>
     <label class="f full">ছোট বর্ণনা (ঐচ্ছিক)<textarea name="description" maxlength="300">${esc(v.description || '')}</textarea></label>
     <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে (টিক তুলে দিলে লুকানো থাকবে)</label>

@@ -19,7 +19,7 @@ const fmtD = (iso) => iso ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(
 const fmtSize = (b) => !num(b) ? '' : num(b) >= 1048576 ? (num(b) / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(num(b) / 1024)) + ' KB';
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 const LEVEL_NAME = { all: 'সব লেভেলের জন্য', N5: 'N5', N4: 'N4', N3: 'N3' };
-const KIND = { pdf: 'PDF', audio: 'অডিও', video: 'ভিডিও', image: 'ছবি', link: 'লিংক', file: 'ফাইল' };
+const KIND = { book: 'বই', pdf: 'PDF', audio: 'অডিও', video: 'ভিডিও', image: 'ছবি', link: 'লিংক', file: 'ফাইল' };
 const BATCH = { morning: 'সকাল ১০–১২টা', evening: 'সন্ধ্যা ৬–৮টা' };
 const WHY = { blocked: 'অফিস থেকে আপনার অ্যাক্সেস আপাতত বন্ধ রাখা হয়েছে।', dropped: 'আপনার ভর্তি এখন চালু নেই।', due: 'পুরো কোর্স ফি পরিশোধ হলে বইগুলো খুলে যাবে।' };
 
@@ -283,10 +283,12 @@ function renderLink(d, user) {
   };
 }
 
+// an HTML book lives in private storage, which serves it as plain text; it is opened from a local copy
+async function bookBlobUrl(u) { const r = await fetch(u); if (!r.ok) throw new Error('বইটি খোলা যায়নি (' + r.status + ')'); return URL.createObjectURL(new Blob([await r.text()], { type: 'text/html;charset=utf-8' })); }
 function matRow(m) {
   const kind = m.kind || 'file';
   const action = m.file_path
-    ? (kind === 'audio' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ শুনুন</button>` : kind === 'video' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ দেখুন</button>` : `<button class="btn sm" data-open="${esc(m.id)}">${kind === 'pdf' ? 'পড়ুন' : 'খুলুন'}</button>`)
+    ? (kind === 'book' ? `<button class="btn sm" data-open="${esc(m.id)}">📖 পড়ুন</button>` : kind === 'audio' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ শুনুন</button>` : kind === 'video' ? `<button class="btn sm" data-play="${esc(m.id)}">▶ দেখুন</button>` : `<button class="btn sm" data-open="${esc(m.id)}">${kind === 'pdf' ? 'পড়ুন' : 'খুলুন'}</button>`)
     : m.url ? `<a class="btn sm" href="${esc(m.url)}" target="_blank" rel="noopener">${kind === 'video' ? '▶ দেখুন' : 'খুলুন'}</a>` : '';
   return `<div class="mat" data-q="${esc(((m.title || '') + ' ' + (m.chapter || '') + ' ' + (m.description || '')).toLowerCase())}"><div class="ic ${esc(kind)}">${esc(KIND[kind] || 'ফাইল')}</div>
     <div class="bd"><b>${esc(m.title)}</b>${m.published === false ? ' <span class="hidtag">লুকানো</span>' : ''}${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}${m.size_bytes ? `<div class="small muted">${fmtSize(m.size_bytes)}</div>` : ''}<div class="player" id="pl-${esc(m.id)}"></div></div>
@@ -321,7 +323,7 @@ function renderHome(d, user) {
   const byId = (id) => mats.find(m => String(m.id) === String(id));
   $$('[data-open]').forEach(b => b.onclick = async () => {
     const m = byId(b.dataset.open); const w = window.open('', '_blank'); b.disabled = true;
-    try { const u = await API.fileUrl(m.file_path); if (!u) throw new Error('ফাইল পাওয়া যায়নি'); if (w) w.location = u; else location.href = u; } catch (e) { if (w) w.close(); toast(errMsg(e), true); }
+    try { const u = await API.fileUrl(m.file_path); if (!u) throw new Error('ফাইল পাওয়া যায়নি'); const go = m.kind === 'book' ? await bookBlobUrl(u) : u; if (w) w.location = go; else location.href = go; } catch (e) { if (w) w.close(); toast(errMsg(e), true); }
     b.disabled = false;
   });
   $$('[data-play]').forEach(b => b.onclick = async () => {
