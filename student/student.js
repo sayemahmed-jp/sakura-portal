@@ -612,10 +612,50 @@ function japanHtml(j) {
     <p class="small muted" style="margin-top:8px">কাগজ জমা দিতে বা কিছু বুঝতে না পারলে অফিসে যোগাযোগ করুন।</p>`;
 }
 
+
+// ------------------------------------------------------------------ badges (ব্যাজ) — worked out from what the student has done
+function fcLearned(d, deck) {
+  let n = 0; for (const lv of ['N5', 'N4', 'N3']) { try { const st = JSON.parse(localStorage.getItem(`sakura_fc_${(d.student || {}).admission_no || 'preview'}_${lv}_${deck}`) || '{}'); n += Object.values(st).filter(x => x.b >= 3).length; } catch { /* none */ } }
+  return n;
+}
+function badgeList(d) {
+  const st = d.streak || {}; const h = (d.history || []).filter(a => a.total); const pct = (a) => Math.round(a.score * 100 / a.total);
+  const passes = h.filter(a => pct(a) >= (a.pass_pct || 60)); const best = h.length ? Math.max(...h.map(pct)) : 0;
+  const kanji = fcLearned(d, 'kanji'), words = fcLearned(d, 'words');
+  const B = (id, icon, name, desc, have, need) => ({ id, icon, name, desc, have: Math.min(have, need), need, done: have >= need });
+  return [
+    B('day1', '🌱', 'প্রথম পা', 'প্রথম দিন পড়া শেষ করুন', st.total || 0, 1),
+    B('streak7', '🔥', '৭ দিন টানা', 'টানা ৭ দিন পড়ুন', st.best || 0, 7),
+    B('streak30', '🌋', '৩০ দিন টানা', 'টানা ৩০ দিন পড়ুন', st.best || 0, 30),
+    B('days50', '📚', '৫০ দিনের পড়ুয়া', 'মোট ৫০ দিন পড়ুন', st.total || 0, 50),
+    B('mock1', '📝', 'প্রথম মক টেস্ট', 'একটা মক টেস্ট শেষ করুন', h.length, 1),
+    B('pass1', '🎯', 'প্রথম পাস', 'কোনো মক টেস্টে পাস করুন', passes.length, 1),
+    B('fullpass', '🏅', 'পূর্ণ মক পাস', 'একটা পূর্ণ মক টেস্টে পাস করুন', passes.filter(a => mockCat(a) === 'full').length, 1),
+    B('score90', '💯', '৯০% ক্লাব', 'কোনো টেস্টে ৯০% বা বেশি পান', best >= 90 ? 1 : 0, 1),
+    B('mocks20', '🏃', '২০টা টেস্ট', 'মোট ২০টা মক টেস্ট দিন', h.length, 20),
+    B('words100', '🗂️', '১০০ শব্দ', 'ফ্ল্যাশকার্ডে ১০০টা শব্দ ভালোভাবে শিখুন', words, 100),
+    B('kanji50', '🈴', '৫০ কানজি', 'ফ্ল্যাশকার্ডে ৫০টা কানজি ভালোভাবে শিখুন', kanji, 50),
+    B('clean', '🧹', 'ভুলের খাতা খালি', 'অন্তত ৩টা টেস্টের পর ভুলের খাতা খালি করুন', h.length >= 3 && !(d.mistakes || []).length ? 1 : 0, 1),
+  ];
+}
+function badgesHtml(d) {
+  const bs = badgeList(d); const n = bs.filter(b => b.done).length;
+  return `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:16px">🏅 আমার ব্যাজ</b><span class="pill ${n ? 'ok' : 'warn'}">${BN_NUM(n)}/${BN_NUM(bs.length)}</span></div>
+    <div class="small muted" style="margin-top:4px">পড়া, মক টেস্ট আর ফ্ল্যাশকার্ড করে ব্যাজ জিতুন।</div></div>
+    <div class="bdg">${bs.map(b => `<div class="bd ${b.done ? 'on' : ''}"><div class="bi">${b.icon}</div><b>${esc(b.name)}</b><span>${b.done ? '✓ পেয়েছেন' : esc(b.desc)}</span>${b.done || b.need === 1 ? '' : `<div class="bar" style="height:5px;margin-top:6px"><span style="width:${Math.round(b.have * 100 / b.need)}%;background:var(--gold)"></span></div><small>${BN_NUM(b.have)}/${BN_NUM(b.need)}</small>`}</div>`).join('')}</div>`;
+}
+function checkNewBadges(d) {
+  if (d.preview || !d.student) return;
+  const key = 'sakura_badges_' + d.student.admission_no; let seen; try { seen = JSON.parse(localStorage.getItem(key) || 'null'); } catch { seen = null; }
+  const got = badgeList(d).filter(b => b.done);
+  if (seen) { const fresh = got.filter(b => !seen.includes(b.id)); if (fresh.length) setTimeout(() => toast(`🎉 নতুন ব্যাজ: ${fresh.map(b => b.icon + ' ' + b.name).join(', ')}`), 600); }
+  try { localStorage.setItem(key, JSON.stringify(got.map(b => b.id))); } catch { /* not kept */ }
+}
+
 let ME_TAB = 'acct';
 async function renderMe(d, user) {
   $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; scrollTo(0, 0);
-  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা'], ['jp', '🇯🇵 জাপান']];
+  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা'], ['jp', '🇯🇵 জাপান'], ['bdg', '🏅 ব্যাজ']];
   let body = '';
   try {
     if (ME_TAB === 'acct') {
@@ -634,6 +674,7 @@ async function renderMe(d, user) {
           ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
       }
     }
+    if (ME_TAB === 'bdg') { body = badgesHtml(d); }
     if (ME_TAB === 'jp') { body = japanHtml(await API.japan()); }
     if (ME_TAB === 'att') { const rows = await API.attendance(); d.att = rows; body = attendanceHtml(rows); }
   } catch (e) { body = `<div class="card"><div class="empty">${esc(errMsg(e))}</div></div>`; }
@@ -868,7 +909,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -882,6 +923,8 @@ function renderHome(d, user) {
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);
+  const bg = $('#bdgo'); if (bg) bg.onclick = () => { ME_TAB = 'bdg'; renderMe(d, user); };
+  checkNewBadges(d);
   bindNotices(d, user, () => renderHome(d, user));
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
