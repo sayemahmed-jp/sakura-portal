@@ -183,6 +183,15 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  routine() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return null;
+    const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })();
+    const t = bdToday(); const end = isoPlus(t, 45); const lv = s.current_level;
+    return { today: t, level: lv, batch: s.batch, class_days: Array.isArray(st.class_days) && st.class_days.length ? st.class_days : [0, 1, 2, 3, 4, 6], online_link: st.online_link || '', times: { morning: st.time_morning || '', evening: st.time_evening || '' },
+      holidays: this.read('holidays').filter(h => h.on_date >= t && h.on_date <= end && (h.batch === 'all' || h.batch === s.batch)).sort((a, b) => a.on_date.localeCompare(b.on_date)).map(h => ({ date: h.on_date, title: h.title, batch: h.batch })),
+      plans: this.read('class_plans').filter(p => p.class_date >= t && p.class_date <= end && p.level === lv && (p.batch === 'all' || p.batch === s.batch)).sort((a, b) => a.class_date.localeCompare(b.class_date)).map(p => ({ date: p.class_date, topic: p.topic, note: p.note, online_link: p.online_link })),
+      recent: this.read('sessions').filter(x => x.level === lv && x.batch === s.batch && x.class_date <= t).sort((a, b) => b.class_date.localeCompare(a.class_date)).slice(0, 8).map(x => ({ date: x.class_date, topic: x.topic, class_no: x.class_no })) };
+  },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -287,6 +296,7 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async routine() { if (DEMO) return Demo.routine(); const { data, error } = await sb.rpc('student_routine'); if (error) throw error; return data; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -1006,6 +1016,57 @@ async function renderHomework(d, user) {
 }
 
 
+// ------------------------------------------------------------------ class routine (ক্লাসের রুটিন) and online class
+const isoPlus = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+const WDAY_BN = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি'];
+const wdayOf = (iso) => new Date(iso + 'T00:00:00Z').getUTCDay();
+const safeLink = (u) => /^https:\/\/[^\s"'<>]+$/.test(u || '') ? u : '';
+function routineDays(R, n = 14) {   // the next n calendar days, each marked class / holiday / weekly off
+  const out = []; const cd = (R.class_days || []).map(Number);
+  for (let i = 0; i < n; i++) {
+    const iso = isoPlus(R.today, i); const hol = (R.holidays || []).find(h => h.date === iso);
+    const plan = (R.plans || []).find(p => p.date === iso);
+    out.push({ iso, i, hol, plan, off: !!hol || !cd.includes(wdayOf(iso)), weekly: !hol && !cd.includes(wdayOf(iso)) });
+  }
+  return out;
+}
+const batchTime = (R) => (R.times || {})[R.batch] || BATCH[R.batch] || '';
+const dayWord = (x) => x.i === 0 ? 'আজ' : x.i === 1 ? 'কাল' : `${WDAY_BN[wdayOf(x.iso)]}বার, ${BN_NUM(Number(x.iso.slice(8, 10)))} ${BN_MON[Number(x.iso.slice(5, 7)) - 1]}`;
+const BN_MON = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+function routineCardHtml(d) {
+  const R = d.routine; if (!R || d.blocked) return '';
+  const next = routineDays(R, 45).find(x => !x.off); const link = next && safeLink((next.plan || {}).online_link || R.online_link);
+  return `<div class="card rtc" id="rtgo" role="button" tabindex="0"><div class="row" style="justify-content:space-between;gap:8px"><b>🗓 ${next ? `পরের ক্লাস: <span style="color:var(--red)">${esc(dayWord(next))}</span>` : 'ক্লাসের রুটিন'}</b><span class="small" style="color:var(--navy);font-weight:700">রুটিন ›</span></div>
+    ${next ? `<div class="small muted" style="margin-top:2px">${esc(batchTime(R))}${R.level ? ' · ' + esc(R.level) : ''}${next.plan && next.plan.topic ? ` · <b style="color:var(--ink)">${esc(next.plan.topic)}</b>` : ''}</div>` : '<div class="small muted">সামনের ৪৫ দিনে কোনো ক্লাসের দিন পাওয়া যায়নি</div>'}
+    ${link ? `<a class="btn sm" href="${esc(link)}" target="_blank" rel="noopener" data-join style="margin-top:8px">🎥 অনলাইন ক্লাসে যোগ দিন</a>` : ''}</div>`;
+}
+async function previewRoutine() {   // portal logins: the morning N5 routine, built from the same tables
+  const t = bdToday(); const end = isoPlus(t, 45);
+  const [{ data: st }, { data: hol }, { data: pl }, { data: ses }] = await Promise.all([sb.from('settings').select('data').eq('id', 1).maybeSingle(),
+    sb.from('holidays').select('on_date,title,batch').gte('on_date', t).lte('on_date', end).in('batch', ['all', 'morning']).order('on_date'),
+    sb.from('class_plans').select('class_date,topic,note,online_link').gte('class_date', t).lte('class_date', end).eq('level', 'N5').in('batch', ['all', 'morning']).order('class_date'),
+    sb.from('sessions').select('class_date,topic,class_no').eq('level', 'N5').eq('batch', 'morning').lte('class_date', t).order('class_date', { ascending: false }).limit(8)]);
+  const S0 = (st && st.data) || {};
+  return { today: t, level: 'N5', batch: 'morning', class_days: Array.isArray(S0.class_days) && S0.class_days.length ? S0.class_days : [0, 1, 2, 3, 4, 6], online_link: S0.online_link || '', times: { morning: S0.time_morning || '', evening: S0.time_evening || '' },
+    holidays: (hol || []).map(h => ({ date: h.on_date, title: h.title, batch: h.batch })), plans: (pl || []).map(p => ({ date: p.class_date, topic: p.topic, note: p.note, online_link: p.online_link })), recent: (ses || []).map(x => ({ date: x.class_date, topic: x.topic, class_no: x.class_no })) };
+}
+function renderRoutine(d, user) {
+  scrollTo(0, 0); const R = d.routine; const days = routineDays(R, 14); const cd = (R.class_days || []).map(Number);
+  const hol = (R.holidays || []); const plansAfter = (R.plans || []).filter(p => p.date > isoPlus(R.today, 13));
+  const row = (x) => { const l = !x.off && safeLink((x.plan || {}).online_link || ''); return `<div class="rtd ${x.off ? 'off' : ''} ${x.i === 0 ? 'now' : ''}"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(x.iso)])}</b><small>${BN_NUM(Number(x.iso.slice(8, 10)))} ${esc(BN_MON[Number(x.iso.slice(5, 7)) - 1])}</small></div>
+    <div style="flex:1;min-width:0">${x.hol ? `<b style="color:var(--red)">ছুটি</b> — ${esc(x.hol.title)}` : x.weekly ? '<span class="muted">সাপ্তাহিক ছুটি</span>' : `<b>ক্লাস</b> <span class="small muted">${esc(batchTime(R))}</span>${x.plan ? `<div style="margin-top:2px">📘 ${esc(x.plan.topic)}</div>${x.plan.note ? `<div class="small muted" style="white-space:pre-line">${esc(x.plan.note)}</div>` : ''}` : ''}${l ? `<a class="btn sm" href="${esc(l)}" target="_blank" rel="noopener" style="margin-top:6px">🎥 অনলাইন ক্লাস</a>` : ''}`}</div>${x.i === 0 ? '<span class="newtag">আজ</span>' : ''}</div>`; };
+  const gl = safeLink(R.online_link);
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🗓 ক্লাসের রুটিন</b><button class="btn sm ghost" id="rtback">‹ ফিরে যান</button></div>
+    <div class="card acct"><div><b>${esc(R.level || '')}${R.batch && BATCH[R.batch] ? ' · ' + esc(R.batch === 'morning' ? 'সকালের ব্যাচ' : 'বিকেলের ব্যাচ') : ''}</b>${batchTime(R) ? ` <span class="muted">· ${esc(batchTime(R))}</span>` : ''}</div>
+      <div class="small" style="margin-top:4px">ক্লাস হয়: <b>${cd.sort().map(x => WDAY_BN[x]).join(', ')}বার</b> · সাপ্তাহিক ছুটি: <b>${[0, 1, 2, 3, 4, 5, 6].filter(x => !cd.includes(x)).map(x => WDAY_BN[x] + 'বার').join(', ') || 'নেই'}</b></div>
+      ${gl ? `<a class="btn" href="${esc(gl)}" target="_blank" rel="noopener" style="width:100%;justify-content:center;margin-top:10px">🎥 অনলাইন ক্লাসে যোগ দিন</a><div class="small muted" style="margin-top:4px;text-align:center">ক্লাসের সময় হলে চাপ দিন। লিংকটা অন্য কাউকে দেবেন না।</div>` : ''}</div>
+    <h2 class="lvl">সামনের ১৪ দিন</h2><div class="card" style="padding:4px 12px">${days.map(row).join('')}</div>
+    ${plansAfter.length ? `<h2 class="lvl">পরের পরিকল্পনা</h2><div class="card" style="padding:4px 12px">${plansAfter.map(p => `<div class="rtd"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(p.date)])}</b><small>${BN_NUM(Number(p.date.slice(8, 10)))} ${esc(BN_MON[Number(p.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">📘 ${esc(p.topic)}</div></div>`).join('')}</div>` : ''}
+    ${hol.filter(h => h.date > isoPlus(R.today, 13)).length ? `<h2 class="lvl">পরের ছুটি</h2><div class="card" style="padding:4px 12px">${hol.filter(h => h.date > isoPlus(R.today, 13)).map(h => `<div class="rtd off"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(h.date)])}</b><small>${BN_NUM(Number(h.date.slice(8, 10)))} ${esc(BN_MON[Number(h.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">${esc(h.title)}</div></div>`).join('')}</div>` : ''}
+    <h2 class="lvl">গত ক্লাসগুলোতে যা পড়ানো হয়েছে</h2>${(R.recent || []).length ? `<div class="card" style="padding:4px 12px">${R.recent.map(x => `<div class="rtd"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(x.date)])}</b><small>${BN_NUM(Number(x.date.slice(8, 10)))} ${esc(BN_MON[Number(x.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">${x.class_no ? `<span class="small muted">ক্লাস ${BN_NUM(x.class_no)} · </span>` : ''}${esc(x.topic || 'বিষয় লেখা হয়নি')}</div></div>`).join('')}</div><div class="small muted" style="margin-top:6px">কোনো ক্লাস মিস করলে এই বিষয়গুলো বই থেকে পড়ে নিন, না বুঝলে "শিক্ষককে প্রশ্ন" করুন।</div>` : '<div class="card"><div class="empty">এখনো কোনো ক্লাসের বিষয় লেখা হয়নি</div></div>'}</div>`;
+  $('#rtback').onclick = () => renderHome(d, user);
+}
+
 // ------------------------------------------------------------------ ask the teacher (শিক্ষককে প্রশ্ন)
 const qaSeenKey = (d) => 'sakura_qa_seen_' + ((d.student || {}).admission_no || 'p');
 function qaUnread(d) { const m = ((d.qa || {}).mine || []).filter(q => q.status === 'answered'); let seen = []; try { seen = JSON.parse(localStorage.getItem(qaSeenKey(d)) || '[]'); } catch { /* none */ } return m.filter(q => !seen.includes(q.id)); }
@@ -1195,7 +1256,7 @@ function renderHome(d, user) {
   $('#app').innerHTML = `<div class="st">
     <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${d.preview ? '' : '<button class="out" id="mepg">👤 আমার পাতা</button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
-    ${noticesHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
+    ${noticesHtml(d)}${routineCardHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -1217,6 +1278,7 @@ function renderHome(d, user) {
   bindCountdown(d, user);
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
+  const rg = $('#rtgo'); if (rg) { const f = (e) => { if (e.target.closest('[data-join]')) return; renderRoutine(d, user); }; rg.onclick = f; rg.onkeydown = (e) => { if (e.target === rg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); renderRoutine(d, user); } }; }
   const hg = $('#hwgo'); if (hg) { const f = () => { HW_OPEN = null; renderHomework(d, user); }; hg.onclick = f; hg.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
   const bg = $('#bdgo'); if (bg) bg.onclick = () => { ME_TAB = 'bdg'; renderMe(d, user); };
   checkNewBadges(d);
@@ -1436,7 +1498,7 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } try { p.qa = await API.qa(); } catch (e) { p.qa = null; } return renderHome(p, user); }
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } try { p.qa = await API.qa(); } catch (e) { p.qa = null; } try { p.routine = await previewRoutine(); } catch (e) { p.routine = null; } return renderHome(p, user); }
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
@@ -1446,6 +1508,7 @@ async function start() {
     if (!d.blocked) { try { d.lb = await API.leaderboard(); } catch (e) { d.lb = null; console.warn(e); } }
     if (!d.blocked) { try { d.homework = await API.homework(); } catch (e) { d.homework = []; console.warn(e); } }
     if (!d.blocked) { try { d.qa = await API.qa(); } catch (e) { d.qa = null; console.warn(e); } }
+    try { d.routine = await API.routine(); } catch (e) { d.routine = null; console.warn(e); }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);

@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions'];
-const OPTIONAL_TABLES = ['student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans'];
+const OPTIONAL_TABLES = ['class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -1869,6 +1869,27 @@ function holidayModal(h, preset = {}) {
   };
 }
 
+function planModal(p, preset = {}) {
+  const v = p || { level: (activeGroups()[0] || {}).level || 'N5', batch: 'all', topic: '', note: '', online_link: '', ...preset };
+  openModal(`<h2>${p ? 'ক্লাসের পরিকল্পনা' : 'ক্লাসের পরিকল্পনা যোগ'}</h2><form class="form" id="cpf">
+    <label class="f">তারিখ<input name="class_date" type="date" required value="${esc(v.class_date)}"></label>
+    <label class="f">লেভেল<select name="level">${LEVELS.map(l => `<option ${v.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">কোন ব্যাচ<select name="batch"><option value="all" ${v.batch === 'all' ? 'selected' : ''}>দুই ব্যাচ</option>${Object.entries(BATCH).map(([k, l]) => `<option value="${k}" ${v.batch === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f full">কী পড়ানো হবে<input name="topic" required value="${esc(v.topic)}" placeholder="যেমন: অধ্যায় ৫ — ~ています, নতুন কাঞ্জি ১০টি"></label>
+    <label class="f full">ছাত্রদের জন্য নোট (ঐচ্ছিক)<textarea name="note" placeholder="যেমন: আগের অধ্যায়ের শব্দ মুখস্থ করে আসবে">${esc(v.note)}</textarea></label>
+    <label class="f full">অনলাইন ক্লাসের লিংক (শুধু অনলাইন ক্লাস হলে)<input name="online_link" type="url" value="${esc(v.online_link)}" placeholder="https://meet.google.com/..."></label>
+    <div class="full row" style="justify-content:flex-end">${p ? '<button type="button" class="btn ghost" id="cpd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="cpc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+  $('#cpc').onclick = closeModal;
+  const del = $('#cpd'); if (del) del.onclick = async () => { try { await API.remove('class_plans', p.id); S.class_plans = S.class_plans.filter(x => x.id !== p.id); closeModal(); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  $('#cpf').onsubmit = async (e) => {
+    e.preventDefault(); const d = formData(e.target); d.topic = (d.topic || '').trim(); d.note = (d.note || '').trim(); d.online_link = (d.online_link || '').trim();
+    if (d.online_link && !/^https:\/\//.test(d.online_link)) return toast('লিংক https:// দিয়ে শুরু হতে হবে', true);
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+    try { putLocal('class_plans', p ? await API.update('class_plans', p.id, d) : await API.insert('class_plans', d)); closeModal(); toast('সংরক্ষণ হয়েছে'); render(); }
+    catch (err) { toast(errMsg(err), true); btn.disabled = false; }
+  };
+}
+
 function viewCalendar(q) {
   const m = q.get('m') || monthISO(); const [Y, M] = m.split('-').map(Number);
   const first = new Date(Y, M - 1, 1); const days = new Date(Y, M, 0).getDate(); const lead = first.getDay();
@@ -1881,7 +1902,7 @@ function viewCalendar(q) {
     const need = !info.off && iso < today ? groups.filter(g => !dayInfo(iso, g.batch).off && groupStarted(g, iso) && !ss.some(x => x.level === g.level && x.batch === g.batch)).length : 0;
     return `<div class="cd ${info.off ? 'off' : ''} ${iso === today ? 'today' : ''}" data-day="${iso}"><div class="dn">${d}</div>
       ${info.off ? `<div class="hl">${esc(info.why)}</div>` : ''}${bHol.map(h => `<div class="hl sm">${esc(BATCH[h.batch] || '')}: ${esc(h.title)}</div>`).join('')}
-      ${ss.length ? `<div class="ok">✓ ${ss.length}টি ক্লাস</div>` : ''}${need ? `<div class="miss">হাজিরা বাকি ${need}</div>` : ''}
+      ${ss.length ? `<div class="ok">✓ ${ss.length}টি ক্লাস</div>` : ''}${(S.class_plans || []).filter(p => p.class_date === iso).map(p => `<div class="ev">📘 ${esc(p.level)}${p.online_link ? ' · অনলাইন' : ''}</div>`).join('')}${need ? `<div class="miss">হাজিরা বাকি ${need}</div>` : ''}
       ${exs.map(x => `<div class="ev">✎ ${esc(x.title)}</div>`).join('')}${ev.map(a => `<div class="ev jp">✈ ${esc(studentName(byId(S.students, a.student_id)))}</div>`).join('')}</div>`;
   };
   const monthHol = (S.holidays || []).filter(h => (h.on_date || '').startsWith(m)).sort((a, b) => a.on_date.localeCompare(b.on_date));
@@ -1910,7 +1931,10 @@ function viewCalendar(q) {
       const iso = c.dataset.day; const info = dayInfo(iso);
       openModal(`<h2>${fmtD(iso)} · ${WDAY[dow(iso)]}বার</h2><p>${info.off ? `ছুটি: <b>${esc(info.why)}</b>` : 'ক্লাসের দিন'}</p>
         <div class="row" style="gap:8px;flex-wrap:wrap">${groups.map(g => `<a class="btn sm ghost" href="#/attendance?d=${iso}&l=${g.level}&b=${g.batch}">${esc(g.level)} · ${esc(BATCH[g.batch])} হাজিরা</a>`).join('')}</div>
-        <div class="row" style="justify-content:flex-end;margin-top:16px;gap:8px">${info.hol ? '<button class="btn ghost" id="eh">ছুটি বদলান</button>' : '<button class="btn ghost" id="ah">এই দিন ছুটি</button>'}<button class="btn" id="dc">বন্ধ</button></div>`);
+        ${(() => { const pl = (S.class_plans || []).filter(p => p.class_date === iso); return `<h3 style="margin:16px 0 6px">ক্লাসের পরিকল্পনা <span class="small muted">(ছাত্রদের সাইটে দেখাবে)</span></h3>${pl.length ? pl.map(p => `<div class="card click" data-cp="${p.id}" style="padding:8px 12px;margin-bottom:6px"><b>${esc(p.level)}</b> · ${p.batch === 'all' ? 'দুই ব্যাচ' : esc(BATCH[p.batch] || '')} — ${esc(p.topic || '—')}${p.online_link ? ' <span class="small muted">· অনলাইন লিংক আছে</span>' : ''}</div>`).join('') : '<p class="small muted" style="margin:0">কিছু লেখা নেই</p>'}<button class="btn sm ghost" id="acp" style="margin-top:6px">+ পরিকল্পনা / অনলাইন লিংক</button>`; })()}
+        <div class="row" style="justify-content:flex-end;margin-top:16px;gap:8px">${isTeacher() ? '' : info.hol ? '<button class="btn ghost" id="eh">ছুটি বদলান</button>' : '<button class="btn ghost" id="ah">এই দিন ছুটি</button>'}<button class="btn" id="dc">বন্ধ</button></div>`);
+      $('#acp').onclick = () => planModal(null, { class_date: iso });
+      $$('[data-cp]').forEach(x => x.onclick = () => planModal(byId(S.class_plans, x.dataset.cp)));
       $('#dc').onclick = closeModal; $$('#modal-body a').forEach(a => a.addEventListener('click', closeModal));
       const ah = $('#ah'); if (ah) ah.onclick = () => holidayModal(null, { on_date: iso });
       const eh = $('#eh'); if (eh) eh.onclick = () => holidayModal(info.hol);
@@ -2062,6 +2086,11 @@ function viewSettings() {
     <label class="f">পরের JLPT-র তারিখ<input name="jlpt_date" type="date" value="${esc(st.jlpt_date || '')}" ${ro}></label>
     <label class="f">পরের NAT-TEST-এর তারিখ (ঐচ্ছিক)<input name="nat_date" type="date" value="${esc(st.nat_date || '')}" ${ro}></label>
     <p class="full small muted" style="margin:0">খালি রাখলে ছাত্ররা জুলাই/ডিসেম্বরের প্রথম রবিবার (JLPT-র সাধারণ দিন) "আনুমানিক" হিসেবে দেখবে। বাংলাদেশে পরীক্ষার আসল তারিখ ঘোষণা হলে এখানে বসিয়ে দিন।</p>
+    <h3>ক্লাসের সময় ও অনলাইন ক্লাস (ছাত্রদের সাইটে রুটিন)</h3>
+    <label class="f">সকালের ব্যাচের সময়<input name="time_morning" placeholder="যেমন ১০:০০ – ১২:০০" value="${esc(st.time_morning || '')}" ${ro}></label>
+    <label class="f">বিকেলের ব্যাচের সময়<input name="time_evening" placeholder="যেমন ৪:০০ – ৬:০০" value="${esc(st.time_evening || '')}" ${ro}></label>
+    <label class="f full">অনলাইন ক্লাসের লিংক (Zoom / Google Meet, ঐচ্ছিক)<input name="online_link" type="url" placeholder="https://meet.google.com/..." value="${esc(st.online_link || '')}" ${ro}></label>
+    <p class="full small muted" style="margin:0">কোনো একদিনের জন্য আলাদা বিষয় বা লিংক দিতে চাইলে ক্যালেন্ডারে সেই দিনে ক্লিক করে "ক্লাসের পরিকল্পনা" যোগ করুন।</p>
     <h3>সার্টিফিকেটে বইয়ের নাম</h3>
     ${LEVELS.map(l => `<label class="f">${l}<input name="tb_${l}" value="${esc(st.textbooks[l])}" ${ro}></label>`).join('')}
     ${isAdmin() ? '<div class="full row" style="justify-content:flex-end"><button class="btn">সংরক্ষণ</button></div>' : ''}
@@ -2071,7 +2100,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
       if (!data.class_days.length) return toast('অন্তত একটা ক্লাসের দিন বাছুন', true);
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
