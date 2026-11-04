@@ -138,7 +138,8 @@ footer{background:var(--navy);color:#D9D3C7;padding:34px 0 90px;font-size:15px}f
     fees: { 'N5': 20000, 'N4': 20000, 'N3': 22000, 'N5+N4': 35000, 'N5+N4+N3': 45000 }, textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' } };
   const CFG = window.SAKURA_CONFIG || {}; const live = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
   const sb = live && window.supabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: false } }) : null;
-  const src = (() => { const s = new URLSearchParams(location.search).get('src'); return ['facebook', 'whatsapp', 'referral'].includes(s) ? s : 'website'; })();
+  const ref = (() => { const r = (new URLSearchParams(location.search).get('ref') || '').trim().toUpperCase(); return /^[A-Z0-9]{4,10}$/.test(r) ? r : ''; })();
+  const src = ref ? 'referral' : (() => { const s = new URLSearchParams(location.search).get('src'); return ['facebook', 'whatsapp', 'referral'].includes(s) ? s : 'website'; })();
 
   function paint(I) {
     const wa = waNum(I.whatsapp || I.phone); const msg = encodeURIComponent('আসসালামু আলাইকুম। জাপানি ভাষা কোর্স সম্পর্কে জানতে চাই।');
@@ -170,8 +171,9 @@ footer{background:var(--navy);color:#D9D3C7;padding:34px 0 90px;font-size:15px}f
     const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'পাঠানো হচ্ছে…';
     try {
       let res = 'ok';
-      if (sb) { const { data, error } = await sb.rpc('submit_inquiry', { p_name: name, p_phone: phone, p_interest: f.interest.value, p_note: note, p_source: src }); if (error) throw error; res = data; }
-      else { const all = JSON.parse(localStorage.getItem('sakura_demo_inquiries') || '[]'); all.push({ id: 'web-' + Date.now(), created_on: new Date().toISOString().slice(0, 10), name, phone, source: src, interest: f.interest.value, status: 'new', next_follow_up: new Date().toISOString().slice(0, 10), notes: 'ওয়েবসাইটের ফর্ম থেকে' + (note ? ': ' + note : ''), created_at: new Date().toISOString() }); localStorage.setItem('sakura_demo_inquiries', JSON.stringify(all)); }
+      if (sb && ref) { const { data, error } = await sb.rpc('submit_referral', { p_name: name, p_phone: phone, p_interest: f.interest.value, p_note: note, p_ref: ref }); if (error) throw error; res = data; }
+      else if (sb) { const { data, error } = await sb.rpc('submit_inquiry', { p_name: name, p_phone: phone, p_interest: f.interest.value, p_note: note, p_source: src }); if (error) throw error; res = data; }
+      else { const all = JSON.parse(localStorage.getItem('sakura_demo_inquiries') || '[]'); all.push({ id: 'web-' + Date.now(), created_on: new Date().toISOString().slice(0, 10), name, phone, source: src, interest: f.interest.value, status: 'new', ref, next_follow_up: new Date().toISOString().slice(0, 10), notes: 'ওয়েবসাইটের ফর্ম থেকে' + (note ? ': ' + note : ''), created_at: new Date().toISOString() }); localStorage.setItem('sakura_demo_inquiries', JSON.stringify(all)); }
       if (res === 'bad_phone') throw new Error('সঠিক মোবাইল নম্বর লিখুন');
       if (res === 'bad_name') throw new Error('আপনার নাম লিখুন');
       if (res === 'busy') throw new Error('এই মুহূর্তে অনেক আবেদন আসছে। একটু পরে আবার চেষ্টা করুন, অথবা WhatsApp করুন।');

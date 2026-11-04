@@ -183,6 +183,9 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  referrals() { const sid = this.linkedId(); if (!sid) return null; const rows = this.read('students'); const i = rows.findIndex(x => x.id === sid); if (!rows[i].ref_code) { rows[i].ref_code = 'DEMO' + String(i + 10); this.write('students', rows); }
+    const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })();
+    return { code: rows[i].ref_code, reward: st.ref_reward || '', list: [...new Map(JSON.parse(localStorage.getItem('sakura_demo_inquiries') || '[]').concat(this.read('inquiries')).map(q => [q.id, q])).values()].filter(q => q.referred_by === sid || (q.ref && q.ref === rows[i].ref_code)).map(q => ({ name: (q.name || '').split(' ')[0], status: q.status, on: q.created_on })) }; },
   feedback() { const sid = this.linkedId(); if (!sid) return null; const per = bdToday().slice(0, 7); const f = this.read('class_feedback').find(x => x.student_id === sid && x.period === per); return { period: per, mine: f || null }; },
   feedbackSave(F) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const per = bdToday().slice(0, 7); const rows = this.read('class_feedback'); const i = rows.findIndex(x => x.student_id === sid && x.period === per);
     const row = { ...(i >= 0 ? rows[i] : { id: 'fb-' + Date.now(), student_id: sid, period: per, created_at: new Date().toISOString() }), level: s.current_level || '', batch: s.batch || '', overall: F.overall, explain: F.explain, pace: F.pace, homework: F.homework, liked: F.liked.trim(), improve: F.improve.trim(), updated_at: new Date().toISOString() };
@@ -313,6 +316,7 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async referrals() { if (PREVIEW) return null; if (DEMO) return Demo.referrals(); const { data, error } = await sb.rpc('student_referrals'); if (error) throw error; return data; },
   async feedback() { if (PREVIEW) return null; if (DEMO) return Demo.feedback(); const { data, error } = await sb.rpc('student_feedback'); if (error) throw error; return data; },
   async feedbackSave(F) { if (DEMO) return Demo.feedbackSave(F); const { data, error } = await sb.rpc('student_feedback_save', { p_overall: F.overall, p_explain: F.explain, p_pace: F.pace, p_homework: F.homework, p_liked: F.liked, p_improve: F.improve }); if (error) throw error; return data; },
   async payproofs() { if (PREVIEW) return null; if (DEMO) return Demo.payproofs(); const { data, error } = await sb.rpc('student_payproofs'); if (error) throw error; return data; },
@@ -1188,6 +1192,30 @@ function startNotifyPoll(d) {   // while the site is open (also in the backgroun
   }, 10 * 60000);
 }
 
+// ------------------------------------------------------------------ bring a friend (বন্ধুকে আনুন)
+const REF_ST = { new: ['warn', 'নতুন'], contacted: ['warn', 'অফিস কথা বলেছে'], trial: ['ok', 'ট্রায়াল ক্লাস'], joined: ['ok', '🎉 ভর্তি হয়েছে'], lost: ['', 'আসেনি'] };
+const refLink = (code) => new URL('../web/?ref=' + encodeURIComponent(code), location.href).href;
+function refLinkHtml(d) { if (d.blocked || d.preview) return ''; return '<button class="bdlink reflink" id="refgo">🤝 বন্ধুকে আনুন — আপনার নিজের লিংক ›</button>'; }
+async function renderRefer(d, user) {
+  scrollTo(0, 0); $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>';
+  let R; try { R = await API.referrals(); } catch (e) { R = null; console.warn(e); }
+  const I = d.institute || {}; const link = R && R.code ? refLink(R.code) : '';
+  const msg = `আসসালামু আলাইকুম! আমি ${I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট'}-এ জাপানি ভাষা শিখছি। তুমিও জাপানি শিখতে বা জাপানে পড়তে যেতে চাইলে এই লিংকে নাম আর নম্বর দাও, অফিস থেকে যোগাযোগ করবে:\n${link}`;
+  const L = (R && R.list) || []; const joined = L.filter(x => x.status === 'joined').length;
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🤝 বন্ধুকে আনুন</b><button class="btn sm ghost" id="refback">‹ ফিরে যান</button></div>
+    ${!R || !R.code ? '<div class="card"><div class="empty">লিংক তৈরি করা যায়নি — একটু পরে আবার চেষ্টা করুন।</div></div>' : `
+    <div class="card acct"><div class="small muted">যাদের জাপানি শেখার বা জাপানে যাওয়ার ইচ্ছা আছে, তাদের এই লিংক দিন। তারা নাম-নম্বর দিলে অফিস যোগাযোগ করবে, আর অফিস জানবে আপনি পাঠিয়েছেন।</div>
+      ${R.reward ? `<div class="tip" style="margin-top:8px">🎁 ${esc(R.reward)}</div>` : ''}
+      <div class="reflinkbox"><code id="reftxt">${esc(link)}</code></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><a class="btn wa" style="flex:1;justify-content:center" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp-এ পাঠান</a><button class="btn ghost" id="refcopy" style="flex:1;justify-content:center">📋 লিংক কপি</button>${navigator.share ? '<button class="btn ghost" id="refshare" style="flex:1;justify-content:center">↗ শেয়ার</button>' : ''}</div>
+      <div class="small muted" style="margin-top:8px">আপনার কোড: <b style="letter-spacing:2px">${esc(R.code)}</b></div></div>
+    <h2 class="lvl" style="margin-top:18px">আপনি যাদের এনেছেন (${BN_NUM(L.length)})${joined ? ` · ভর্তি ${BN_NUM(joined)}` : ''}</h2>
+    ${L.length ? `<div class="card" style="padding:4px 14px">${L.map(x => `<div class="attr" style="padding:9px 0"><span style="flex:1"><b>${esc(x.name || '—')}</b> <span class="small muted">${fmtD(x.on)}</span></span><span class="pill ${(REF_ST[x.status] || ['', x.status])[0]}">${esc((REF_ST[x.status] || ['', x.status])[1])}</span></div>`).join('')}</div>` : '<div class="card"><div class="empty">এখনো কেউ আপনার লিংক দিয়ে আসেনি</div></div>'}`}</div>`;
+  $('#refback').onclick = () => renderHome(d, user);
+  const c = $('#refcopy'); if (c) c.onclick = async () => { try { await navigator.clipboard.writeText(link); toast('লিংক কপি হয়েছে'); } catch { toast(link); } };
+  const sh = $('#refshare'); if (sh) sh.onclick = () => navigator.share({ title: I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট', text: msg.replace('\n' + link, ''), url: link }).catch(() => {});
+}
+
 // ------------------------------------------------------------------ Japan life guide (জাপান লাইফ গাইড)
 let JG_OPEN = 'before';
 const jgKey = (d) => 'sakura_jg_' + ((d.student || {}).admission_no || 'p');
@@ -1613,7 +1641,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${jgLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${jgLinkHtml(d)}${refLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1634,6 +1662,7 @@ function renderHome(d, user) {
   $$('[data-fbq]').forEach(b => b.onclick = () => { FB = null; renderFeedback(d, user, Number(b.dataset.fbq)); });
   const fh = $('#fbhide'); if (fh) fh.onclick = () => { try { localStorage.setItem(fbHideKey(d), '1'); } catch { /* not kept */ } $('.fbc').remove(); };
   const bl = $('#bellgo'); if (bl) bl.onclick = () => renderInbox(d, user);
+  const rf = $('#refgo'); if (rf) rf.onclick = () => renderRefer(d, user);
   const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
   const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
