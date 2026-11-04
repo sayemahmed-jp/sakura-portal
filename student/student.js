@@ -350,6 +350,88 @@ function bindDaily(d, user) {
   };
 }
 
+
+// ------------------------------------------------------------------ flashcards (ফ্ল্যাশকার্ড) — Leitner boxes, kept on this device
+const FC_GAP = [0, 1, 3, 7, 14, 30];          // days until a card comes back, by box
+const FC_NEW_PER_DAY = 10, FC_SESSION = 15;
+let FC_LV = '', FC_DECK = 'words', FC = null;  // FC = the running session
+const fcKey = (d) => `sakura_fc_${(d.student || {}).admission_no || 'preview'}_${FC_LV}_${FC_DECK}`;
+function fcLoad(d) { try { return JSON.parse(localStorage.getItem(fcKey(d)) || '{}'); } catch { return {}; } }
+function fcSave(d, st) { try { localStorage.setItem(fcKey(d), JSON.stringify(st)); } catch { /* storage full or blocked: progress just isn't kept */ } }
+function fcCards() {
+  const D = (window.SAKURA_DAILY || {})[FC_LV]; if (!D) return [];
+  return FC_DECK === 'kanji' ? D.kanji.map(k => ({ id: k[0], front: k[0], word: k[1], reading: k[2], meaning: k[3] }))
+    : D.words.map(w => ({ id: w[0], front: w[0], word: w[0], reading: w[1], meaning: w[2], sentence: w[3] }));
+}
+function fcStats(d) {
+  const st = fcLoad(d); const cards = fcCards(); const t = bdToday();
+  const seen = cards.filter(c => st[c.id]); const learned = seen.filter(c => st[c.id].b >= 3).length;
+  const due = seen.filter(c => st[c.id].due <= t).length;
+  const newToday = Object.values(st).filter(x => x.first === t).length;
+  return { total: cards.length, seen: seen.length, learned, due, newLeft: Math.max(0, Math.min(FC_NEW_PER_DAY - newToday, cards.length - seen.length)) };
+}
+function fcHomeHtml(d) {
+  const lvs = (d.levels || []).filter(l => (window.SAKURA_DAILY || {})[l]);
+  if (!lvs.length) return '<div class="card"><div class="empty">আপনার লেভেলের ফ্ল্যাশকার্ড এখনো নেই।</div></div>';
+  if (!lvs.includes(FC_LV)) FC_LV = lvs.includes((d.student || {}).current_level) ? d.student.current_level : lvs[0];
+  if (FC) return fcCardHtml(d);
+  const x = fcStats(d); const pct = x.total ? Math.round(x.learned * 100 / x.total) : 0; const go = x.due + x.newLeft;
+  return `<div class="card fc">
+    <div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="mchips" style="margin:0">${lvs.map(l => `<button data-fclv="${l}" class="${l === FC_LV ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="mchips" style="margin:0"><button data-fcdeck="words" class="${FC_DECK === 'words' ? 'on' : ''}">শব্দ</button><button data-fcdeck="kanji" class="${FC_DECK === 'kanji' ? 'on' : ''}">কানজি</button></div></div>
+    <div class="fcstat"><div><b>${BN_NUM(x.learned)}</b><span>শেখা হয়েছে</span></div><div><b>${BN_NUM(x.due)}</b><span>আজ আবার দেখার</span></div><div><b>${BN_NUM(x.newLeft)}</b><span>আজকের নতুন</span></div></div>
+    <div class="bar" style="margin:4px 0 2px"><span style="width:${pct}%;background:var(--green)"></span></div>
+    <div class="small muted">${FC_LV} ${FC_DECK === 'kanji' ? 'কানজি' : 'শব্দ'}: মোট ${BN_NUM(x.total)}টির মধ্যে ${BN_NUM(x.learned)}টি ভালোভাবে শেখা (${BN_NUM(pct)}%)</div>
+    ${go ? `<button class="btn" id="fcgo" style="width:100%;justify-content:center;margin-top:14px">শুরু করুন (${BN_NUM(Math.min(go, FC_SESSION))}টি কার্ড)</button>` : `<div class="ddone" style="margin-top:14px">✓ আজকের কার্ড শেষ। কাল আবার আসুন!</div><button class="btn ghost" id="fcmore" style="width:100%;justify-content:center;margin-top:8px">তবুও আরও অনুশীলন করব</button>`}
+    <details class="small muted" style="margin-top:12px"><summary>কীভাবে কাজ করে?</summary><p style="margin:6px 0 0;line-height:1.7">কার্ড দেখে মনে মনে উত্তর ভাবুন, তারপর উল্টে মিলিয়ে নিন। "জানি" চাপলে কার্ডটা কয়েক দিন পরে আবার আসবে (১ → ৩ → ৭ → ১৪ → ৩০ দিন)। "জানি না" চাপলে আজই আবার আসবে। প্রতিদিন ${BN_NUM(FC_NEW_PER_DAY)}টি নতুন কার্ড যোগ হয়। আপনার হিসাব এই ফোন/কম্পিউটারেই রাখা থাকে।</p></details>
+  </div>`;
+}
+function fcStart(d, extra) {
+  const st = fcLoad(d); const t = bdToday(); const cards = fcCards();
+  const due = cards.filter(c => st[c.id] && st[c.id].due <= t).sort((a, b) => st[a.id].b - st[b.id].b);
+  const x = fcStats(d); const fresh = cards.filter(c => !st[c.id]).slice(0, extra ? 5 : x.newLeft);
+  let q = [...due, ...fresh];
+  if (extra && !q.length) q = cards.filter(c => st[c.id]).sort((a, b) => st[a.id].b - st[b.id].b).slice(0, 10);
+  q = q.slice(0, FC_SESSION);
+  FC = { q, i: 0, flip: false, know: 0, again: 0, total: q.length };
+}
+function fcCardHtml(d) {
+  const c = FC.q[FC.i];
+  if (!c) return `<div class="card fc" style="text-align:center"><div style="font-size:40px">🎉</div><b style="font-size:18px">এই দফা শেষ!</b>
+    <p class="muted" style="margin:6px 0 0">জানা ছিল ${BN_NUM(FC.know)}টি · আবার দেখতে হয়েছে ${BN_NUM(FC.again)} বার</p>
+    <button class="btn" id="fcback" style="width:100%;justify-content:center;margin-top:14px">ঠিক আছে</button></div>`;
+  const left = FC.q.length - FC.i;
+  return `<div class="card fc"><div class="row" style="justify-content:space-between"><span class="small muted">${FC_LV} · ${FC_DECK === 'kanji' ? 'কানজি' : 'শব্দ'} · বাকি ${BN_NUM(left)}</span><button class="linkbtn" id="fcstop">থামুন</button></div>
+    <div class="fccard ${FC.flip ? 'flip' : ''}" id="fcflip" role="button" tabindex="0">
+      <div class="fcfront ${FC_DECK === 'kanji' ? 'k' : ''}">${esc(c.front)}</div>
+      ${FC.flip ? `<div class="fcback"><div class="jp" style="font-size:19px">${esc(c.word)} <span class="rd">${esc(c.reading)}</span> <button type="button" class="say" data-sayj="${esc(c.reading)}" aria-label="শুনুন">🔊</button></div><div style="font-size:17px;font-weight:600;margin-top:4px">${esc(c.meaning)}</div>${c.sentence ? `<div class="jp small muted" style="margin-top:6px;font-size:14.5px">${esc(c.sentence)}</div>` : ''}</div>` : '<div class="small muted" style="margin-top:14px">মনে মনে উচ্চারণ আর অর্থ ভাবুন, তারপর চাপুন</div>'}
+    </div>
+    ${FC.flip ? `<div class="fcbtns"><button class="btn ghost" id="fcno">✗ জানি না</button><button class="btn" id="fcyes">✓ জানি</button></div>` : `<button class="btn" id="fcshow" style="width:100%;justify-content:center;margin-top:12px">উল্টে দেখুন</button>`}
+  </div>`;
+}
+function bindFc(d, user) {
+  const re = () => renderHome(d, user);
+  $$('[data-fclv]').forEach(b => b.onclick = () => { FC_LV = b.dataset.fclv; FC = null; re(); });
+  $$('[data-fcdeck]').forEach(b => b.onclick = () => { FC_DECK = b.dataset.fcdeck; FC = null; re(); });
+  const go = $('#fcgo'); if (go) go.onclick = () => { fcStart(d, false); re(); };
+  const more = $('#fcmore'); if (more) more.onclick = () => { fcStart(d, true); if (!FC.q.length) { FC = null; toast('এখনো কোনো কার্ড নেই'); } re(); };
+  const show = () => { if (FC && !FC.flip) { FC.flip = true; re(); } };
+  const fl = $('#fcflip'); if (fl) { fl.onclick = (e) => { if (!e.target.closest('[data-sayj]')) show(); }; fl.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(); } }; }
+  const sh = $('#fcshow'); if (sh) sh.onclick = show;
+  const answer = (know) => {
+    const st = fcLoad(d); const c = FC.q[FC.i]; const t = bdToday(); const cur = st[c.id] || { b: 0, first: t };
+    if (know) { cur.b = Math.min(FC_GAP.length - 1, cur.b + 1); FC.know++; } else { cur.b = 0; FC.again++; FC.q.splice(Math.min(FC.q.length, FC.i + 4), 0, c); }
+    cur.due = new Date(Date.parse(t + 'T00:00:00Z') + FC_GAP[cur.b] * 86400000).toISOString().slice(0, 10);
+    st[c.id] = cur; fcSave(d, st); FC.i++; FC.flip = false;
+    if (!FC.q[FC.i] && FC.know + FC.again >= 5) API.checkin('daily').then(s => { d.streak = s; }).catch(() => {});
+    re();
+  };
+  const y = $('#fcyes'); if (y) y.onclick = () => answer(true);
+  const n = $('#fcno'); if (n) n.onclick = () => answer(false);
+  const st = $('#fcstop'); if (st) st.onclick = () => { FC = null; re(); };
+  const bk = $('#fcback'); if (bk) bk.onclick = () => { FC = null; re(); };
+}
+
 // an HTML book lives in private storage, which serves it as plain text; it is opened from a local copy
 async function bookBlobUrl(u) { const r = await fetch(u); if (!r.ok) throw new Error('বইটি খোলা যায়নি (' + r.status + ')'); return URL.createObjectURL(new Blob([await r.text()], { type: 'text/html;charset=utf-8' })); }
 function matRow(m) {
@@ -377,8 +459,8 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB !== 'mock' ? 'on' : ''}">📚 পড়ার উপকরণ (${mats.length})</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+    : `${streakHtml(d.streak)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
@@ -386,6 +468,7 @@ function renderHome(d, user) {
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
+  bindFc(d, user);
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
