@@ -1022,6 +1022,79 @@ async function renderHomework(d, user) {
 }
 
 
+// ------------------------------------------------------------------ interview practice (ইন্টারভিউ প্র্যাকটিস)
+let IV = { mode: 'list', cat: 'intro', open: {}, mock: null };
+const ivData = () => window.SAKURA_INTERVIEW || { cats: {}, qs: [] };
+function ivFill(t, d) { const s = d.student || {}; const nm = (s.name_en || '').trim(); return String(t).replace('{name}', nm || '名前').replace('{age}', '年齢'); }
+const ivMark = (t) => esc(t).replace(/〔([^〕]*)〕/g, '<em>$1</em>');
+const ivSpeakText = (t) => String(t).replace(/[〔〕]/g, '');
+const ivRateKey = (d) => 'sakura_iv_' + ((d.student || {}).admission_no || 'p');
+function ivRates(d) { try { return JSON.parse(localStorage.getItem(ivRateKey(d)) || '{}'); } catch { return {}; } }
+function ivLinkHtml(d) { if (d.blocked) return ''; const r = ivRates(d); const n = Object.values(r).filter(v => v === 'good').length;
+  return `<button class="bdlink ivlink" id="ivgo">🎤 ইন্টারভিউ প্র্যাকটিস${n ? ` · ${BN_NUM(n)}/${BN_NUM(ivData().qs.length)} আত্মবিশ্বাসী` : ' — জাপানের স্কুল/ভিসা ইন্টারভিউ'} ›</button>`; }
+function ivStopRec() { const M = IV.mock; if (M && M.rec) { try { M.rec.stop(); } catch { /* stopped */ } } }
+function renderInterview(d, user) {
+  scrollTo(0, 0); const D = ivData(); const rates = ivRates(d);
+  const head = `<div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🎤 ইন্টারভিউ প্র্যাকটিস</b><button class="btn sm ghost" id="ivback">‹ ফিরে যান</button></div>
+    <div class="authtabs" style="margin:0 0 12px"><button data-ivm="list" class="${IV.mode === 'list' ? 'on' : ''}">📋 প্রশ্ন ও উত্তর</button><button data-ivm="mock" class="${IV.mode === 'mock' ? 'on' : ''}">🎙 মক ইন্টারভিউ</button></div>`;
+  let body = '';
+  if (IV.mode === 'list') {
+    const list = D.qs.map((q, i) => ({ ...q, i })).filter(q => q.c === IV.cat);
+    body = `<div class="card acct small" style="line-height:1.6">জাপানের ভাষা স্কুল, ইমিগ্রেশন বা দূতাবাসের ইন্টারভিউতে সাধারণত এমন প্রশ্নই আসে। <b>হলুদ অংশ</b> নিজের সত্যিকারের তথ্য দিয়ে বদলে নিন — কাগজপত্রের সাথে যেন মেলে। স্কুল ভেদে প্রশ্ন আলাদা হতে পারে; চূড়ান্ত প্রস্তুতি শিক্ষকের সাথে নিন।</div>
+      <div class="mchips" style="margin:10px 0">${Object.entries(D.cats).map(([k, l]) => `<button data-ivc="${k}" class="${IV.cat === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
+      ${list.map(q => `<div class="card ivq"><div class="row" style="gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div class="jq">${esc(q.q)}</div><div class="rd">${esc(q.r)}</div><div class="small" style="margin-top:2px">${esc(q.bn)}</div></div><button class="btn sm ghost" data-ivsay="${q.i}" aria-label="শুনুন">🔊</button></div>
+        ${IV.open[q.i] ? `<div class="ivans"><div class="small muted" style="margin-bottom:2px">নমুনা উত্তর</div><div class="ja">${ivMark(ivFill(q.a, d))}</div><div class="small" style="margin-top:4px">${esc(q.abn)}</div><button class="linkbtn" data-ivsaya="${q.i}" style="margin-top:4px">🔊 উত্তরটা শুনুন</button>${q.tip ? `<div class="ivtip">💡 ${esc(q.tip)}</div>` : ''}</div>` : ''}
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn sm ${IV.open[q.i] ? 'ghost' : ''}" data-ivo="${q.i}">${IV.open[q.i] ? 'উত্তর লুকান' : 'নমুনা উত্তর দেখুন'}</button><span class="spacer" style="flex:1"></span>
+          <span class="mchips" style="margin:0">${[['good', '😊 পারি'], ['mid', '😐 মোটামুটি'], ['bad', '😟 পারি না']].map(([k, l]) => `<button data-ivr="${q.i}:${k}" class="${rates[q.i] === k ? 'on' : ''}">${l}</button>`).join('')}</span></div></div>`).join('')}`;
+  } else {
+    const M = IV.mock; const canRec = !!(navigator.mediaDevices && window.MediaRecorder);
+    if (!M) body = `<div class="card ivstage"><div class="who">🧑‍💼</div><div style="font-weight:700;margin-top:8px">${BN_NUM(8)}টি প্রশ্নের মক ইন্টারভিউ</div>
+      <div class="small muted" style="margin:6px 0 14px;line-height:1.7">ইন্টারভিউয়ার জাপানিতে প্রশ্ন করবে (শব্দ চালু রাখুন)। আপনি জোরে উত্তর দিন${canRec ? ' — আপনার উত্তর রেকর্ড হবে, শেষে নিজে শুনে নমুনা উত্তরের সাথে মেলাবেন' : ''}। রেকর্ড শুধু আপনার ফোনেই থাকে।<br>সোজা হয়ে বসুন, ক্যামেরার দিকে তাকিয়ে কথা বলার অভ্যাস করুন।</div>
+      <button class="btn" id="ivstart" style="min-width:200px;justify-content:center">▶ শুরু করুন</button></div>`;
+    else if (M.i < M.qs.length) { const q = D.qs[M.qs[M.i]];
+      body = `<div class="card ivstage"><div class="ivdots">${M.qs.map((_, k) => `<i class="${k < M.i ? 'ok' : k === M.i ? 'on' : ''}"></i>`).join('')}</div><div class="who">🧑‍💼</div>
+        <div class="jq">${M.show ? esc(q.q) : '<span class="muted" style="font-size:15px">🔊 শুনুন… (লেখা দেখতে নিচে চাপুন)</span>'}</div>${M.show ? `<div class="small muted">${esc(q.bn)}</div>` : ''}
+        <div class="row" style="justify-content:center;gap:8px;margin:12px 0"><button class="btn sm ghost" id="ivrep">🔁 আবার শুনুন</button>${M.show ? '' : '<button class="btn sm ghost" id="ivshow">👁 প্রশ্নটা দেখান</button>'}</div>
+        ${canRec ? `<button class="btn ${M.rec ? 'recon' : 'gold'}" id="ivrec" style="min-width:200px;justify-content:center">${M.rec ? '⏹ উত্তর শেষ' : M.recs[M.i] ? '🎙 আবার উত্তর দিন' : '🎙 উত্তর দিন'}</button>${M.rec ? '<div class="small muted" style="margin-top:6px">বলুন… (সর্বোচ্চ ৬০ সেকেন্ড)</div>' : ''}` : '<div class="small muted">এই ব্রাউজারে রেকর্ড হয় না — জোরে উত্তর দিয়ে "পরের প্রশ্ন" চাপুন।</div>'}
+        <div class="row" style="justify-content:center;gap:8px;margin-top:14px"><button class="btn ghost" id="ivnext" ${M.rec ? 'disabled' : ''}>${M.i === M.qs.length - 1 ? 'শেষ করুন ›' : 'পরের প্রশ্ন ›'}</button></div></div>`; }
+    else body = `<div class="card acct"><b>🎉 মক ইন্টারভিউ শেষ!</b><div class="small muted" style="margin-top:4px">প্রতিটা উত্তর শুনুন, নমুনার সাথে মেলান, আর নিজেকে নম্বর দিন। যেগুলো "পারি না", সেগুলো আবার অনুশীলন করুন।</div></div>
+      ${M.qs.map((qi, k) => { const q = D.qs[qi]; return `<div class="card ivq"><div class="small muted">প্রশ্ন ${BN_NUM(k + 1)}</div><div class="jq">${esc(q.q)}</div><div class="small">${esc(q.bn)}</div>
+        ${M.recs[k] ? `<audio controls src="${M.recs[k]}" style="width:100%;margin-top:8px"></audio>` : '<div class="small muted" style="margin-top:6px">রেকর্ড নেই</div>'}
+        <div class="ivans"><div class="ja">${ivMark(ivFill(q.a, d))}</div><div class="small" style="margin-top:4px">${esc(q.abn)}</div></div>
+        <div class="mchips" style="margin:8px 0 0">${[['good', '😊 ভালো পেরেছি'], ['mid', '😐 মোটামুটি'], ['bad', '😟 পারিনি']].map(([r, l]) => `<button data-ivr="${qi}:${r}" class="${rates[qi] === r ? 'on' : ''}">${l}</button>`).join('')}</div></div>`; }).join('')}
+      <div class="row" style="gap:8px"><button class="btn" id="ivagain" style="flex:1;justify-content:center">🔁 নতুন মক ইন্টারভিউ</button></div>`;
+  }
+  $('#app').innerHTML = `<div class="st">${head}${body}</div>`;
+  const re = () => renderInterview(d, user);
+  $('#ivback').onclick = () => { ivStopRec(); try { speechSynthesis.cancel(); } catch { /* none */ } renderHome(d, user); };
+  $$('[data-ivm]').forEach(b => b.onclick = () => { ivStopRec(); try { speechSynthesis.cancel(); } catch { /* none */ } IV.mode = b.dataset.ivm; re(); });
+  $$('[data-ivc]').forEach(b => b.onclick = () => { IV.cat = b.dataset.ivc; re(); });
+  $$('[data-ivo]').forEach(b => b.onclick = () => { IV.open[b.dataset.ivo] = !IV.open[b.dataset.ivo]; re(); });
+  $$('[data-ivsay]').forEach(b => b.onclick = () => speakJa(D.qs[b.dataset.ivsay].q));
+  $$('[data-ivsaya]').forEach(b => b.onclick = () => speakJa(ivSpeakText(ivFill(D.qs[b.dataset.ivsaya].a, d))));
+  $$('[data-ivr]').forEach(b => b.onclick = () => { const [i, r] = b.dataset.ivr.split(':'); const all = ivRates(d); all[i] = r; try { localStorage.setItem(ivRateKey(d), JSON.stringify(all)); } catch { /* not kept */ } b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); });
+  const st = $('#ivstart'); if (st) st.onclick = () => {   // the introduction first, then 7 others from different topics, weakest first
+    const r = ivRates(d); const pool = D.qs.map((q, i) => ({ q, i })).filter(x => x.i !== 0).sort(() => Math.random() - .5).sort((a, b) => ({ bad: 0, mid: 1 }[r[a.i]] ?? 2) - ({ bad: 0, mid: 1 }[r[b.i]] ?? 2));
+    const pick = []; const used = {}; for (const x of pool) { if (pick.length >= 7) break; if ((used[x.q.c] || 0) >= 2) continue; used[x.q.c] = (used[x.q.c] || 0) + 1; pick.push(x.i); }
+    IV.mock = { qs: [0, ...pick], i: 0, recs: {}, rec: null, show: false }; re(); setTimeout(() => speakJa(D.qs[0].q), 300);
+  };
+  const M = IV.mock; if (!M) return;
+  const rep = $('#ivrep'); if (rep) rep.onclick = () => speakJa(D.qs[M.qs[M.i]].q);
+  const sh = $('#ivshow'); if (sh) sh.onclick = () => { M.show = true; re(); };
+  const nx = $('#ivnext'); if (nx) nx.onclick = () => { M.i++; M.show = false; re(); if (M.i < M.qs.length) setTimeout(() => speakJa(D.qs[M.qs[M.i]].q), 300); else if (!d.preview) API.checkin('daily').then(s2 => { d.streak = s2; }).catch(() => {}); };
+  const ag = $('#ivagain'); if (ag) ag.onclick = () => { Object.values(M.recs).forEach(u => URL.revokeObjectURL(u)); IV.mock = null; re(); };
+  const rc = $('#ivrec'); if (rc) rc.onclick = async () => {
+    if (M.rec) { M.rec.stop(); return; }
+    try { speechSynthesis.cancel(); } catch { /* none */ }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const chunks = []; const mr = new MediaRecorder(stream); const k = M.i;
+      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); clearTimeout(M.tm); if (M.recs[k]) URL.revokeObjectURL(M.recs[k]); M.recs[k] = URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || 'audio/webm' })); M.rec = null; if (IV.mock === M && IV.mode === 'mock' && $('#ivstart, #ivrec, #ivagain')) re(); };
+      M.rec = mr; mr.start(); M.tm = setTimeout(() => { if (M.rec) M.rec.stop(); }, 60000); re();
+    } catch (e) { M.rec = null; toast('মাইক্রোফোন চালু করা যায়নি — ব্রাউজারে মাইকের অনুমতি দিন।', true); }
+  };
+}
+
 // ------------------------------------------------------------------ video lessons (ভিডিও ক্লাস)
 let VID_OPEN = null;
 function embedOf(url) {   // a player address for YouTube, Google Drive and Vimeo links; null for anything else
@@ -1315,7 +1388,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1332,6 +1405,7 @@ function renderHome(d, user) {
   bindCountdown(d, user);
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
+  const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
   const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
   const rg = $('#rtgo'); if (rg) { const f = (e) => { if (e.target.closest('[data-join]')) return; renderRoutine(d, user); }; rg.onclick = f; rg.onkeydown = (e) => { if (e.target === rg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); renderRoutine(d, user); } }; }
   const hg = $('#hwgo'); if (hg) { const f = () => { HW_OPEN = null; renderHomework(d, user); }; hg.onclick = f; hg.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
