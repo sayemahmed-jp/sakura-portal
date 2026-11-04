@@ -1,0 +1,18 @@
+{
+  "name": "সাকুরা ছাত্রদের সাইট",
+  "short_name": "সাকুরা ছাত্র",
+  "description": "সাকুরা জাপানিজ ইনস্টিটিউটের ছাত্রদের পড়া, মক টেস্ট, বাড়ির কাজ আর নোটিশ",
+  "lang": "bn",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF8F1",
+  "theme_color": "#1B2945",
+  "icons": [
+    { "src": "../icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "../icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

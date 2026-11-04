@@ -1052,6 +1052,76 @@ async function renderHomework(d, user) {
 }
 
 
+// ------------------------------------------------------------------ app install, inbox (🔔) and notifications
+let _instEvt = null;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _instEvt = e; const c = $('#instc'); if (c) c.hidden = false; });
+addEventListener('appinstalled', () => { _instEvt = null; const c = $('#instc'); if (c) c.remove(); toast('ইনস্টল হয়েছে — হোম স্ক্রিনে "সাকুরা ছাত্র" আইকন দেখুন'); });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
+const instHidden = () => { try { return Number(localStorage.getItem('sakura_inst_hide') || 0) > Date.now(); } catch { return false; } };
+function installCardHtml(d) {
+  if (standalone() || instHidden() || d.preview) return '';
+  return `<div class="card instc" id="instc"><span style="font-size:30px">📲</span><div style="flex:1;min-width:0"><b>ফোনে অ্যাপের মতো রাখুন</b><div class="small">এক চাপে খুলবে, পুরো স্ক্রিনে — প্রতিবার লিংক খুঁজতে হবে না</div></div>
+    <button class="btn sm gold" id="instgo">ইনস্টল</button><button class="out" id="insthide" aria-label="বন্ধ" style="padding:4px 9px">✕</button></div>`;
+}
+function bindInstall() {
+  const g = $('#instgo'); if (g) g.onclick = async () => {
+    if (_instEvt) { _instEvt.prompt(); const r = await _instEvt.userChoice.catch(() => null); _instEvt = null; if (r && r.outcome === 'accepted') return; }
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    confirmOverlay(ios ? 'iPhone (Safari):\n১. নিচের Share বোতাম (□↑) চাপুন\n২. "Add to Home Screen" চাপুন\n৩. ডানে উপরে "Add" চাপুন' : 'Android (Chrome):\n১. ডানে উপরে ⋮ চাপুন\n২. "Install app" বা "Add to Home screen" চাপুন\n৩. "Install" চাপুন\n\nএরপর হোম স্ক্রিনে "সাকুরা ছাত্র" আইকন থাকবে।', 'ঠিক আছে');
+  };
+  const h = $('#insthide'); if (h) h.onclick = () => { try { localStorage.setItem('sakura_inst_hide', String(Date.now() + 14 * 86400000)); } catch { /* not kept */ } $('#instc').remove(); };
+}
+const inboxKey = (d, k) => `sakura_${k}_` + ((d.student || {}).admission_no || 'p');
+function inboxSet(d, k) { try { return new Set(JSON.parse(localStorage.getItem(inboxKey(d, k)) || '[]')); } catch { return new Set(); } }
+function inboxSave(d, k, set) { try { localStorage.setItem(inboxKey(d, k), JSON.stringify([...set].slice(-400))); } catch { /* not kept */ } }
+function inboxItems(d) {   // everything new for this student, newest first; "seen" is kept on this phone
+  const out = []; const seen = inboxSet(d, 'inbox'); const nts = ntSeen(d); const qaNew = new Set(qaUnread(d).map(q => q.id));
+  for (const n of d.notices || []) out.push({ key: 'n:' + n.id, icon: '📢', title: n.title || 'নতুন নোটিশ', sub: 'নোটিশ', at: n.created_at, go: 'notices', fresh: !nts.includes(String(n.id)) });
+  for (const q of ((d.qa || {}).mine || [])) if (q.status === 'answered') out.push({ key: 'q:' + q.id, icon: '❓', title: 'আপনার প্রশ্নের উত্তর এসেছে', sub: (q.topic || q.body || '').slice(0, 60), at: q.answered_at, go: 'qa', fresh: qaNew.has(q.id) });
+  for (const h of d.homework || []) {
+    if (!h.sub && Date.now() - Date.parse(h.created_at) < 14 * 86400000) out.push({ key: 'h:' + h.id, icon: '📓', title: 'নতুন বাড়ির কাজ', sub: h.title + (h.due_on ? ' · জমা ' + fmtD(h.due_on) : ''), at: h.created_at, go: 'hw' });
+    if (h.sub && (h.sub.status === 'checked' || h.sub.status === 'redo') && h.sub.checked_at) out.push({ key: 'hc:' + h.id + ':' + h.sub.checked_at, icon: h.sub.status === 'redo' ? '🔁' : '✅', title: h.sub.status === 'redo' ? 'বাড়ির কাজ আবার করতে হবে' : `বাড়ির কাজ দেখা হয়েছে${h.sub.marks != null ? ' — ' + BN_NUM(h.sub.marks) + (h.max_marks ? '/' + BN_NUM(h.max_marks) : '') : ''}`, sub: h.title, at: h.sub.checked_at, go: 'hw' });
+  }
+  for (const r of d.docreq || []) if (r.status === 'ready' || r.status === 'rejected') out.push({ key: 'd:' + r.id + ':' + r.status, icon: r.status === 'ready' ? '📄' : '✕', title: r.status === 'ready' ? 'আপনার কাগজ তৈরি — অফিস থেকে নিন' : 'আবেদনের কাগজ দেওয়া যায়নি', sub: (REQ_KIND[r.kind] || ['', r.kind])[1], at: r.done_at || r.created_at, go: 'doc' });
+  for (const x of out) if (x.fresh === undefined) x.fresh = !seen.has(x.key);
+  return out.sort((a, b) => String(b.at || '').localeCompare(String(a.at || ''))).slice(0, 40);
+}
+const inboxCount = (d) => inboxItems(d).filter(x => x.fresh).length;
+function bellHtml(d) { if (d.preview) return ''; const n = inboxCount(d); return `<button class="out bell" id="bellgo" aria-label="নতুন খবর">🔔${n ? `<span class="bn">${n > 9 ? '৯+' : BN_NUM(n)}</span>` : ''}</button>`; }
+function setAppBadge(d) { try { const n = inboxCount(d); if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch { /* not supported */ } }
+function renderInbox(d, user) {
+  scrollTo(0, 0); const items = inboxItems(d);
+  const can = 'Notification' in window; const perm = can ? Notification.permission : 'denied';
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🔔 নতুন খবর</b><button class="btn sm ghost" id="ibback">‹ ফিরে যান</button></div>
+    ${can && perm === 'default' ? `<div class="card acct"><b>ফোনে নোটিফিকেশন চালু করুন</b><div class="small muted" style="margin:2px 0 8px">সাইট খোলা থাকলে (বা পেছনে চালু থাকলে) নতুন নোটিশ, উত্তর বা নম্বর এলে ফোনে জানিয়ে দেবে।</div><button class="btn" id="nfon">🔔 চালু করুন</button></div>` : ''}
+    ${can && perm === 'denied' ? '<div class="small muted" style="margin:0 0 10px">নোটিফিকেশন বন্ধ করা আছে — চালু করতে ব্রাউজারের সেটিংসে এই সাইটের Notifications অনুমতি দিন।</div>' : ''}
+    <div class="card" style="padding:2px 14px">${items.length ? items.map((x, i) => `<button class="nfi ${x.fresh ? 'new' : ''}" data-ib="${i}"><span class="ic">${x.icon}</span><span style="flex:1;min-width:0"><b>${esc(x.title)}</b>${x.sub ? `<div class="small muted">${esc(x.sub)}</div>` : ''}<div class="small muted">${x.at ? localD(x.at) : ''}</div></span><span class="muted">›</span></button>`).join('') : '<div class="empty">এখনো কোনো খবর নেই</div>'}</div></div>`;
+  const all = inboxSet(d, 'inbox'); items.forEach(x => all.add(x.key)); inboxSave(d, 'inbox', all); setAppBadge(d);
+  $('#ibback').onclick = () => renderHome(d, user);
+  $$('[data-ib]').forEach(b => b.onclick = () => { const x = items[b.dataset.ib];
+    if (x.go === 'notices') { ntMarkSeen(d, [x.key.slice(2)]); renderNotices(d, user); } else if (x.go === 'qa') renderQA(d, user); else if (x.go === 'hw') { HW_OPEN = null; renderHomework(d, user); } else if (x.go === 'doc') { ME_TAB = 'doc'; renderMe(d, user); } });
+  const on = $('#nfon'); if (on) on.onclick = async () => { const r = await Notification.requestPermission().catch(() => 'denied'); if (r === 'granted') { toast('নোটিফিকেশন চালু হয়েছে ✓'); notifyMarkAll(d); startNotifyPoll(d); } renderInbox(d, user); };
+}
+function notifyMarkAll(d) { const s = inboxSet(d, 'notified'); inboxItems(d).forEach(x => s.add(x.key)); inboxSave(d, 'notified', s); }
+let _poll = null;
+function startNotifyPoll(d) {   // while the site is open (also in the background), look for news every 10 minutes
+  if (_poll || DEMO || d.preview || !('Notification' in window) || Notification.permission !== 'granted') return;
+  _poll = setInterval(async () => {
+    try {
+      const [n, q, h, r] = await Promise.all([API.notices().catch(() => d.notices), API.qa().catch(() => d.qa), API.homework().catch(() => d.homework), API.docRequests().catch(() => d.docreq)]);
+      Object.assign(d, { notices: n, qa: q, homework: h, docreq: r });
+      const told = inboxSet(d, 'notified'); const fresh = inboxItems(d).filter(x => x.fresh && !told.has(x.key)); setAppBadge(d);
+      const b = $('#bellgo'); if (b) { const k = inboxCount(d); b.innerHTML = '🔔' + (k ? `<span class="bn">${k > 9 ? '৯+' : BN_NUM(k)}</span>` : ''); }
+      if (!fresh.length) return; fresh.forEach(x => told.add(x.key)); inboxSave(d, 'notified', told);
+      if (!document.hidden) return;
+      const reg = await navigator.serviceWorker.getRegistration('./');
+      const opt = { body: fresh.slice(0, 3).map(x => x.icon + ' ' + x.title).join('\n') + (fresh.length > 3 ? `\n…আরও ${BN_NUM(fresh.length - 3)}টি` : ''), icon: '../icons/icon-192.png', badge: '../icons/icon-192.png', tag: 'sakura-news', lang: 'bn' };
+      if (reg) reg.showNotification('সাকুরা — নতুন খবর', opt); else new Notification('সাকুরা — নতুন খবর', opt);
+    } catch (e) { console.warn(e); }
+  }, 10 * 60000);
+}
+
 // ------------------------------------------------------------------ Japan life guide (জাপান লাইফ গাইড)
 let JG_OPEN = 'before';
 const jgKey = (d) => 'sakura_jg_' + ((d.student || {}).admission_no || 'p');
@@ -1435,9 +1505,9 @@ function renderHome(d, user) {
     return `<section data-lv><div class="lvl">${esc(LEVEL_NAME[g.level] || g.level)}</div>${chaps.map(c => `<div data-ch>${c.k ? `<div class="chap">${esc(c.k)}</div>` : ''}<div class="mlist">${c.items.map(matRow).join('')}</div></div>`).join('')}</section>`; };
   const counts = d.counts || {}; const total = Object.values(counts).reduce((a, b) => a + num(b), 0);
   $('#app').innerHTML = `<div class="st">
-    <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${d.preview ? '' : '<button class="out" id="mepg">👤 আমার পাতা</button>'}<button class="out" id="lo">লগআউট</button></div></div>
+    <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.preview ? '' : '<button class="out" id="mepg" aria-label="আমার পাতা">👤<span class="lbl"> আমার পাতা</span></button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
-    ${noticesHtml(d)}${routineCardHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
+    ${installCardHtml(d)}${noticesHtml(d)}${routineCardHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -1459,6 +1529,8 @@ function renderHome(d, user) {
   bindCountdown(d, user);
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
+  bindInstall(); setAppBadge(d);
+  const bl = $('#bellgo'); if (bl) bl.onclick = () => renderInbox(d, user);
   const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
   const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
@@ -1694,6 +1766,8 @@ async function start() {
     if (!d.blocked) { try { d.qa = await API.qa(); } catch (e) { d.qa = null; console.warn(e); } }
     try { d.routine = await API.routine(); } catch (e) { d.routine = null; console.warn(e); }
     if (!d.blocked) { try { d.videoViews = await API.videoViews(); } catch (e) { d.videoViews = []; console.warn(e); } }
+    try { d.docreq = await API.docRequests(); } catch (e) { d.docreq = []; console.warn(e); }
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') { notifyMarkAll(d); startNotifyPoll(d); }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
