@@ -276,3 +276,5 @@ details summary{cursor:pointer}
 @media (max-width:860px){.mqo{grid-template-columns:1fr}}
 .notice{margin-bottom:10px;border-left:4px solid var(--gold)}
 .notice.off{opacity:.6;border-left-color:var(--line)}
+.hwfiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.hwfiles img{width:100%;border-radius:8px;border:1px solid var(--line);display:block}

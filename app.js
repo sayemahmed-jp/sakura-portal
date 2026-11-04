@@ -81,7 +81,7 @@ const isAdmin = () => S.profile && S.profile.role === 'admin';
 const isTeacher = () => S.profile && S.profile.role === 'teacher';
 const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
-const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices'];
+const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
 const ADMIN_ROUTES = ['people', 'weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices'];
-const OPTIONAL_TABLES = ['notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions'];
+const OPTIONAL_TABLES = ['homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -513,6 +513,7 @@ function render() {
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'materials') return viewMaterials(q);
   if (p[0] === 'notices') return viewNotices(q);
+  if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
   if (p[0] === 'settings') return viewSettings();
@@ -2271,6 +2272,93 @@ const newParentToken = () => { const b = new Uint8Array(24); crypto.getRandomVal
 const parentLink = (tok) => `${location.origin}${location.pathname}#/p/${tok}`;
 function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(), name: s.name_bn || s.name_en, link }); }
 
+
+
+// ------------------------------------------------------------------ homework (v30)
+const HW_BUCKET = 'homework';
+const HW_ST = { submitted: ['জমা দিয়েছে — দেখা বাকি', 'trial'], checked: ['দেখা হয়েছে', 'active'], redo: ['আবার করতে বলা হয়েছে', 'due'] };
+const hwSubs = (id) => (S.homework_submissions || []).filter(x => x.homework_id === id);
+const hwExpected = (h) => S.students.filter(s => (s.status === 'active' || s.status === 'trial') && (h.level === 'all' || studentLevels(s).includes(h.level)) && (h.batch === 'all' || s.batch === h.batch));
+function viewHomeworkList() {
+  const list = (S.homework || []).slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  const toCheck = (S.homework_submissions || []).filter(x => x.status === 'submitted').length;
+  mount('#/homework', `
+  <div class="top"><div><h1>বাড়ির কাজ</h1><p>এখানে কাজ দিলে ছাত্ররা ছাত্রদের সাইটে দেখে, খাতার ছবি তুলে জমা দেয়; আপনি নম্বর আর মন্তব্য দেন।</p></div>
+    <div class="row"><button class="btn" id="hwadd">+ নতুন বাড়ির কাজ</button></div></div>
+  ${toCheck ? `<div class="alertbar" style="margin-bottom:16px"><b>${toCheck}টি জমা দেখা বাকি</b><span>কাজ খুলে ছাত্রের নামে চাপ দিন।</span></div>` : ''}
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>কাজ</th><th>কারা</th><th>শেষ তারিখ</th><th class="num">জমা</th><th class="num">দেখা বাকি</th><th>অবস্থা</th></tr>${list.map(h => { const subs = hwSubs(h.id); const exp = hwExpected(h).length; const due = subs.filter(x => x.status === 'submitted').length;
+    return `<tr class="click" data-go="#/homework/${h.id}"><td data-l="কাজ"><b>${esc(h.title)}</b><div class="small muted">${fmtD(String(h.created_at || '').slice(0, 10))}${h.author ? ' · ' + esc(h.author) : ''}</div></td><td data-l="কারা">${esc(NOTICE_LV[h.level] || h.level)} · ${esc(NOTICE_BATCH[h.batch] || h.batch)}</td><td data-l="শেষ তারিখ">${h.due_on ? fmtD(h.due_on) : '—'}${h.due_on && h.due_on < todayISO() ? ' <span class="small muted">(পেরিয়ে গেছে)</span>' : ''}</td>
+      <td class="num" data-l="জমা">${subs.length}/${exp}</td><td class="num" data-l="দেখা বাকি">${due ? `<b style="color:var(--red)">${due}</b>` : '0'}</td><td data-l="অবস্থা">${h.published === false ? badge('dropped', 'লুকানো') : badge('active', 'ছাত্ররা দেখে')}</td></tr>`; }).join('')}</table>` : '<div class="empty">এখনো কোনো বাড়ির কাজ দেওয়া হয়নি। "+ নতুন বাড়ির কাজ" দিয়ে শুরু করুন।</div>'}</div>`, () => {
+    bindGo(); $('#hwadd').onclick = () => homeworkModal(null);
+  });
+}
+function homeworkModal(h) {
+  const v = h || { level: 'all', batch: 'all', published: true };
+  openModal(`<h2>${h ? 'বাড়ির কাজ বদলান' : 'নতুন বাড়ির কাজ'}</h2>
+  <form id="hwf" class="form">
+    <label class="f full">শিরোনাম<input name="title" required maxlength="120" value="${esc(v.title || '')}" placeholder="যেমন: পাঠ ৩ — অনুশীলনের ১–১০ নম্বর লিখে আনো"></label>
+    <label class="f full">কী করতে হবে<textarea name="body" rows="5" maxlength="3000" placeholder="বিস্তারিত নির্দেশনা…">${esc(v.body || '')}</textarea></label>
+    <label class="f">লেভেল<select name="level">${Object.entries(NOTICE_LV).map(([k, l]) => `<option value="${k}" ${v.level === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+    <label class="f">ব্যাচ<select name="batch">${Object.entries(NOTICE_BATCH).map(([k, l]) => `<option value="${k}" ${v.batch === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+    <label class="f">জমার শেষ তারিখ<input name="due_on" type="date" value="${esc(v.due_on || '')}"></label>
+    <label class="f">পূর্ণ নম্বর (খালি = নম্বর ছাড়া)<input name="max_marks" type="number" min="1" max="1000" value="${esc(v.max_marks || '')}"></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে</label>
+    <div class="full row" style="justify-content:flex-end">${h ? '<button type="button" class="btn ghost" id="hwdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="hwc">বাতিল</button><button class="btn" type="submit">${h ? 'সংরক্ষণ' : 'কাজ দিন'}</button></div>
+  </form>`);
+  const f = $('#hwf'); $('#hwc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const d = { title: f.title.value.trim(), body: f.body.value.trim(), level: f.level.value, batch: f.batch.value, due_on: f.due_on.value || null, max_marks: f.max_marks.value ? Math.max(1, Math.round(num(f.max_marks.value))) : null, published: f.published.checked };
+    if (!h) d.author = S.profile.name || '';
+    try { const row = h ? await API.update('homework', h.id, d) : await API.insert('homework', d); putLocal('homework', row); closeModal(); toast(h ? 'সংরক্ষণ হয়েছে' : 'বাড়ির কাজ দেওয়া হয়েছে'); location.hash = '#/homework/' + row.id; render(); }
+    catch (err) { btn.disabled = false; toast(errMsg(err), true); }
+  };
+  const del = $('#hwdel'); if (del) del.onclick = async () => {
+    const n = hwSubs(h.id).length; closeModal();
+    if (!(await confirmBox(`"${h.title}" মুছে যাবে${n ? `, সাথে ছাত্রদের ${n}টি জমা দেওয়া কাজও` : ''}।`))) return;
+    try { for (const x of hwSubs(h.id)) for (const fl of (x.files || [])) API.removeFile(HW_BUCKET, fl.path).catch(() => {});
+      await API.remove('homework', h.id); S.homework = S.homework.filter(x => x.id !== h.id); S.homework_submissions = (S.homework_submissions || []).filter(x => x.homework_id !== h.id); toast('মুছে ফেলা হয়েছে'); location.hash = '#/homework'; }
+    catch (err) { toast(errMsg(err), true); }
+  };
+}
+function viewHomework(id) {
+  const h = byId(S.homework || [], id); if (!h) return mount('#/homework', '<div class="empty">কাজটি পাওয়া যায়নি</div>');
+  const subs = hwSubs(h.id); const exp = hwExpected(h); const ids = new Set(exp.map(s => s.id)); subs.forEach(x => { if (!ids.has(x.student_id)) { const s = byId(S.students, x.student_id); if (s) exp.push(s); } });
+  const rows = exp.map(s => ({ s, x: subs.find(z => z.student_id === s.id) })).sort((a, b) => (a.x ? (a.x.status === 'submitted' ? 0 : 1) : 2) - (b.x ? (b.x.status === 'submitted' ? 0 : 1) : 2) || studentName(a.s).localeCompare(studentName(b.s)));
+  mount('#/homework', `
+  <div class="top"><div><h1>${esc(h.title)}</h1><p>${esc(NOTICE_LV[h.level] || h.level)} · ${esc(NOTICE_BATCH[h.batch] || h.batch)}${h.due_on ? ' · শেষ তারিখ ' + fmtD(h.due_on) : ''}${h.max_marks ? ' · পূর্ণ নম্বর ' + h.max_marks : ''}</p></div>
+    <div class="row"><a class="btn ghost" href="#/homework">‹ সব বাড়ির কাজ</a><button class="btn ghost" id="hwedit">বদলান</button></div></div>
+  ${h.body ? `<div class="card" style="white-space:pre-line;line-height:1.7;margin-bottom:14px">${esc(h.body)}</div>` : ''}
+  <div class="grid g4" style="margin-bottom:14px"><div class="card stat"><div class="l">মোট ছাত্র</div><div class="v">${exp.length}</div></div><div class="card stat"><div class="l">জমা দিয়েছে</div><div class="v">${subs.length}</div></div>
+    <div class="card stat ${subs.filter(x => x.status === 'submitted').length ? 'red' : ''}"><div class="l">দেখা বাকি</div><div class="v">${subs.filter(x => x.status === 'submitted').length}</div></div><div class="card stat"><div class="l">জমা দেয়নি</div><div class="v">${exp.length - subs.length}</div></div></div>
+  <div class="tw"><table class="stack"><tr><th>ছাত্র</th><th>অবস্থা</th><th>জমার সময়</th><th class="num">নম্বর</th><th></th></tr>${rows.map(({ s, x }) => `<tr ${x ? `class="click" data-hs="${x.id}"` : ''}><td data-l="ছাত্র">${esc(studentName(s))}<div class="small muted">${esc(s.admission_no || '')}</div></td>
+    <td data-l="অবস্থা">${x ? badge(HW_ST[x.status][1], HW_ST[x.status][0]) : badge('dropped', 'জমা দেয়নি')}</td><td data-l="জমার সময়">${x ? fmtDT(x.submitted_at) + (h.due_on && String(x.submitted_at).slice(0, 10) > h.due_on ? ' <span class="small" style="color:var(--red)">দেরিতে</span>' : '') : '—'}</td>
+    <td class="num" data-l="নম্বর">${x && x.marks != null ? `${x.marks}${h.max_marks ? '/' + h.max_marks : ''}` : '—'}</td><td>${x ? `<button class="btn sm ${x.status === 'submitted' ? '' : 'ghost'}" data-hs="${x.id}" data-stop>${x.status === 'submitted' ? 'দেখুন' : 'খুলুন'}</button>` : ''}</td></tr>`).join('')}</table></div>`, () => {
+    $('#hwedit').onclick = () => homeworkModal(h);
+    $$('[data-hs]').forEach(el => el.onclick = (e) => { e.stopPropagation(); hwCheckModal(h, byId(S.homework_submissions, el.dataset.hs)); });
+  });
+}
+async function hwCheckModal(h, x) {
+  const s = byId(S.students, x.student_id) || {};
+  openModal(`<h2>${esc(studentName(s))} — ${esc(h.title)}</h2>
+    <p class="small muted" style="margin:0 0 8px">জমা: ${fmtDT(x.submitted_at)}${x.checked_at ? ' · দেখা হয়েছে ' + fmtDT(x.checked_at) : ''}</p>
+    ${x.note ? `<div class="card" style="white-space:pre-line;margin-bottom:10px;background:var(--soft)">${esc(x.note)}</div>` : ''}
+    <div id="hwfiles" class="hwfiles">${(x.files || []).length ? '<div class="small muted">ছবি লোড হচ্ছে…</div>' : '<div class="small muted">কোনো ফাইল নেই</div>'}</div>
+    <form id="hcf" class="form" style="margin-top:12px">
+      ${h.max_marks ? `<label class="f">নম্বর (${h.max_marks}-এর মধ্যে)<input name="marks" type="number" min="0" max="${h.max_marks}" value="${esc(x.marks ?? '')}"></label>` : ''}
+      <label class="f full">মন্তব্য (ছাত্র দেখবে)<textarea name="feedback" rows="3" maxlength="1000" placeholder="যেমন: খুব ভালো! ৫ নম্বরে は-এর জায়গায় が হবে।">${esc(x.feedback || '')}</textarea></label>
+      <div class="full row" style="justify-content:flex-end;gap:8px"><button type="button" class="btn ghost" id="hcc">বন্ধ করুন</button><button type="button" class="btn ghost" id="hcredo" style="color:var(--red)">আবার করতে বলুন</button><button class="btn" type="submit">✓ দেখা শেষ</button></div>
+    </form>`);
+  const save = async (status) => {
+    const f = $('#hcf'); const d = { status, feedback: f.feedback.value.trim(), checked_at: new Date().toISOString(), checked_by: S.user && S.user.id || null };
+    if (h.max_marks) { const m = f.marks.value === '' ? null : Math.min(h.max_marks, Math.max(0, Math.round(num(f.marks.value)))); if (status === 'checked' && m == null) return toast('নম্বর দিন', true); d.marks = m; }
+    try { putLocal('homework_submissions', await API.update('homework_submissions', x.id, d)); closeModal(); toast(status === 'checked' ? 'দেখা শেষ — ছাত্র নম্বর আর মন্তব্য দেখবে' : 'ছাত্রকে আবার করতে বলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); }
+  };
+  $('#hcc').onclick = closeModal; $('#hcf').onsubmit = (e) => { e.preventDefault(); save('checked'); }; $('#hcredo').onclick = () => save('redo');
+  const box = $('#hwfiles'); const parts = [];
+  for (const fl of (x.files || [])) { try { const u = await API.fileUrlFrom(HW_BUCKET, fl.path); parts.push(/\.pdf$/i.test(fl.path) || fl.type === 'application/pdf' ? `<a class="btn sm ghost" href="${esc(u)}" target="_blank" rel="noopener">📄 ${esc(fl.name || 'PDF')}</a>` : `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(fl.name || 'ছবি')}"></a>`); } catch (e) { parts.push(`<div class="small" style="color:var(--red)">${esc(fl.name || '')} খোলা যায়নি</div>`); } }
+  if (box && parts.length) box.innerHTML = parts.join('');
+}
 
 // ------------------------------------------------------------------ notice board (v27)
 const NOTICE_LV = { all: 'সব লেভেল', N5: 'N5', N4: 'N4', N3: 'N3' };

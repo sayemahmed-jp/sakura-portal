@@ -163,6 +163,20 @@ const Demo = {
     return { level: lv, week_start: ws, today: t, students: pool.length, regular: reg.map(r => ({ name: r.name, days: r.days, mocks: r.mocks, me: !!me && r.id === me.id })), best: best.map(r => ({ name: r.name, pct: r.best, mocks: r.mocks, me: !!me && r.id === me.id })),
       me: mine ? { days: mine.days, mocks: mine.mocks, best: mine.best, rank: rows.filter(x => x.days > mine.days || (x.days === mine.days && x.mocks > mine.mocks)).length + 1 } : null };
   },
+  homework() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
+    const lv = this.levels(s); const subs = this.read('homework_submissions');
+    return this.read('homework').filter(h => h.published !== false && (h.level === 'all' || lv.includes(h.level)) && (h.batch === 'all' || h.batch === s.batch))
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .map(h => { const x = subs.find(z => z.homework_id === h.id && z.student_id === s.id); return { id: h.id, title: h.title, body: h.body, level: h.level, due_on: h.due_on, max_marks: h.max_marks, author: h.author, created_at: h.created_at, sub: x ? { id: x.id, note: x.note, files: x.files, status: x.status, marks: x.marks, feedback: x.feedback, submitted_at: x.submitted_at, checked_at: x.checked_at } : null }; });
+  },
+  homeworkSubmit(hid, note, files) {
+    const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('homework_submissions'); const i = rows.findIndex(x => x.homework_id === hid && x.student_id === sid);
+    if (i >= 0 && rows[i].status === 'checked') throw new Error('checked');
+    const row = { ...(i >= 0 ? rows[i] : { id: 'hs-' + Date.now(), homework_id: hid, student_id: sid, feedback: '' }), note, files, status: 'submitted', marks: null, submitted_at: new Date().toISOString() };
+    if (i >= 0) rows[i] = row; else rows.push(row); this.write('homework_submissions', rows); return this.homework();
+  },
+  async uploadHw(path, blob) { const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); }); const files = JSON.parse(localStorage.getItem('sakura_demo_files') || '{}'); files[path] = data; localStorage.setItem('sakura_demo_files', JSON.stringify(files)); return path; },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -259,6 +273,12 @@ const API = {
   async notices() { if (DEMO) return Demo.notices(); const { data, error } = await sb.rpc('student_notices'); if (error) throw error; return data || []; },
   async japan() { if (PREVIEW) return null; if (DEMO) return Demo.japan(); const { data, error } = await sb.rpc('student_japan'); if (error) throw error; return data; },
   async leaderboard(lv) { if (DEMO) return Demo.leaderboard(lv); const { data, error } = await sb.rpc('student_leaderboard', { p_level: lv || null }); if (error) throw error; return data; },
+  async homework() { if (PREVIEW) return []; if (DEMO) return Demo.homework(); const { data, error } = await sb.rpc('student_homework'); if (error) throw error; return data || []; },
+  async homeworkSubmit(hid, note, files) { if (DEMO) return Demo.homeworkSubmit(hid, note, files); const { data, error } = await sb.rpc('student_homework_submit', { p_homework: hid, p_note: note, p_files: files }); if (error) throw error; return data || []; },
+  async myStudentId() { if (DEMO) return Demo.linkedId(); const { data, error } = await sb.rpc('my_student_id'); if (error) throw error; return data; },
+  async uploadHw(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('homework').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
+  async hwUrl(path) { if (DEMO) return Demo.fileUrl(path); const { data, error } = await sb.storage.from('homework').createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
+  async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -860,6 +880,80 @@ function bindKana(d, user) {
   $$('[data-knpq]').forEach(b => b.onclick = () => { const h = KN.script === 'k' ? b.dataset.knpq.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)) : b.dataset.knpq; KN.quiz = null; KN.mode = 'chart'; KN.pick = h; const row = KANA_ROWS.find(r => r[1].some(c => c && c[0] === h)); KN.group = row ? (row[2] || '') : ''; re(); });
 }
 
+
+// ------------------------------------------------------------------ homework (বাড়ির কাজ)
+const HW_ERR = { checked: 'শিক্ষক এই কাজ দেখে ফেলেছেন — আর বদলানো যাবে না।', empty: 'অন্তত একটা ছবি দিন বা কিছু লিখুন।', too_many: 'সর্বোচ্চ ৮টি ফাইল দেওয়া যায়।', not_found: 'কাজটি এখন পাওয়া যাচ্ছে না।', bad_file: 'ফাইল ঠিকমতো ওঠেনি, আবার চেষ্টা করুন।' };
+const hwErr = (e) => { const m = errMsg(e); const k = Object.keys(HW_ERR).find(x => m.includes(x)); return k ? HW_ERR[k] : m; };
+const hwPending = (h) => !h.sub || h.sub.status === 'redo';
+function hwState(h) {
+  const t = bdToday();
+  if (!h.sub) return h.due_on && h.due_on < t ? ['শেষ তারিখ পেরিয়ে গেছে', 'bad'] : ['জমা দেননি', 'warn'];
+  if (h.sub.status === 'redo') return ['আবার করতে হবে', 'bad'];
+  if (h.sub.status === 'checked') return [h.sub.marks != null ? `দেখা হয়েছে · ${BN_NUM(h.sub.marks)}${h.max_marks ? '/' + BN_NUM(h.max_marks) : ''}` : 'দেখা হয়েছে ✓', 'ok'];
+  return ['জমা দিয়েছেন — দেখা বাকি', 'ok'];
+}
+function homeworkCardHtml(d) {
+  const hw = d.homework || []; if (!hw.length) return '';
+  const pend = hw.filter(hwPending); const fresh = hw.filter(h => h.sub && h.sub.status === 'checked' && h.sub.checked_at && Date.now() - Date.parse(h.sub.checked_at) < 3 * 86400000);
+  if (!pend.length && !fresh.length) return `<button class="bdlink hwlink" id="hwgo">📓 বাড়ির কাজ: সব জমা হয়েছে ✓ ›</button>`;
+  const next = pend.filter(h => h.due_on).sort((a, b) => a.due_on.localeCompare(b.due_on))[0];
+  return `<div class="card hwc" id="hwgo" role="button" tabindex="0"><div class="row" style="justify-content:space-between;gap:8px"><b>📓 বাড়ির কাজ${pend.length ? ` <span class="cnt1">${BN_NUM(pend.length)}টি বাকি</span>` : ''}</b><span class="small" style="color:var(--navy);font-weight:700">খুলুন ›</span></div>
+    <div class="small muted" style="margin-top:4px">${next ? `পরের শেষ তারিখ: <b>${fmtD(next.due_on)}</b> — ${esc(next.title)}` : pend.length ? esc(pend[0].title) : ''}${fresh.length ? `${pend.length ? '<br>' : ''}✓ শিক্ষক ${BN_NUM(fresh.length)}টি কাজ দেখেছেন — নম্বর আর মন্তব্য দেখুন` : ''}</div></div>`;
+}
+let HW_OPEN = null, HW_NEW = [];   // HW_NEW: files picked but not yet sent
+async function compressImage(file) {
+  if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) return file;
+  try {
+    const bmp = await createImageBitmap(file); const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', .82)); return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+  } catch { return file; }
+}
+async function renderHomework(d, user) {
+  scrollTo(0, 0);
+  const hw = d.homework || []; const h = HW_OPEN && hw.find(x => x.id === HW_OPEN);
+  if (!h) {
+    $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">📓 বাড়ির কাজ</b><button class="btn sm ghost" id="hwback">‹ ফিরে যান</button></div>
+      ${hw.length ? hw.map(x => { const [l, c] = hwState(x); return `<div class="card hwi" data-hwo="${esc(x.id)}" role="button" tabindex="0"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><b>${esc(x.title)}</b><div class="small muted">${x.due_on ? 'শেষ তারিখ ' + fmtD(x.due_on) : 'শেষ তারিখ নেই'}${x.author ? ' · ' + esc(x.author) : ''}</div></div><span class="pill ${c}">${esc(l)}</span></div></div>`; }).join('') : '<div class="card"><div class="empty">এখনো কোনো বাড়ির কাজ দেওয়া হয়নি।</div></div>'}</div>`;
+    $('#hwback').onclick = () => renderHome(d, user);
+    $$('[data-hwo]').forEach(el => el.onclick = () => { HW_OPEN = el.dataset.hwo; HW_NEW = []; renderHomework(d, user); });
+    return;
+  }
+  const x = h.sub; const locked = x && x.status === 'checked'; const [l, c] = hwState(h);
+  const fileList = (x && x.files) || [];
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 18px 'Noto Serif Bengali';color:var(--navy);min-width:0">${esc(h.title)}</b><button class="btn sm ghost" id="hwback">‹ সব কাজ</button></div>
+    <div class="card acct"><div class="row" style="justify-content:space-between;gap:8px"><span class="small muted">${h.due_on ? 'জমার শেষ তারিখ: <b>' + fmtD(h.due_on) + '</b>' : ''}${h.max_marks ? ' · পূর্ণ নম্বর ' + BN_NUM(h.max_marks) : ''}</span><span class="pill ${c}">${esc(l)}</span></div>
+      ${h.body ? `<div style="white-space:pre-line;line-height:1.75;margin-top:8px">${esc(h.body)}</div>` : ''}</div>
+    ${x && (x.status === 'checked' || x.status === 'redo') && (x.feedback || x.marks != null) ? `<div class="card acct" style="border-left:4px solid ${x.status === 'redo' ? 'var(--red)' : 'var(--green)'}"><b>👩‍🏫 শিক্ষকের মন্তব্য</b>${x.marks != null ? `<div style="font:800 26px 'Noto Serif Bengali';color:var(--navy);margin:4px 0">${BN_NUM(x.marks)}${h.max_marks ? ' / ' + BN_NUM(h.max_marks) : ''}</div>` : ''}${x.feedback ? `<div style="white-space:pre-line;line-height:1.7">${esc(x.feedback)}</div>` : ''}${x.status === 'redo' ? '<div class="small" style="color:var(--red);margin-top:6px">কাজটি ঠিক করে আবার জমা দিন।</div>' : ''}</div>` : ''}
+    ${fileList.length ? `<h2 class="lvl">জমা দেওয়া ফাইল</h2><div class="hwthumbs" id="hwold">${fileList.map(f => `<div class="hwt" data-path="${esc(f.path)}"><span class="small muted">লোড হচ্ছে…</span></div>`).join('')}</div>${x.note ? `<div class="small muted" style="margin-top:6px;white-space:pre-line">আপনার লেখা: ${esc(x.note)}</div>` : ''}<div class="small muted" style="margin-top:4px">জমা দিয়েছেন: ${fmtD(String(x.submitted_at).slice(0, 10))}</div>` : ''}
+    ${locked ? '' : `<div class="card acct" style="margin-top:14px"><b>${x ? 'আবার জমা দিন (আগের জমার জায়গায় বসবে)' : 'জমা দিন'}</b>
+      <div class="small muted" style="margin:4px 0 10px">খাতার পাতার স্পষ্ট ছবি তুলুন (সর্বোচ্চ ৮টি)। PDF-ও দেওয়া যায়।</div>
+      <label class="btn ghost" style="width:100%;justify-content:center;cursor:pointer">📷 ছবি তুলুন / বেছে নিন<input type="file" id="hwfile" accept="image/*,application/pdf" multiple hidden></label>
+      <div class="hwthumbs" id="hwnew" style="margin-top:8px">${HW_NEW.map((f, i) => `<div class="hwt">${f.type === 'application/pdf' ? `<span>📄 ${esc(f.name)}</span>` : `<img src="${URL.createObjectURL(f)}" alt="">`}<button class="hwx" data-hwx="${i}" aria-label="সরান">✕</button></div>`).join('')}</div>
+      <label class="f" style="margin-top:10px">শিক্ষককে কিছু বলবেন? (ঐচ্ছিক)<textarea id="hwnote" rows="2" maxlength="2000">${esc(x && x.status !== 'checked' ? x.note || '' : '')}</textarea></label>
+      <button class="btn" id="hwsend" style="width:100%;justify-content:center;margin-top:10px" ${HW_NEW.length || (x && x.files && x.files.length) ? '' : 'disabled'}>${x ? 'আবার জমা দিন' : 'জমা দিন'}</button><div class="msg" id="hwmsg"></div></div>`}
+  </div>`;
+  $('#hwback').onclick = () => { HW_OPEN = null; HW_NEW = []; renderHomework(d, user); };
+  $$('#hwold .hwt').forEach(async el => { const path = el.dataset.path; try { const u = await API.hwUrl(path); el.innerHTML = /\.pdf$/i.test(path) ? `<a href="${esc(u)}" target="_blank" rel="noopener">📄 PDF খুলুন</a>` : `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt=""></a>`; } catch { el.innerHTML = '<span class="small red">খোলা যায়নি</span>'; } });
+  const inp = $('#hwfile'); if (inp) inp.onchange = async () => { const picked = [...inp.files]; for (const f of picked) { if (HW_NEW.length >= 8) { toast('সর্বোচ্চ ৮টি ফাইল', true); break; } const g = await compressImage(f); if (g.size > 10 * 1048576) { toast(`${f.name} খুব বড় (১০ MB-এর বেশি)`, true); continue; } HW_NEW.push(g); } renderHomework(d, user); };
+  $$('[data-hwx]').forEach(b => b.onclick = () => { HW_NEW.splice(Number(b.dataset.hwx), 1); renderHomework(d, user); });
+  const send = $('#hwsend'); if (send) send.onclick = async () => {
+    const msg = $('#hwmsg'); send.disabled = true;
+    try {
+      let files = (x && x.files) || [];
+      if (HW_NEW.length) {
+        const sid = await API.myStudentId(); if (!sid) throw new Error('not_linked'); const out = [];
+        for (let i = 0; i < HW_NEW.length; i++) { const f = HW_NEW[i]; msg.className = 'msg ok'; msg.textContent = `আপলোড হচ্ছে ${BN_NUM(i + 1)}/${BN_NUM(HW_NEW.length)}…`;
+          const ext = f.type === 'application/pdf' ? 'pdf' : f.type === 'image/png' ? 'png' : f.type === 'image/webp' ? 'webp' : f.type === 'image/heic' ? 'heic' : 'jpg';
+          const path = `${h.id}/${sid}/${Date.now()}-${i + 1}.${ext}`; await API.uploadHw(path, f); out.push({ path, name: f.name, size: f.size, type: f.type }); }
+        const old = files; files = out; old.forEach(o => API.hwRemove(o.path));
+      }
+      d.homework = await API.homeworkSubmit(h.id, ($('#hwnote') || {}).value || '', files);
+      HW_NEW = []; toast('জমা হয়েছে ✓ শিক্ষক দেখে নম্বর দেবেন'); API.checkin('daily').then(s2 => { d.streak = s2; }).catch(() => {}); renderHomework(d, user);
+    } catch (e) { send.disabled = false; msg.className = 'msg err'; msg.textContent = hwErr(e); }
+  };
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -1025,7 +1119,7 @@ function renderHome(d, user) {
   $('#app').innerHTML = `<div class="st">
     <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${d.preview ? '' : '<button class="out" id="mepg">👤 আমার পাতা</button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
-    ${noticesHtml(d)}
+    ${noticesHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -1045,6 +1139,7 @@ function renderHome(d, user) {
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);
+  const hg = $('#hwgo'); if (hg) { const f = () => { HW_OPEN = null; renderHomework(d, user); }; hg.onclick = f; hg.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
   const bg = $('#bdgo'); if (bg) bg.onclick = () => { ME_TAB = 'bdg'; renderMe(d, user); };
   checkNewBadges(d);
   bindNotices(d, user, () => renderHome(d, user));
@@ -1271,6 +1366,7 @@ async function start() {
     try { d.exams = await API.examDates(); } catch (e) { d.exams = {}; console.warn(e); }
     try { d.notices = await API.notices(); } catch (e) { d.notices = []; console.warn(e); }
     if (!d.blocked) { try { d.lb = await API.leaderboard(); } catch (e) { d.lb = null; console.warn(e); } }
+    if (!d.blocked) { try { d.homework = await API.homework(); } catch (e) { d.homework = []; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
