@@ -183,6 +183,10 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  feedback() { const sid = this.linkedId(); if (!sid) return null; const per = bdToday().slice(0, 7); const f = this.read('class_feedback').find(x => x.student_id === sid && x.period === per); return { period: per, mine: f || null }; },
+  feedbackSave(F) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const per = bdToday().slice(0, 7); const rows = this.read('class_feedback'); const i = rows.findIndex(x => x.student_id === sid && x.period === per);
+    const row = { ...(i >= 0 ? rows[i] : { id: 'fb-' + Date.now(), student_id: sid, period: per, created_at: new Date().toISOString() }), level: s.current_level || '', batch: s.batch || '', overall: F.overall, explain: F.explain, pace: F.pace, homework: F.homework, liked: F.liked.trim(), improve: F.improve.trim(), updated_at: new Date().toISOString() };
+    if (i >= 0) rows[i] = row; else rows.push(row); this.write('class_feedback', rows); return this.feedback(); },
   payproofs() { const sid = this.linkedId(); if (!sid) return null; const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })(); const pays = this.read('payments');
     return { numbers: { bkash: st.pay_bkash || '', nagad: st.pay_nagad || '', bank: st.pay_bank || '' }, list: this.read('pay_proofs').filter(p => p.student_id === sid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).map(p => ({ ...p, has_file: !!p.file_path, receipt_no: (pays.find(x => x.id === p.payment_id) || {}).receipt_no || null })) }; },
   payproofSubmit(method, amount, trx, sender, paid_on, file, note) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('pay_proofs');
@@ -309,6 +313,8 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async feedback() { if (PREVIEW) return null; if (DEMO) return Demo.feedback(); const { data, error } = await sb.rpc('student_feedback'); if (error) throw error; return data; },
+  async feedbackSave(F) { if (DEMO) return Demo.feedbackSave(F); const { data, error } = await sb.rpc('student_feedback_save', { p_overall: F.overall, p_explain: F.explain, p_pace: F.pace, p_homework: F.homework, p_liked: F.liked, p_improve: F.improve }); if (error) throw error; return data; },
   async payproofs() { if (PREVIEW) return null; if (DEMO) return Demo.payproofs(); const { data, error } = await sb.rpc('student_payproofs'); if (error) throw error; return data; },
   async payproofSubmit(m, a, t, snd, dt, f, n) { if (DEMO) return Demo.payproofSubmit(m, a, t, snd, dt, f, n); const { data, error } = await sb.rpc('student_payproof_submit', { p_method: m, p_amount: a, p_trx: t, p_sender: snd, p_paid_on: dt, p_file: f || '', p_note: n }); if (error) throw error; return data; },
   async uploadProof(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('payproof').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
@@ -1327,6 +1333,39 @@ function renderVideos(d, user) {
   }
 }
 
+// ------------------------------------------------------------------ monthly class survey (ক্লাসের মতামত)
+let FB = null;
+const fbHideKey = (d) => 'sakura_fb_hide_' + ((d.student || {}).admission_no || 'p') + '_' + ((d.fb || {}).period || '');
+function feedbackCardHtml(d) {
+  if (!d.fb || d.fb.mine || d.preview || Number(bdToday().slice(8, 10)) < 15) return '';
+  try { if (localStorage.getItem(fbHideKey(d))) return ''; } catch { /* shown */ }
+  return `<div class="card fbc"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div><b>⭐ এ মাসে ক্লাস কেমন লাগছে?</b><div class="small muted">১ মিনিটের জরিপ — নাম ছাড়া দেখানো হয়, শিক্ষকরা দেখেন না</div></div><button class="out" id="fbhide" aria-label="পরে" style="padding:2px 8px">✕</button></div>
+    <div class="fbstars" style="margin-top:6px">${[1, 2, 3, 4, 5].map(n => `<button data-fbq="${n}" aria-label="${n} তারা">☆</button>`).join('')}</div></div>`;
+}
+const FB_PACE = [['slow', '🐢 খুব ধীর'], ['ok', '👌 ঠিক আছে'], ['fast', '🐇 খুব দ্রুত']];
+const FB_HW = [['less', 'আরও দরকার'], ['ok', 'ঠিক আছে'], ['more', 'বেশি হয়ে যায়']];
+function renderFeedback(d, user, quick) {
+  scrollTo(0, 0); const m = (d.fb || {}).mine || {};
+  if (!FB) FB = { overall: quick || m.overall || 0, explain: m.explain || 0, pace: m.pace || 'ok', homework: m.homework || 'ok', liked: m.liked || '', improve: m.improve || '' };
+  const row = (k, lbl) => `<div style="margin:12px 0 4px;font-weight:700">${lbl}</div><div class="fbstars">${[1, 2, 3, 4, 5].map(n => `<button data-fbs="${k}:${n}" class="${FB[k] >= n ? 'on' : ''}" aria-label="${n} তারা">${FB[k] >= n ? '★' : '☆'}</button>`).join('')}</div>`;
+  const chips = (k, opts, lbl) => `<div style="margin:12px 0 4px;font-weight:700">${lbl}</div><div class="mchips" style="margin:0">${opts.map(([v, l]) => `<button data-fbc="${k}:${v}" class="${FB[k] === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">⭐ ক্লাসের মতামত</b><button class="btn sm ghost" id="fbback">‹ ফিরে যান</button></div>
+    <div class="card acct"><div class="small muted">এ মাসের (${esc(MONTH_BN(d.fb.period))}) জরিপ। আপনার নাম কাউকে দেখানো হয় না, আর শিক্ষকরা এটা দেখতে পান না — খোলাখুলি লিখুন, এতে ক্লাস আরও ভালো হবে।${(d.fb || {}).mine ? ' আগে দিয়েছেন — চাইলে বদলাতে পারেন।' : ''}</div>
+      ${row('overall', 'সব মিলিয়ে ক্লাস কেমন লাগছে?')}${row('explain', 'শিক্ষক কতটা পরিষ্কার করে বোঝান?')}
+      ${chips('pace', FB_PACE, 'পড়ানোর গতি')}${chips('homework', FB_HW, 'বাড়ির কাজ')}
+      <label class="f" style="margin-top:12px">কী ভালো লাগছে? (ঐচ্ছিক)<textarea id="fbl" rows="2" maxlength="600">${esc(FB.liked)}</textarea></label>
+      <label class="f" style="margin-top:8px">কী বদলালে আরও ভালো হয়? (ঐচ্ছিক)<textarea id="fbi" rows="2" maxlength="600">${esc(FB.improve)}</textarea></label>
+      <button class="btn" id="fbsend" style="width:100%;justify-content:center;margin-top:12px">জমা দিন</button><div class="msg" id="fbmsg"></div></div></div>`;
+  const keep = () => { FB.liked = $('#fbl').value; FB.improve = $('#fbi').value; };
+  $('#fbback').onclick = () => { FB = null; renderHome(d, user); };
+  $$('[data-fbs]').forEach(b => b.onclick = () => { keep(); const [k, n] = b.dataset.fbs.split(':'); FB[k] = Number(n); renderFeedback(d, user); });
+  $$('[data-fbc]').forEach(b => b.onclick = () => { keep(); const [k, v] = b.dataset.fbc.split(':'); FB[k] = v; renderFeedback(d, user); });
+  $('#fbsend').onclick = async () => { keep(); const msg = $('#fbmsg'); if (!FB.overall || !FB.explain) { msg.className = 'msg err'; msg.textContent = 'দুটো প্রশ্নেই তারা দিন'; return; }
+    const b = $('#fbsend'); b.disabled = true;
+    try { d.fb = await API.feedbackSave(FB); FB = null; toast('ধন্যবাদ! আপনার মতামত জমা হয়েছে 🙏'); renderHome(d, user); } catch (e) { b.disabled = false; msg.className = 'msg err'; msg.textContent = errMsg(e); } };
+}
+const MONTH_BN = (p) => { const n = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর']; return p ? `${n[Number(p.slice(5)) - 1]} ${BN_NUM(Number(p.slice(0, 4)))}` : ''; };
+
 // ------------------------------------------------------------------ class routine (ক্লাসের রুটিন) and online class
 const isoPlus = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const WDAY_BN = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি'];
@@ -1374,8 +1413,10 @@ function renderRoutine(d, user) {
     <h2 class="lvl">সামনের ১৪ দিন</h2><div class="card" style="padding:4px 12px">${days.map(row).join('')}</div>
     ${plansAfter.length ? `<h2 class="lvl">পরের পরিকল্পনা</h2><div class="card" style="padding:4px 12px">${plansAfter.map(p => `<div class="rtd"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(p.date)])}</b><small>${BN_NUM(Number(p.date.slice(8, 10)))} ${esc(BN_MON[Number(p.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">📘 ${esc(p.topic)}</div></div>`).join('')}</div>` : ''}
     ${hol.filter(h => h.date > isoPlus(R.today, 13)).length ? `<h2 class="lvl">পরের ছুটি</h2><div class="card" style="padding:4px 12px">${hol.filter(h => h.date > isoPlus(R.today, 13)).map(h => `<div class="rtd off"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(h.date)])}</b><small>${BN_NUM(Number(h.date.slice(8, 10)))} ${esc(BN_MON[Number(h.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">${esc(h.title)}</div></div>`).join('')}</div>` : ''}
-    <h2 class="lvl">গত ক্লাসগুলোতে যা পড়ানো হয়েছে</h2>${(R.recent || []).length ? `<div class="card" style="padding:4px 12px">${R.recent.map(x => `<div class="rtd"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(x.date)])}</b><small>${BN_NUM(Number(x.date.slice(8, 10)))} ${esc(BN_MON[Number(x.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">${x.class_no ? `<span class="small muted">ক্লাস ${BN_NUM(x.class_no)} · </span>` : ''}${esc(x.topic || 'বিষয় লেখা হয়নি')}</div></div>`).join('')}</div><div class="small muted" style="margin-top:6px">কোনো ক্লাস মিস করলে এই বিষয়গুলো বই থেকে পড়ে নিন, না বুঝলে "শিক্ষককে প্রশ্ন" করুন।</div>` : '<div class="card"><div class="empty">এখনো কোনো ক্লাসের বিষয় লেখা হয়নি</div></div>'}</div>`;
+    <h2 class="lvl">গত ক্লাসগুলোতে যা পড়ানো হয়েছে</h2>${(R.recent || []).length ? `<div class="card" style="padding:4px 12px">${R.recent.map(x => `<div class="rtd"><div class="rdw"><b>${esc(WDAY_BN[wdayOf(x.date)])}</b><small>${BN_NUM(Number(x.date.slice(8, 10)))} ${esc(BN_MON[Number(x.date.slice(5, 7)) - 1])}</small></div><div style="flex:1">${x.class_no ? `<span class="small muted">ক্লাস ${BN_NUM(x.class_no)} · </span>` : ''}${esc(x.topic || 'বিষয় লেখা হয়নি')}</div></div>`).join('')}</div><div class="small muted" style="margin-top:6px">কোনো ক্লাস মিস করলে এই বিষয়গুলো বই থেকে পড়ে নিন, না বুঝলে "শিক্ষককে প্রশ্ন" করুন।</div>` : '<div class="card"><div class="empty">এখনো কোনো ক্লাসের বিষয় লেখা হয়নি</div></div>'}
+    ${d.fb && !d.preview ? `<button class="bdlink" id="fblink" style="margin-top:16px">⭐ ক্লাসের মতামত দিন${d.fb.mine ? ' (এ মাসে দিয়েছেন ✓)' : ''} ›</button>` : ''}</div>`;
   $('#rtback').onclick = () => renderHome(d, user);
+  const fl = $('#fblink'); if (fl) fl.onclick = () => { FB = null; renderFeedback(d, user); };
 }
 
 // ------------------------------------------------------------------ ask the teacher (শিক্ষককে প্রশ্ন)
@@ -1567,7 +1608,7 @@ function renderHome(d, user) {
   $('#app').innerHTML = `<div class="st">
     <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.preview ? '' : '<button class="out" id="mepg" aria-label="আমার পাতা">👤<span class="lbl"> আমার পাতা</span></button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
-    ${installCardHtml(d)}${noticesHtml(d)}${routineCardHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
+    ${installCardHtml(d)}${noticesHtml(d)}${feedbackCardHtml(d)}${routineCardHtml(d)}${d.blocked ? '' : homeworkCardHtml(d)}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -1590,6 +1631,8 @@ function renderHome(d, user) {
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
   bindInstall(); setAppBadge(d);
+  $$('[data-fbq]').forEach(b => b.onclick = () => { FB = null; renderFeedback(d, user, Number(b.dataset.fbq)); });
+  const fh = $('#fbhide'); if (fh) fh.onclick = () => { try { localStorage.setItem(fbHideKey(d), '1'); } catch { /* not kept */ } $('.fbc').remove(); };
   const bl = $('#bellgo'); if (bl) bl.onclick = () => renderInbox(d, user);
   const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
@@ -1827,6 +1870,7 @@ async function start() {
     try { d.routine = await API.routine(); } catch (e) { d.routine = null; console.warn(e); }
     if (!d.blocked) { try { d.videoViews = await API.videoViews(); } catch (e) { d.videoViews = []; console.warn(e); } }
     try { d.docreq = await API.docRequests(); } catch (e) { d.docreq = []; console.warn(e); }
+    try { d.fb = await API.feedback(); } catch (e) { d.fb = null; console.warn(e); }
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') { notifyMarkAll(d); startNotifyPoll(d); }
     renderHome(d, user);
   } catch (e) {

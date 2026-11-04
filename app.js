@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs'];
-const OPTIONAL_TABLES = ['pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback'];
+const OPTIONAL_TABLES = ['class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -516,6 +516,7 @@ function render() {
   if (p[0] === 'questions') return viewQuestions(q);
   if (p[0] === 'requests') return viewRequests(q);
   if (p[0] === 'proofs') return viewProofs(q);
+  if (p[0] === 'feedback') return viewFeedback(q);
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
@@ -2311,6 +2312,34 @@ function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(
 
 
 
+
+// ------------------------------------------------------------------ monthly class survey (v36) — shown without names
+function viewFeedback(q) {
+  const all = S.class_feedback || []; const months = [...new Set(all.map(f => f.period))].sort().reverse();
+  const m = q.get('m') || months[0] || monthISO(); const list = all.filter(f => f.period === m).sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  const avg = (xs, k) => xs.length ? (xs.reduce((a, x) => a + num(x[k]), 0) / xs.length) : 0;
+  const stars = (v) => v ? `${'★'.repeat(Math.round(v))}${'☆'.repeat(5 - Math.round(v))} <b>${v.toFixed(1)}</b>` : '—';
+  const active = S.students.filter(s => s.status === 'active' || s.status === 'trial').length;
+  const dist = (k, keys, labels) => keys.map((x, i) => { const n = list.filter(f => f[k] === x).length; return `<div class="row" style="gap:8px;margin:4px 0"><span style="width:110px" class="small">${labels[i]}</span><div class="bar" style="flex:1;height:10px"><span style="width:${list.length ? Math.round(100 * n / list.length) : 0}%;background:var(--navy)"></span></div><span class="small" style="width:40px;text-align:right">${n}</span></div>`; }).join('');
+  const groups = [...new Set(list.map(f => f.level + '|' + f.batch))].sort().map(k => { const [lv, b] = k.split('|'); const xs = list.filter(f => f.level === lv && f.batch === b); return { lv, b, n: xs.length, o: avg(xs, 'overall'), e: avg(xs, 'explain'), fast: xs.filter(f => f.pace === 'fast').length, slow: xs.filter(f => f.pace === 'slow').length }; });
+  const texts = list.filter(f => f.liked || f.improve);
+  mount('#/feedback', `
+  <div class="top"><div><h1>ছাত্রদের মতামত</h1><p>প্রতি মাসে ছাত্ররা ছাত্রদের সাইট থেকে ক্লাস নিয়ে ছোট একটা জরিপ দেয়। নাম দেখানো হয় না, আর শিক্ষকরা এই পাতা দেখতে পান না — তাই ছাত্ররা খোলাখুলি লিখতে পারে।</p></div>
+    <div class="row"><select id="fbm">${(months.includes(m) ? months : [m, ...months]).map(x => `<option value="${x}" ${x === m ? 'selected' : ''}>${monthLabel(x)}</option>`).join('')}</select></div></div>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="card stat"><div class="l">মতামত দিয়েছে</div><div class="v">${list.length}</div><div class="s">চলমান ${active} জনের মধ্যে</div></div>
+    <div class="card stat ${avg(list, 'overall') && avg(list, 'overall') < 3.5 ? 'red' : 'green'}"><div class="l">ক্লাস কেমন (গড়)</div><div class="v" style="font-size:20px;color:#C9962B">${stars(avg(list, 'overall'))}</div></div>
+    <div class="card stat"><div class="l">বোঝানো কেমন (গড়)</div><div class="v" style="font-size:20px;color:#C9962B">${stars(avg(list, 'explain'))}</div></div>
+    <div class="card stat"><div class="l">খুব দ্রুত মনে করে</div><div class="v">${list.filter(f => f.pace === 'fast').length}</div><div class="s">ধীর মনে করে ${list.filter(f => f.pace === 'slow').length} জন</div></div>
+  </div>
+  ${list.length ? `<div class="grid g2">
+    <div class="card"><h2>পড়ানোর গতি</h2>${dist('pace', ['slow', 'ok', 'fast'], ['খুব ধীর', 'ঠিক আছে', 'খুব দ্রুত'])}<h2 style="margin-top:14px">বাড়ির কাজ</h2>${dist('homework', ['less', 'ok', 'more'], ['আরও দরকার', 'ঠিক আছে', 'বেশি হয়ে যায়'])}</div>
+    <div class="card"><h2>ব্যাচ অনুযায়ী</h2><div class="tw"><table><tr><th>ব্যাচ</th><th>জন</th><th>ক্লাস</th><th>বোঝানো</th><th>গতি</th></tr>${groups.map(g => `<tr><td><b>${esc(g.lv)}</b> · ${esc(BATCH[g.b] || g.b)}</td><td>${g.n}</td><td>${g.o.toFixed(1)}★</td><td>${g.e.toFixed(1)}★</td><td class="small">${g.fast ? g.fast + ' দ্রুত ' : ''}${g.slow ? g.slow + ' ধীর' : ''}${!g.fast && !g.slow ? 'ঠিক আছে' : ''}</td></tr>`).join('')}</table></div>${groups.some(g => g.n < 3) ? '<p class="small muted" style="margin:6px 0 0">৩ জনের কম হলে গড় দেখে সিদ্ধান্ত নেবেন না।</p>' : ''}</div></div>
+  <h2 style="margin-top:18px">ছাত্রদের কথা (${texts.length})</h2>${texts.length ? texts.map(f => `<div class="card" style="margin-bottom:8px"><div class="small muted">${esc(f.level)} · ${esc(BATCH[f.batch] || f.batch)} · ${'★'.repeat(f.overall)}</div>${f.liked ? `<div style="margin-top:4px">👍 ${esc(f.liked)}</div>` : ''}${f.improve ? `<div style="margin-top:4px">💡 ${esc(f.improve)}</div>` : ''}</div>`).join('') : '<div class="card"><div class="empty">কেউ কিছু লেখেনি</div></div>'}`
+    : `<div class="card"><div class="empty">${monthLabel(m)}-এ এখনো কেউ মতামত দেয়নি। মাসের ১৫ তারিখ থেকে ছাত্রদের সাইটে জরিপটা দেখায়।</div></div>`}`, () => {
+    $('#fbm').onchange = (e) => { location.hash = '#/feedback?m=' + e.target.value; };
+  });
+}
 
 // ------------------------------------------------------------------ payment proofs from the student site (v35)
 const PROOF_ST = { pending: ['due', 'যাচাই বাকি'], approved: ['active', 'রশিদ হয়েছে'], rejected: ['dropped', 'মেলেনি'] };
