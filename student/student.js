@@ -177,6 +177,12 @@ const Demo = {
     if (i >= 0) rows[i] = row; else rows.push(row); this.write('homework_submissions', rows); return this.homework();
   },
   async uploadHw(path, blob) { const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); }); const files = JSON.parse(localStorage.getItem('sakura_demo_files') || '{}'); files[path] = data; localStorage.setItem('sakura_demo_files', JSON.stringify(files)); return path; },
+  qa() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return null; const lv = this.levels(s); const all = this.read('student_questions');
+    return { mine: all.filter(q => q.student_id === s.id).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))), shared: all.filter(q => q.shared && q.status === 'answered' && lv.includes(q.level) && q.student_id !== s.id) };
+  },
+  ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
+    rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -279,6 +285,8 @@ const API = {
   async uploadHw(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('homework').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
   async hwUrl(path) { if (DEMO) return Demo.fileUrl(path); const { data, error } = await sb.storage.from('homework').createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
+  async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
+  async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -954,6 +962,31 @@ async function renderHomework(d, user) {
   };
 }
 
+
+// ------------------------------------------------------------------ ask the teacher (শিক্ষককে প্রশ্ন)
+const qaSeenKey = (d) => 'sakura_qa_seen_' + ((d.student || {}).admission_no || 'p');
+function qaUnread(d) { const m = ((d.qa || {}).mine || []).filter(q => q.status === 'answered'); let seen = []; try { seen = JSON.parse(localStorage.getItem(qaSeenKey(d)) || '[]'); } catch { /* none */ } return m.filter(q => !seen.includes(q.id)); }
+function qaLinkHtml(d) { if (d.blocked) return ''; const n = qaUnread(d).length; const open = ((d.qa || {}).mine || []).filter(q => q.status === 'open').length;
+  return `<button class="bdlink qalink" id="qago">❓ শিক্ষককে প্রশ্ন করুন${n ? ` · <b style="color:var(--red)">${BN_NUM(n)}টি নতুন উত্তর</b>` : open ? ` · ${BN_NUM(open)}টির উত্তর আসছে` : ''} ›</button>`; }
+async function renderQA(d, user) {
+  scrollTo(0, 0); const Q = d.qa || { mine: [], shared: [] };
+  const unread = qaUnread(d).map(q => q.id);
+  const item = (q, mine) => `<div class="card qai ${mine && q.status === 'open' ? 'wait' : ''}">${q.topic ? `<div class="small muted">${esc(q.topic)}</div>` : ''}<div style="white-space:pre-line;font-weight:600;line-height:1.6">${esc(q.body)}</div>
+    ${q.status === 'open' && mine ? '<div class="small muted" style="margin-top:6px">⏳ শিক্ষকের উত্তরের অপেক্ষায়…</div>' : `<div class="qans">${unread.includes(q.id) ? '<span class="newtag">নতুন</span> ' : ''}<b>👩‍🏫 ${esc(q.answered_by || 'শিক্ষক')}:</b> <span style="white-space:pre-line">${esc(q.answer)}</span></div>`}</div>`;
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">❓ শিক্ষককে প্রশ্ন</b><button class="btn sm ghost" id="qaback">‹ ফিরে যান</button></div>
+    ${d.preview ? '' : `<div class="card acct"><b>নতুন প্রশ্ন</b><div class="small muted" style="margin:2px 0 8px">কোনো পাঠ, শব্দ, ব্যাকরণ বা মক টেস্টের প্রশ্ন বুঝতে না পারলে লিখুন। জাপানিতে বা বাংলায় — যেভাবে সুবিধা।</div>
+      <label class="f">কোন পাঠ / বিষয় (ঐচ্ছিক)<input id="qtopic" maxlength="80" placeholder="যেমন: পাঠ ৫, は আর が-এর পার্থক্য"></label>
+      <label class="f" style="margin-top:8px">প্রশ্ন<textarea id="qbody" rows="4" maxlength="2000" placeholder="আপনার প্রশ্ন লিখুন…"></textarea></label>
+      <button class="btn" id="qsend" style="width:100%;justify-content:center;margin-top:10px">প্রশ্ন পাঠান</button><div class="msg" id="qmsg"></div></div>`}
+    ${Q.mine.length ? `<h2 class="lvl">আমার প্রশ্ন (${BN_NUM(Q.mine.length)})</h2>${Q.mine.map(q => item(q, true)).join('')}` : ''}
+    ${Q.shared.length ? `<h2 class="lvl">অন্যদের প্রশ্ন ও উত্তর</h2><div class="small muted" style="margin:-2px 0 8px">শিক্ষক যে প্রশ্ন-উত্তরগুলো সবার জন্য দিয়েছেন</div>${Q.shared.map(q => item(q, false)).join('')}` : ''}</div>`;
+  try { const seen = new Set(JSON.parse(localStorage.getItem(qaSeenKey(d)) || '[]')); unread.forEach(i => seen.add(i)); localStorage.setItem(qaSeenKey(d), JSON.stringify([...seen].slice(-300))); } catch { /* not kept */ }
+  $('#qaback').onclick = () => renderHome(d, user);
+  const send = $('#qsend'); if (send) send.onclick = async () => { const body = $('#qbody').value.trim(); const msg = $('#qmsg'); if (!body) { msg.className = 'msg err'; msg.textContent = 'প্রশ্ন লিখুন'; return; }
+    send.disabled = true; try { d.qa = await API.ask($('#qtopic').value.trim(), body); toast('প্রশ্ন পাঠানো হয়েছে — শিক্ষক উত্তর দিলে এখানে দেখবেন'); renderQA(d, user); }
+    catch (e) { send.disabled = false; msg.className = 'msg err'; msg.textContent = /busy/.test(errMsg(e)) ? 'আজ অনেক প্রশ্ন পাঠিয়েছেন — কাল আবার পাঠান।' : errMsg(e); } };
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -1124,7 +1157,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1139,6 +1172,7 @@ function renderHome(d, user) {
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);
+  const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
   const hg = $('#hwgo'); if (hg) { const f = () => { HW_OPEN = null; renderHomework(d, user); }; hg.onclick = f; hg.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
   const bg = $('#bdgo'); if (bg) bg.onclick = () => { ME_TAB = 'bdg'; renderMe(d, user); };
   checkNewBadges(d);
@@ -1358,7 +1392,7 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } return renderHome(p, user); }
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } try { p.qa = await API.qa(); } catch (e) { p.qa = null; } return renderHome(p, user); }
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
@@ -1367,6 +1401,7 @@ async function start() {
     try { d.notices = await API.notices(); } catch (e) { d.notices = []; console.warn(e); }
     if (!d.blocked) { try { d.lb = await API.leaderboard(); } catch (e) { d.lb = null; console.warn(e); } }
     if (!d.blocked) { try { d.homework = await API.homework(); } catch (e) { d.homework = []; console.warn(e); } }
+    if (!d.blocked) { try { d.qa = await API.qa(); } catch (e) { d.qa = null; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);

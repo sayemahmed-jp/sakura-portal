@@ -81,7 +81,7 @@ const isAdmin = () => S.profile && S.profile.role === 'admin';
 const isTeacher = () => S.profile && S.profile.role === 'teacher';
 const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
-const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework'];
+const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
 const ADMIN_ROUTES = ['people', 'weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions'];
-const OPTIONAL_TABLES = ['homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions'];
+const OPTIONAL_TABLES = ['student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -513,6 +513,7 @@ function render() {
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'materials') return viewMaterials(q);
   if (p[0] === 'notices') return viewNotices(q);
+  if (p[0] === 'questions') return viewQuestions(q);
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
@@ -2273,6 +2274,42 @@ const parentLink = (tok) => `${location.origin}${location.pathname}#/p/${tok}`;
 function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(), name: s.name_bn || s.name_en, link }); }
 
 
+
+
+// ------------------------------------------------------------------ students' questions (v31)
+function viewQuestions(q) {
+  const tab = q.get('t') === 'done' ? 'done' : 'open';
+  const all = (S.student_questions || []).slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const open = all.filter(x => x.status === 'open'), done = all.filter(x => x.status === 'answered');
+  const list = tab === 'open' ? open.slice().reverse() : done;
+  const card = (x) => { const s = byId(S.students, x.student_id) || {};
+    return `<div class="card click notice ${x.status === 'open' ? '' : 'off'}" data-qa="${x.id}" style="${x.status === 'open' ? 'border-left-color:var(--red)' : ''}"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start">
+      <div style="min-width:0"><b>${esc(studentName(s))}</b> <span class="small muted">${esc(s.admission_no || '')} · ${esc(x.level)}${x.topic ? ' · ' + esc(x.topic) : ''} · ${fmtDT(x.created_at)}</span></div>
+      ${x.status === 'open' ? badge('due', 'উত্তর বাকি') : x.shared ? badge('active', 'সবাই দেখে') : badge('completed', 'উত্তর দেওয়া হয়েছে')}</div>
+      <div style="white-space:pre-line;margin-top:6px;line-height:1.7">${esc(x.body)}</div>
+      ${x.answer ? `<div class="small" style="white-space:pre-line;margin-top:8px;background:var(--soft);border-radius:8px;padding:8px 10px"><b>উত্তর${x.answered_by ? ' (' + esc(x.answered_by) + ')' : ''}:</b> ${esc(x.answer)}</div>` : ''}</div>`; };
+  mount('#/questions', `
+  <div class="top"><div><h1>ছাত্রদের প্রশ্ন</h1><p>ছাত্ররা ছাত্রদের সাইট থেকে যা জিজ্ঞেস করে। উত্তর দিলে ছাত্র সাথে সাথে দেখে; চাইলে উত্তরটা ওই লেভেলের সবাইকে দেখানো যায় (প্রশ্নকারীর নাম ছাড়া)।</p></div></div>
+  <div class="tabs"><button data-qt="open" class="${tab === 'open' ? 'on' : ''}">উত্তর বাকি (${open.length})</button><button data-qt="done" class="${tab === 'done' ? 'on' : ''}">উত্তর দেওয়া (${done.length})</button></div>
+  ${list.length ? list.map(card).join('') : `<div class="card"><div class="empty">${tab === 'open' ? 'এখন কোনো প্রশ্নের উত্তর বাকি নেই 🎉' : 'এখনো কোনো উত্তর দেওয়া হয়নি'}</div></div>`}`, () => {
+    $$('[data-qt]').forEach(b => b.onclick = () => { location.hash = '#/questions' + (b.dataset.qt === 'done' ? '?t=done' : ''); });
+    $$('[data-qa]').forEach(c => c.onclick = () => answerModal(byId(S.student_questions, c.dataset.qa)));
+  });
+}
+function answerModal(x) {
+  const s = byId(S.students, x.student_id) || {};
+  openModal(`<h2>${esc(studentName(s))}-এর প্রশ্ন</h2>
+    <p class="small muted" style="margin:0 0 6px">${esc(x.level)}${x.topic ? ' · ' + esc(x.topic) : ''} · ${fmtDT(x.created_at)}</p>
+    <div class="card" style="white-space:pre-line;background:var(--soft);margin-bottom:10px">${esc(x.body)}</div>
+    <form id="af2" class="form"><label class="f full">উত্তর<textarea name="answer" rows="6" maxlength="3000" required placeholder="সহজ বাংলায় ব্যাখ্যা করুন, দরকার হলে উদাহরণ দিন…">${esc(x.answer || '')}</textarea></label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="shared" type="checkbox" ${x.shared ? 'checked' : ''} style="width:auto"> এই প্রশ্ন-উত্তর ${esc(x.level)}-এর সব ছাত্রকে দেখান (নাম ছাড়া)</label>
+    <div class="full row" style="justify-content:flex-end">${isAdmin() ? '<button type="button" class="btn ghost" id="aqdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="aqc">বাতিল</button><button class="btn" type="submit">উত্তর পাঠান</button></div></form>`);
+  const f = $('#af2'); $('#aqc').onclick = closeModal;
+  f.onsubmit = async (e) => { e.preventDefault(); const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    try { putLocal('student_questions', await API.update('student_questions', x.id, { answer: f.answer.value.trim(), shared: f.shared.checked, status: 'answered', answered_by: S.profile.name || '', answered_at: new Date().toISOString() })); closeModal(); toast('উত্তর পাঠানো হয়েছে'); render(); }
+    catch (err) { btn.disabled = false; toast(errMsg(err), true); } };
+  const del = $('#aqdel'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox('প্রশ্নটা মুছে যাবে।'))) return; try { await API.remove('student_questions', x.id); S.student_questions = S.student_questions.filter(z => z.id !== x.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
+}
 
 // ------------------------------------------------------------------ homework (v30)
 const HW_BUCKET = 'homework';
