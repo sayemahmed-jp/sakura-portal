@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans'];
-const OPTIONAL_TABLES = ['class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views'];
+const OPTIONAL_TABLES = ['video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -2521,7 +2521,7 @@ function viewMaterials(q) {
     <td data-l="অধ্যায়">${esc(m.chapter || '—')}</td>
     <td data-l="নাম"><b>${esc(m.title)}</b>${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}</td>
     <td data-l="লেভেল">${esc(MAT_LEVEL[m.level] || m.level)}</td>
-    <td data-l="ধরন">${esc(MAT_KIND[m.kind] || m.kind)}${m.size_bytes ? ` <span class="small muted">${fmtSize(m.size_bytes)}</span>` : ''}</td>
+    <td data-l="ধরন">${esc(MAT_KIND[m.kind] || m.kind)}${m.size_bytes ? ` <span class="small muted">${fmtSize(m.size_bytes)}</span>` : ''}${m.kind === 'video' ? (() => { const vv = (S.video_views || []).filter(x => x.material_id === m.id); return `<div class="small muted">👁 ${vv.length} জন খুলেছে · ${vv.filter(x => x.done).length} জন পুরো দেখেছে</div>`; })() : ''}</td>
     <td data-l="অবস্থা">${m.published === false ? badge('dropped', 'লুকানো') : badge('active', 'ছাত্ররা দেখে')}</td>
     <td><button class="btn sm ghost" data-mo="${m.id}" data-stop>খুলুন</button></td></tr>`).join('')}</table>` : `<div class="empty">${lv ? 'এই লেভেলে' : 'এখনো'} কোনো উপকরণ নেই। "+ নতুন উপকরণ" চেপে PDF, অডিও, ভিডিও বা লিংক যোগ করুন।</div>`}</div>
   <div class="card" style="margin-top:16px"><h2>যা জেনে রাখবেন</h2><ul class="small" style="margin:0;padding-left:18px;line-height:1.8">
@@ -2549,14 +2549,16 @@ function materialModal(m, presetLevel) {
     <label class="f">ক্রম (ছোট সংখ্যা আগে)<input name="sort_order" type="number" step="1" value="${esc(v.sort_order ?? 0)}"></label>
     <label class="f">কী দেবেন<select name="src"><option value="file" ${isLink ? '' : 'selected'}>ফাইল আপলোড (PDF, অডিও, ভিডিও, ছবি, HTML বই)</option><option value="link" ${isLink ? 'selected' : ''}>লিংক (YouTube, Google Drive ইত্যাদি)</option></select></label>
     <label class="f full" id="mfile">ফাইল${m && m.file_path ? ` <span class="small muted">— এখন আছে: ${esc(m.file_name || 'ফাইল')} ${fmtSize(m.size_bytes)}; বদলাতে চাইলে নতুনটা বেছে নিন</span>` : ''}<input name="file" type="file" accept=".pdf,application/pdf,audio/*,video/*,image/*,.html,text/html"></label>
-    <label class="f full" id="mlink">লিংক<input name="url" type="url" value="${esc(v.url || '')}" placeholder="https://youtu.be/…"></label>
+    <label class="f full" id="mlink">লিংক<input name="url" type="url" value="${esc(v.url || '')}" placeholder="https://youtu.be/…"><span class="small muted">ভিডিও ক্লাস: YouTube-এ <b>Unlisted</b> করে তুলুন, বা Google Drive-এ "Anyone with the link" করে লিংক দিন — ছাত্রদের সাইটের ভেতরেই চলবে।</span></label>
+    <label class="f" id="mlk">লিংকটা কী<select name="lkind"><option value="video" ${v.kind === 'video' ? 'selected' : ''}>ভিডিও ক্লাস</option><option value="link" ${v.kind === 'link' ? 'selected' : ''}>অন্য লিংক</option></select></label>
     <label class="f full">ছোট বর্ণনা (ঐচ্ছিক)<textarea name="description" maxlength="300">${esc(v.description || '')}</textarea></label>
     <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে (টিক তুলে দিলে লুকানো থাকবে)</label>
     <p class="small muted full" id="mmsg" style="margin:0"></p>
     <div class="full row" style="justify-content:flex-end">${m ? '<button type="button" class="btn ghost" id="mdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="mcc">বাতিল</button><button class="btn" type="submit">${m ? 'সংরক্ষণ' : 'যোগ করুন'}</button></div>
   </form>`);
   const f = $('#mf');
-  const sync = () => { const link = f.src.value === 'link'; $('#mfile').style.display = link ? 'none' : ''; $('#mlink').style.display = link ? '' : 'none'; };
+  const sync = () => { const link = f.src.value === 'link'; $('#mfile').style.display = link ? 'none' : ''; $('#mlink').style.display = link ? '' : 'none'; $('#mlk').style.display = link ? '' : 'none'; };
+  f.url.oninput = () => { f.lkind.value = /youtu\.?be|vimeo|drive\.google\.com\/(file|open)/i.test(f.url.value) ? 'video' : 'link'; };
   f.src.onchange = sync; sync();
   $('#mcc').onclick = closeModal;
   f.onsubmit = async (e) => {
@@ -2567,7 +2569,7 @@ function materialModal(m, presetLevel) {
     const file = f.file.files[0]; let oldPath = null;
     if (f.src.value === 'link') {
       const u = f.url.value.trim(); if (!/^https?:\/\//i.test(u)) return toast('পুরো লিংক দিন (https:// দিয়ে শুরু)', true);
-      Object.assign(d, { url: u, kind: /youtu\.?be|vimeo/i.test(u) ? 'video' : 'link', file_path: null, file_name: null, size_bytes: null });
+      Object.assign(d, { url: u, kind: f.lkind.value === 'video' ? 'video' : 'link', file_path: null, file_name: null, size_bytes: null });
       if (m && m.file_path) oldPath = m.file_path;
     } else if (file) {
       if (file.size > MAT_MAX) return toast(`ফাইলটা ${fmtSize(file.size)} — সর্বোচ্চ ৫০ MB রাখা যায়। বড় ভিডিও YouTube-এ Unlisted করে লিংক দিন।`, true);

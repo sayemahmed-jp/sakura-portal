@@ -183,6 +183,10 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  videoViews() { const sid = this.linkedId(); return this.read('video_views').filter(v => v.student_id === sid).map(v => ({ id: v.material_id, done: v.done, last_at: v.last_at })); },
+  videoSeen(mid, done) { const sid = this.linkedId(); if (!sid) return null; const rows = this.read('video_views'); const i = rows.findIndex(v => v.student_id === sid && v.material_id === mid); const now = new Date().toISOString();
+    if (i >= 0) { rows[i].last_at = now; rows[i].done = rows[i].done || !!done; if (!done) rows[i].times++; } else rows.push({ student_id: sid, material_id: mid, first_at: now, last_at: now, times: 1, done: !!done });
+    this.write('video_views', rows); if (done) this.checkin('daily'); return this.videoViews(); },
   routine() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return null;
     const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })();
@@ -296,6 +300,8 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async videoViews() { if (PREVIEW) return []; if (DEMO) return Demo.videoViews(); const { data, error } = await sb.rpc('student_video_views'); if (error) throw error; return data || []; },
+  async videoSeen(id, done = false) { if (PREVIEW) return null; if (DEMO) return Demo.videoSeen(id, done); const { data, error } = await sb.rpc('student_video_seen', { p_material: id, p_done: !!done }); if (error) throw error; return data; },
   async routine() { if (DEMO) return Demo.routine(); const { data, error } = await sb.rpc('student_routine'); if (error) throw error; return data; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
@@ -1016,6 +1022,54 @@ async function renderHomework(d, user) {
 }
 
 
+// ------------------------------------------------------------------ video lessons (ভিডিও ক্লাস)
+let VID_OPEN = null;
+function embedOf(url) {   // a player address for YouTube, Google Drive and Vimeo links; null for anything else
+  const u = String(url || ''); let m;
+  if ((m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/))) return `https://www.youtube-nocookie.com/embed/${m[1]}?rel=0&modestbranding=1&playsinline=1`;
+  if ((m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([A-Za-z0-9_-]{20,})/))) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  if ((m = u.match(/vimeo\.com\/(?:video\/)?(\d{6,})/))) return `https://player.vimeo.com/video/${m[1]}`;
+  return null;
+}
+const vidDone = (d, id) => (d.videoViews || []).some(v => v.id === id && v.done);
+const vidSeen = (d, id) => (d.videoViews || []).some(v => v.id === id);
+function videoCardHtml(d, vids) {
+  if (!vids.length) return '';
+  const done = vids.filter(v => vidDone(d, v.id)).length; const nxt = vids.find(v => !vidDone(d, v.id));
+  return `<button class="card vidc" id="vidgo"><div class="row" style="justify-content:space-between;gap:8px;width:100%"><b>🎬 ভিডিও ক্লাস <span class="small muted" style="font-weight:600">(${BN_NUM(vids.length)}টি)</span></b><span class="small" style="color:var(--navy);font-weight:700">দেখুন ›</span></div>
+    <div class="vbar"><i style="width:${Math.round(100 * done / vids.length)}%"></i></div><div class="small muted" style="text-align:left">${BN_NUM(done)}/${BN_NUM(vids.length)}টি দেখা শেষ${nxt ? ` · পরেরটা: <b style="color:var(--ink)">${esc(nxt.title)}</b>` : ' — সব দেখা হয়েছে 🎉'}</div></button>`;
+}
+function renderVideos(d, user) {
+  scrollTo(0, 0); const vids = (d.materials || []).filter(m => m.kind === 'video');
+  const groups = []; for (const m of vids) { const k = (LEVEL_NAME[m.level] || m.level) + (m.chapter ? ' · ' + m.chapter : ''); let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, items: [] }); g.items.push(m); }
+  const done = vids.filter(v => vidDone(d, v.id)).length;
+  const item = (m) => `<div class="card vli ${VID_OPEN === m.id ? 'on' : ''}" data-v="${esc(m.id)}"><div class="row" style="gap:10px;align-items:flex-start"><span class="vck ${vidDone(d, m.id) ? 'ok' : vidSeen(d, m.id) ? 'half' : ''}">${vidDone(d, m.id) ? '✓' : '▶'}</span>
+    <div style="flex:1;min-width:0"><b>${esc(m.title)}</b>${m.published === false ? ' <span class="hidtag">লুকানো</span>' : ''}${m.description ? `<div class="small muted">${esc(m.description)}</div>` : ''}</div></div>
+    ${VID_OPEN === m.id ? `<div class="vplay" id="vp"></div><div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">${vidDone(d, m.id) ? '<span class="small" style="color:var(--green,#2e7d32);font-weight:700">✓ দেখা শেষ</span>' : d.preview ? '' : '<button class="btn sm" id="vdone">✓ পুরোটা দেখেছি</button>'}<button class="btn sm ghost" id="vask">❓ প্রশ্ন আছে</button></div>` : ''}</div>`;
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🎬 ভিডিও ক্লাস</b><button class="btn sm ghost" id="vback">‹ ফিরে যান</button></div>
+    <div class="card acct"><div class="vbar"><i style="width:${Math.round(100 * done / Math.max(1, vids.length))}%"></i></div><div class="small" style="margin-top:4px">${BN_NUM(done)}/${BN_NUM(vids.length)}টি ভিডিও দেখা শেষ। পুরো ভিডিও দেখলে আজকের দিনটা পড়ার দিন হিসেবে গোনা হয় 🔥</div>
+      <div class="small muted" style="margin-top:4px">ভিডিওগুলো শুধু আপনার জন্য — লিংক বা রেকর্ড করে অন্য কাউকে দেবেন না।</div></div>
+    ${groups.map(g => `<h2 class="lvl">${esc(g.k)}</h2>${g.items.map(item).join('')}`).join('')}</div>`;
+  $('#vback').onclick = () => { VID_OPEN = null; renderHome(d, user); };
+  $$('[data-v]').forEach(c => c.onclick = (e) => { if (e.target.closest('#vp, button, a')) return; VID_OPEN = VID_OPEN === c.dataset.v ? null : c.dataset.v; renderVideos(d, user); if (VID_OPEN) { const el = $('.vli.on'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } });
+  const ask = $('#vask'); if (ask) ask.onclick = () => { const m = vids.find(v => v.id === VID_OPEN); renderQA(d, user); const t = $('#qtopic'); if (t && m) t.value = ('ভিডিও: ' + m.title).slice(0, 80); const b = $('#qbody'); if (b) b.focus(); };
+  const mark = async (done) => { if (d.preview) return; try { const v = await API.videoSeen(VID_OPEN, done); if (v) d.videoViews = v; if (done) { API.streak().then(s2 => { d.streak = s2; }).catch(() => {}); } } catch (e) { console.warn(e); } };
+  const vd = $('#vdone'); if (vd) vd.onclick = async () => { vd.disabled = true; await mark(true); toast('দারুণ! ভিডিও দেখা শেষ ✓'); renderVideos(d, user); };
+  const box = $('#vp'); if (!box) return; const m = vids.find(v => v.id === VID_OPEN); if (!m) return;
+  if (!vidSeen(d, m.id)) mark(false);
+  if (m.file_path) {
+    box.innerHTML = '<div class="small muted" style="padding:20px;text-align:center">লোড হচ্ছে…</div>';
+    API.fileUrl(m.file_path).then(u => { box.innerHTML = `<video controls autoplay playsinline controlsList="nodownload" disablePictureInPicture oncontextmenu="return false" src="${esc(u)}"></video>`;
+      const v = box.querySelector('video'); let sent = false; const fin = () => { if (sent || vidDone(d, m.id)) return; sent = true; mark(true).then(() => { toast('ভিডিও দেখা শেষ ✓'); renderVideos(d, user); }); };
+      v.addEventListener('ended', fin); v.addEventListener('timeupdate', () => { if (v.duration && v.currentTime / v.duration > 0.92) fin(); }); })
+      .catch(e => { box.innerHTML = `<div class="msg err">${esc(errMsg(e))}</div>`; });
+  } else {
+    const e = embedOf(m.url);
+    box.innerHTML = e ? `<div class="vfr"><iframe src="${esc(e)}" title="${esc(m.title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
+      : `<a class="btn" href="${esc(m.url || '#')}" target="_blank" rel="noopener" style="width:100%;justify-content:center">▶ ভিডিও খুলুন</a>`;
+  }
+}
+
 // ------------------------------------------------------------------ class routine (ক্লাসের রুটিন) and online class
 const isoPlus = (iso, n) => new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const WDAY_BN = ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহস্পতি', 'শুক্র', 'শনি'];
@@ -1246,7 +1300,7 @@ function matRow(m) {
 }
 
 function renderHome(d, user) {
-  const I = d.institute || {}; const s = d.student || {}; const fee = d.fee || {}; const mats = d.materials || [];
+  const I = d.institute || {}; const s = d.student || {}; const fee = d.fee || {}; const vids = (d.materials || []).filter(m => m.kind === 'video'); const mats = (d.materials || []).filter(m => m.kind !== 'video');
   document.title = 'ছাত্রদের সাইট · ' + (s.name_bn || s.name_en || 'সাকুরা');
   const wa = waNum(I.whatsapp || I.phone);
   const groups = []; for (const m of mats) { let g = groups.find(x => x.level === m.level); if (!g) groups.push(g = { level: m.level, items: [] }); g.items.push(m); }
@@ -1262,8 +1316,8 @@ function renderHome(d, user) {
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
     : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
-      <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
+      ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+      <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
@@ -1278,6 +1332,7 @@ function renderHome(d, user) {
   bindCountdown(d, user);
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
+  const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
   const rg = $('#rtgo'); if (rg) { const f = (e) => { if (e.target.closest('[data-join]')) return; renderRoutine(d, user); }; rg.onclick = f; rg.onkeydown = (e) => { if (e.target === rg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); renderRoutine(d, user); } }; }
   const hg = $('#hwgo'); if (hg) { const f = () => { HW_OPEN = null; renderHomework(d, user); }; hg.onclick = f; hg.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
   const bg = $('#bdgo'); if (bg) bg.onclick = () => { ME_TAB = 'bdg'; renderMe(d, user); };
@@ -1509,6 +1564,7 @@ async function start() {
     if (!d.blocked) { try { d.homework = await API.homework(); } catch (e) { d.homework = []; console.warn(e); } }
     if (!d.blocked) { try { d.qa = await API.qa(); } catch (e) { d.qa = null; console.warn(e); } }
     try { d.routine = await API.routine(); } catch (e) { d.routine = null; console.warn(e); }
+    if (!d.blocked) { try { d.videoViews = await API.videoViews(); } catch (e) { d.videoViews = []; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
