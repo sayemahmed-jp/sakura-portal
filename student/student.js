@@ -1641,6 +1641,8 @@ function matRow(m) {
     <div>${action}</div></div>`;
 }
 
+let NAVSEC = 'home';
+const SECS = [['home', '🏠', 'হোম'], ['study', '📚', 'পড়া'], ['test', '📝', 'টেস্ট'], ['japan', '🗾', 'জাপান'], ['me', '👤', 'আমি']];
 const O = (html, n) => html ? `<div class="ob" style="order:${n}">${html}</div>` : '';   // a home block with its place in the phone layout
 function renderHome(d, user) {
   const I = d.institute || {}; const s = d.student || {}; const fee = d.fee || {}; const vids = (d.materials || []).filter(m => m.kind === 'video'); const mats = (d.materials || []).filter(m => m.kind !== 'video');
@@ -1650,27 +1652,43 @@ function renderHome(d, user) {
   const levelBlock = (g) => { const chaps = []; for (const m of g.items) { const k = m.chapter || ''; let c = chaps.find(x => x.k === k); if (!c) chaps.push(c = { k, items: [] }); c.items.push(m); }
     return `<section data-lv><div class="lvl">${esc(LEVEL_NAME[g.level] || g.level)}</div>${chaps.map(c => `<div data-ch>${c.k ? `<div class="chap">${esc(c.k)}</div>` : ''}<div class="mlist">${c.items.map(matRow).join('')}</div></div>`).join('')}</section>`; };
   const counts = d.counts || {}; const total = Object.values(counts).reduce((a, b) => a + num(b), 0);
-  $('#app').innerHTML = `<div class="st wide">
-    <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.preview ? '' : '<button class="out" id="mepg" aria-label="আমার পাতা">👤<span class="lbl"> আমার পাতা</span></button>'}<button class="out" id="lo">লগআউট</button></div></div>
-    ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
-    ${d.blocked ? installCardHtml(d) + noticesHtml(d) + feedbackCardHtml(d) : ''}
-    ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
+  if (HOME_TAB === 'mock') { NAVSEC = 'test'; HOME_TAB = 'mat'; }   // coming back from a test
+  if (d.blocked || !SECS.some(x => x[0] === NAVSEC)) NAVSEC = 'home';
+  const head = `<div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.blocked ? '<button class="out" id="lo">লগআউট</button>' : ''}</div></div>
+    ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}`;
+  const foot = `<p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p>`;
+  const row = (id, ic, t, sub, n) => `<button class="mrow" id="${id}"><span class="ri">${ic}</span><span class="rt"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${n ? `<span class="bn">${n}</span>` : ''}<span class="rc">›</span></button>`;
+  let body = '';
+  if (d.blocked) body = `${installCardHtml(d)}${noticesHtml(d)}${feedbackCardHtml(d)}<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
-      ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `<div class="hgrid"><div class="hmain">${O(noticesHtml(d), 2)}${O(homeworkCardHtml(d), 5)}${O(dailyHtml(d), 9)}<div style="order:11;min-width:0"><div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
-      <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
-      : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}</div></div><aside class="hside">${O(installCardHtml(d), 1)}${O(feedbackCardHtml(d), 3)}${O(routineCardHtml(d), 4)}${O(streakHtml(d.streak), 6)}${O(menuGridHtml(d), 7)}${O(countdownHtml(d), 8)}${O(leaderboardHtml(d), 10)}</aside></div>`}
-    <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
-  $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
-  const mp = $('#mepg'); if (mp) mp.onclick = () => renderMe(d, user);
+      ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`;
+  else if (NAVSEC === 'home') body = `${installCardHtml(d)}${noticesHtml(d)}${feedbackCardHtml(d)}${routineCardHtml(d)}${homeworkCardHtml(d)}${streakHtml(d.streak)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}`;
+  else if (NAVSEC === 'study') { const qn = qaUnread(d).length;
+    body = `<h1 class="sech">📚 পড়া</h1><div class="mlist2">${vids.length ? row('vidgo', '🎬', 'ভিডিও ক্লাস', `${BN_NUM(vids.filter(v => vidDone(d, v.id)).length)}/${BN_NUM(vids.length)}টি দেখা শেষ`) : ''}${row('qago', '❓', 'শিক্ষককে প্রশ্ন', 'কিছু না বুঝলে জিজ্ঞেস করুন', qn ? BN_NUM(qn) : '')}</div>
+      <div class="authtabs" style="margin:0 0 14px;flex-wrap:nowrap"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 কার্ড</button></div>
+      ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+      <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
+      : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`; }
+  else if (NAVSEC === 'test') body = `<h1 class="sech">📝 মক টেস্ট</h1>${MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])}`;
+  else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'কাগজপত্র আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
+  else if (NAVSEC === 'me') { const bd = d.preview ? null : badgeList(d); const ib = inboxCount(d);
+    body = `<h1 class="sech">👤 আমি</h1><div class="card acct"><b style="font-size:16px">${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</div></div>
+      <div class="mlist2">${d.preview ? '' : row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
+      ${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center;margin-top:6px">লগআউট</button>`; }
+  const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
+    return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;
+  $('#app').innerHTML = `<div class="st app2 ${d.blocked ? '' : 'hasnav'}">${head}<div class="shell2">${nav}<main class="smain">${body}${foot}</main></div></div>`;
+  $$('[data-sec]').forEach(b => b.onclick = () => { NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
+  const jp = $('#jpgo'); if (jp) jp.onclick = () => { ME_TAB = 'jp'; renderMe(d, user); };
+  const ibg = $('#ibgo'); if (ibg) ibg.onclick = () => renderInbox(d, user);
+  const lo = $('#lo'); if (lo) lo.onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
   bindFc(d, user);
   bindKana(d, user);
-  if (HOME_TAB === 'kana' && KN.mode === 'speak') bindSpeak(d, user);
+  if (NAVSEC === 'study' && HOME_TAB === 'kana' && KN.mode === 'speak') bindSpeak(d, user);
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);

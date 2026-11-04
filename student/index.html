@@ -234,12 +234,31 @@
   .mtile:hover{border-color:#C9A24B;transform:translateY(-1px)}.mtile:active{transform:scale(.97)}
   .mtile .mi{font-size:24px;line-height:1}.mtile .ml{font-size:12px;font-weight:600;line-height:1.25;text-align:center;color:var(--navy)}
   .mtile .bn{position:absolute;top:6px;right:8px;min-width:18px;height:18px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
-  .st.wide{max-width:1200px}
-  .hgrid{display:flex;flex-direction:column}.hmain,.hside{display:contents}.ob{min-width:0}
+  .sech{font:800 21px 'Noto Serif Bengali',serif;color:var(--navy);margin:2px 0 12px}
+  .mlist2{display:grid;gap:8px;margin:0 0 14px}
+  .mrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;font:inherit;color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(27,41,69,.05)}
+  .mrow:hover{border-color:#C9A24B}.mrow:active{transform:scale(.99)}
+  .mrow .ri{font-size:24px;flex:none;width:34px;text-align:center}.mrow .rt{flex:1;min-width:0;display:flex;flex-direction:column}.mrow .rt b{color:var(--navy);font-size:15px}.mrow .rt small{color:var(--muted);font-size:12.5px;line-height:1.4}
+  .mrow .rc{color:var(--muted);font-size:20px}.mrow .bn{min-width:20px;height:20px;border-radius:99px;background:var(--red);color:#fff;font-size:11.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+  .bnav{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;justify-content:space-around;background:rgba(255,253,248,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(27,41,69,.08)}
+  .bnav button{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;border:0;background:none;font:inherit;color:#7A7F8C;padding:6px 2px;border-radius:12px;cursor:pointer}
+  .bnav .ni{font-size:21px;line-height:1.1;filter:grayscale(.6);opacity:.8}.bnav .nl{font-size:11.5px;font-weight:600}
+  .bnav button.on{color:var(--navy)}.bnav button.on .ni{filter:none;opacity:1;transform:translateY(-1px)}.bnav button.on .nl{font-weight:800}
+  .bnav button.on::before{content:'';position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:#C9A24B}
+  .bnav .ndot{position:absolute;top:5px;left:calc(50% + 8px);width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid #fff}
+  .st.hasnav{padding-bottom:96px}
+  body:has(.bnav) #toast{bottom:84px}
+  .authtabs[style*='nowrap'] button{flex:1 1 0;padding-left:4px;padding-right:4px;white-space:nowrap}
   @media (min-width:1000px){
-    .hgrid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start}
-    .hmain,.hside{display:block}.hmain{min-width:0}
-    .hside .instc{flex-wrap:wrap}.hside .instc>div{flex-basis:calc(100% - 50px)}
+    .st.app2{max-width:1080px}.st.hasnav{padding-bottom:40px}
+    .shell2{display:grid;grid-template-columns:200px minmax(0,1fr);gap:22px;align-items:start}
+    .st:not(.hasnav) .shell2{display:block}
+    .bnav{position:sticky;top:16px;left:auto;right:auto;bottom:auto;flex-direction:column;gap:4px;padding:10px;border:1px solid var(--line);border-radius:16px;box-shadow:none;background:var(--card)}
+    .bnav button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px}.bnav .nl{font-size:15px}
+    .bnav button.on{background:#F3EEDF}.bnav button.on::before{top:20%;bottom:20%;left:0;right:auto;width:3px;height:auto;border-radius:0 3px 3px 0}
+    .bnav .ndot{top:12px;left:30px}
+    body:has(.bnav) #toast{bottom:24px}
+    .smain{max-width:780px}
   }
   .bell{position:relative}.bell .bn{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px;line-height:1}
   .nfi{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line,#eee);cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-top:0;font:inherit;color:inherit;text-align:left}.nfi:last-child{border-bottom:0}.nfi .ic{font-size:20px;flex:none}.nfi.new b::after{content:' •';color:var(--red)}
