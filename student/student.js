@@ -137,6 +137,11 @@ const Demo = {
       processing: { fee: num(s.processing_fee), paid: ppaid, due: Math.max(0, num(s.processing_fee) - ppaid) },
       payments: pays.map(p => ({ id: p.id, receipt_no: p.receipt_no, paid_on: p.paid_on, amount: num(p.amount), method: p.method, trx_id: p.trx_id || '', purpose: p.purpose })) };
   },
+  attendance() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
+    const ses = this.read('sessions');
+    return this.read('attendance').filter(a => a.student_id === s.id).map(a => { const x = ses.find(z => z.id === a.session_id); return x && { date: x.class_date, status: a.status, level: x.level, topic: x.topic, hours: num(x.hours), class_no: x.class_no }; }).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date));
+  },
   mistakes() {
     let s; try { s = this.student(); } catch { return []; }
     const fixed = this.read('student_fixed').filter(f => f.student_id === s.id); const tests = this.read('mock_tests');
@@ -225,6 +230,7 @@ const API = {
   async mistakes() { if (PREVIEW) return []; if (DEMO) return Demo.mistakes(); const { data, error } = await sb.rpc('student_mistakes'); if (error) throw error; return data || []; },
   async mistakeFixed(ids) { if (PREVIEW || !ids.length) return 0; if (DEMO) return Demo.mistakeFixed(ids); const { data, error } = await sb.rpc('student_mistake_fixed', { p_ids: ids }); if (error) throw error; return data; },
   async examDates() { if (DEMO) { try { const st = JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); return { jlpt_date: st.jlpt_date || null, nat_date: st.nat_date || null }; } catch { return {}; } } const { data, error } = await sb.rpc('student_exam_dates'); if (error) throw error; return data || {}; },
+  async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
   async mockStart(id) { if (PREVIEW) return Preview.start(id); if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
@@ -507,10 +513,40 @@ function printStudentReceipt(acc, p) {
   <p style="font-size:11.5px;color:#6E665A;margin:12px 0 0">এটি ছাত্রদের সাইট থেকে নেওয়া রশিদের কপি। অফিসের সই করা মূল রশিদ যত্নে রাখুন।</p></div></div></body></html>`);
   w.document.close();
 }
+
+// ---- my attendance (আমার হাজিরা)
+const ATT_ST = { present: ['উপস্থিত', 'p'], late: ['দেরিতে', 'l'], absent: ['অনুপস্থিত', 'a'], leave: ['ছুটি', 'v'] };
+let ATT_MONTH = '';
+function bindAttMonth(d, user) { $$('[data-attm]').forEach(b => b.onclick = () => { ATT_MONTH = b.dataset.attm; $('#attbox').innerHTML = attendanceHtml(d.att, true); bindAttMonth(d, user); }); }
+function attendanceHtml(rows, inner) {
+  rows = rows || [];
+  if (!rows.length) return '<div class="card"><div class="empty">এখনো কোনো ক্লাসের হাজিরা নেওয়া হয়নি।</div></div>';
+  const came = rows.filter(r => r.status === 'present' || r.status === 'late'); const pct = Math.round(came.length * 100 / rows.length);
+  const hours = came.reduce((a, r) => a + num(r.hours), 0); const late = rows.filter(r => r.status === 'late').length;
+  const months = [...new Set(rows.map(r => String(r.date).slice(0, 7)))].sort();
+  if (!months.includes(ATT_MONTH)) ATT_MONTH = months[months.length - 1];
+  const mi = months.indexOf(ATT_MONTH); const [y, m] = ATT_MONTH.split('-').map(Number);
+  const mrows = rows.filter(r => String(r.date).startsWith(ATT_MONTH)); const byDay = {}; mrows.forEach(r => { byDay[Number(String(r.date).slice(8, 10))] = r; });
+  const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const mc = mrows.filter(r => r.status === 'present' || r.status === 'late').length;
+  const cells = [...Array(first).fill('<span></span>'), ...Array.from({ length: days }, (_, i) => { const r = byDay[i + 1]; return `<span class="cal ${r ? 'c-' + ATT_ST[r.status][1] : ''}" title="${r ? esc(ATT_ST[r.status][0]) : ''}">${BN_NUM(i + 1)}</span>`; })];
+  const month = `<div class="card attm"><div class="row" style="justify-content:space-between;align-items:center"><button class="btn sm ghost" data-attm="${months[mi - 1] || ''}" ${mi > 0 ? '' : 'disabled'}>‹</button><b>${BN_MONTH[m - 1]} ${BN_NUM(y)}</b><button class="btn sm ghost" data-attm="${months[mi + 1] || ''}" ${mi < months.length - 1 ? '' : 'disabled'}>›</button></div>
+    <div class="small muted" style="text-align:center;margin:4px 0 8px">এই মাসে ${BN_NUM(mrows.length)}টি ক্লাসের মধ্যে ${BN_NUM(mc)}টিতে এসেছেন</div>
+    <div class="calg">${['র', 'সো', 'ম', 'বু', 'বৃ', 'শু', 'শ'].map(w => `<span class="wd">${w}</span>`).join('')}${cells.join('')}</div>
+    <div class="legend">${Object.values(ATT_ST).map(([l, c]) => `<span><i class="c-${c}"></i>${l}</span>`).join('')}</div>
+    ${mrows.length ? `<div style="margin-top:10px">${mrows.map(r => `<div class="attr"><span class="dot2 c-${ATT_ST[r.status][1]}"></span><span style="flex:none;width:70px">${fmtD(r.date).slice(0, 5)}</span><span style="flex:1;min-width:0">${esc(r.topic || r.level + ' ক্লাস')}</span><span class="small muted">${esc(ATT_ST[r.status][0])}</span></div>`).join('')}</div>` : ''}</div>`;
+  if (inner) return month;
+  return `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:16px">মোট উপস্থিতি</b><span class="pill ${pct >= 80 ? 'ok' : pct >= 60 ? 'warn' : 'bad'}">${BN_NUM(pct)}%</span></div>
+    <div class="bar" style="margin:10px 0 6px;height:10px"><span style="width:${pct}%;background:${pct >= 80 ? 'var(--green)' : pct >= 60 ? 'var(--gold)' : 'var(--red)'}"></span></div>
+    <div class="fcstat"><div><b>${BN_NUM(came.length)}/${BN_NUM(rows.length)}</b><span>ক্লাসে এসেছেন</span></div><div><b>${BN_NUM(late)}</b><span>দেরিতে</span></div><div><b>${BN_NUM(Math.round(hours))}</b><span>মোট ঘণ্টা</span></div></div>
+    ${pct < 80 ? '<div class="tip">⚠️ উপস্থিতি ৮০%-এর নিচে। জাপানে ভর্তি আর ভিসার আবেদনে ক্লাসের উপস্থিতি দেখা হয় — নিয়মিত ক্লাসে আসুন।</div>' : '<div class="tip">👍 উপস্থিতি ভালো আছে, এভাবেই চালিয়ে যান।</div>'}</div>
+    <div id="attbox">${month}</div>`;
+}
+
 let ME_TAB = 'acct';
 async function renderMe(d, user) {
   $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; scrollTo(0, 0);
-  const tabs = [['acct', '💳 হিসাব']];
+  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা']];
   let body = '';
   try {
     if (ME_TAB === 'acct') {
@@ -529,11 +565,13 @@ async function renderMe(d, user) {
           ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
       }
     }
+    if (ME_TAB === 'att') { const rows = await API.attendance(); d.att = rows; body = attendanceHtml(rows); }
   } catch (e) { body = `<div class="card"><div class="empty">${esc(errMsg(e))}</div></div>`; }
   $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">👤 আমার পাতা</b><button class="btn sm ghost" id="meback">‹ ফিরে যান</button></div>
     ${tabs.length > 1 ? `<div class="authtabs" style="margin:0 0 14px">${tabs.map(([k, l]) => `<button data-me="${k}" class="${ME_TAB === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${body}</div>`;
   $('#meback').onclick = () => renderHome(d, user);
   $$('[data-me]').forEach(b => b.onclick = () => { ME_TAB = b.dataset.me; renderMe(d, user); });
+  $$('[data-attm]').forEach(b => b.onclick = () => { ATT_MONTH = b.dataset.attm; const box = $('#attbox'); if (box) box.innerHTML = attendanceHtml(d.att, true); bindAttMonth(d, user); });
   $$('[data-rcpt]').forEach(b => b.onclick = () => { const p = d.account.payments.find(x => String(x.id) === b.dataset.rcpt); if (p) printStudentReceipt(d.account, p); });
 }
 
