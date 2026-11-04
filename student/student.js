@@ -183,6 +183,9 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  docRequests() { const sid = this.linkedId(); return this.read('doc_requests').filter(r => r.student_id === sid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))); },
+  docRequest(kind, purpose, note) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('doc_requests'); if (rows.filter(r => r.student_id === sid && r.status === 'pending').length >= 3) throw new Error('busy');
+    rows.push({ id: 'dr-' + Date.now(), student_id: sid, kind, purpose, note, status: 'pending', reply: '', created_at: new Date().toISOString() }); this.write('doc_requests', rows); return this.docRequests(); },
   videoViews() { const sid = this.linkedId(); return this.read('video_views').filter(v => v.student_id === sid).map(v => ({ id: v.material_id, done: v.done, last_at: v.last_at })); },
   videoSeen(mid, done) { const sid = this.linkedId(); if (!sid) return null; const rows = this.read('video_views'); const i = rows.findIndex(v => v.student_id === sid && v.material_id === mid); const now = new Date().toISOString();
     if (i >= 0) { rows[i].last_at = now; rows[i].done = rows[i].done || !!done; if (!done) rows[i].times++; } else rows.push({ student_id: sid, material_id: mid, first_at: now, last_at: now, times: 1, done: !!done });
@@ -300,6 +303,8 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async docRequests() { if (PREVIEW) return []; if (DEMO) return Demo.docRequests(); const { data, error } = await sb.rpc('student_doc_requests'); if (error) throw error; return data || []; },
+  async docRequest(kind, purpose, note) { if (DEMO) return Demo.docRequest(kind, purpose, note); const { data, error } = await sb.rpc('student_doc_request', { p_kind: kind, p_purpose: purpose, p_note: note }); if (error) throw error; return data || []; },
   async videoViews() { if (PREVIEW) return []; if (DEMO) return Demo.videoViews(); const { data, error } = await sb.rpc('student_video_views'); if (error) throw error; return data || []; },
   async videoSeen(id, done = false) { if (PREVIEW) return null; if (DEMO) return Demo.videoSeen(id, done); const { data, error } = await sb.rpc('student_video_seen', { p_material: id, p_done: !!done }); if (error) throw error; return data; },
   async routine() { if (DEMO) return Demo.routine(); const { data, error } = await sb.rpc('student_routine'); if (error) throw error; return data; },
@@ -696,10 +701,33 @@ function checkNewBadges(d) {
   try { localStorage.setItem(key, JSON.stringify(got.map(b => b.id))); } catch { /* not kept */ }
 }
 
+// ---- certificate requests (সার্টিফিকেটের আবেদন)
+const REQ_KIND = { hours: ['⏱', 'স্টাডি-আওয়ার সার্টিফিকেট', 'কত ঘণ্টা জাপানি শিখেছেন — জাপানের স্কুলে আবেদনে লাগে'], transcript: ['📊', 'পরীক্ষার ফলাফল (ট্রান্সক্রিপ্ট)', 'ইনস্টিটিউটের পরীক্ষাগুলোর নম্বর'], idcard: ['🪪', 'আইডি কার্ড', 'নতুন বা হারানো কার্ডের বদলে'], other: ['✉️', 'অন্য কাগজ / চিঠি', 'নিচে লিখে জানান কী দরকার'] };
+const REQ_ST = { pending: ['warn', '⏳ অফিস দেখছে'], ready: ['ok', '✅ তৈরি — অফিস থেকে নিন'], delivered: ['', '✓ নিয়েছেন'], rejected: ['bad', '✕ দেওয়া যায়নি'] };
+let DR_KIND = 'hours';
+function docReqHtml(d) {
+  const L = d.docreq || []; const pend = L.filter(r => r.status === 'pending').length;
+  return `<div class="card acct"><b style="font-size:16px">নতুন আবেদন</b><div class="small muted" style="margin:2px 0 10px">অফিস কাগজ তৈরি করলে এখানে জানিয়ে দেবে — তারপর অফিস থেকে নিয়ে যাবেন।</div>
+    <div style="display:grid;gap:6px">${Object.entries(REQ_KIND).map(([k, v]) => `<label class="jgck" style="border:1px solid ${DR_KIND === k ? 'var(--navy)' : 'var(--line,#e5e5e5)'};border-radius:10px;padding:8px 10px;cursor:pointer"><input type="radio" name="drk" value="${k}" ${DR_KIND === k ? 'checked' : ''}><span><b>${v[0]} ${esc(v[1])}</b><br><span class="small muted">${esc(v[2])}</span></span></label>`).join('')}</div>
+    <label class="f" style="margin-top:10px">কেন দরকার (ঐচ্ছিক)<input id="drp" maxlength="120" placeholder="যেমন: জাপানের স্কুলে আবেদন, ভিসা"></label>
+    <label class="f" style="margin-top:8px">${DR_KIND === 'other' ? 'কী দরকার, বিস্তারিত লিখুন' : 'অতিরিক্ত কিছু বলার থাকলে (ঐচ্ছিক)'}<textarea id="drn" rows="3" maxlength="1000" placeholder="${DR_KIND === 'other' ? 'যেমন: ইংরেজিতে প্রত্যয়নপত্র, ২ কপি' : 'যেমন: ২ কপি লাগবে'}"></textarea></label>
+    <button class="btn" id="drsend" style="width:100%;justify-content:center;margin-top:10px" ${pend >= 3 ? 'disabled' : ''}>আবেদন পাঠান</button>${pend >= 3 ? '<div class="small muted" style="margin-top:4px">৩টি আবেদন অপেক্ষায় আছে — আগে সেগুলো শেষ হোক।</div>' : ''}<div class="msg" id="drmsg"></div></div>
+    ${L.length ? `<h2 class="lvl" style="margin-top:20px">আমার আবেদন (${BN_NUM(L.length)})</h2>${L.map(r => `<div class="card acct"><div class="row" style="justify-content:space-between;gap:8px;align-items:baseline"><b>${(REQ_KIND[r.kind] || ['', r.kind])[0]} ${esc((REQ_KIND[r.kind] || ['', r.kind])[1])}</b><span class="pill ${REQ_ST[r.status][0]}">${REQ_ST[r.status][1]}</span></div>
+      <div class="small muted">আবেদন: ${localD(r.created_at)}${r.purpose ? ' · ' + esc(r.purpose) : ''}</div>${r.note ? `<div class="small" style="white-space:pre-line;margin-top:4px">${esc(r.note)}</div>` : ''}
+      ${r.reply ? `<div class="qans" style="margin-top:8px"><b>🏢 অফিস:</b> <span style="white-space:pre-line">${esc(r.reply)}</span></div>` : ''}</div>`).join('')}` : ''}`;
+}
+function bindDocReq(d, user) {
+  $$('[name=drk]').forEach(r => r.onchange = () => { DR_KIND = r.value; renderMe(d, user); });
+  const b = $('#drsend'); if (!b) return;
+  b.onclick = async () => { const msg = $('#drmsg'); const note = $('#drn').value.trim(); if (DR_KIND === 'other' && !note) { msg.className = 'msg err'; msg.textContent = 'কী দরকার লিখুন'; return; }
+    b.disabled = true; try { d.docreq = await API.docRequest(DR_KIND, $('#drp').value.trim(), note); toast('আবেদন পাঠানো হয়েছে ✓ অফিস তৈরি করলে এখানে দেখবেন'); renderMe(d, user); }
+    catch (e) { b.disabled = false; msg.className = 'msg err'; msg.textContent = /busy/.test(errMsg(e)) ? '৩টি আবেদন অপেক্ষায় আছে — আগে সেগুলো শেষ হোক।' : errMsg(e); } };
+}
+
 let ME_TAB = 'acct';
 async function renderMe(d, user) {
   $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; scrollTo(0, 0);
-  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা'], ['jp', '🇯🇵 জাপান'], ['bdg', '🏅 ব্যাজ']];
+  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা'], ['doc', '📄 সার্টিফিকেট'], ['jp', '🇯🇵 জাপান'], ['bdg', '🏅 ব্যাজ']];
   let body = '';
   try {
     if (ME_TAB === 'acct') {
@@ -718,6 +746,7 @@ async function renderMe(d, user) {
           ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
       }
     }
+    if (ME_TAB === 'doc') { d.docreq = await API.docRequests(); body = docReqHtml(d); }
     if (ME_TAB === 'bdg') { body = badgesHtml(d); }
     if (ME_TAB === 'jp') { body = japanHtml(await API.japan()); }
     if (ME_TAB === 'att') { const rows = await API.attendance(); d.att = rows; body = attendanceHtml(rows); }
@@ -726,6 +755,7 @@ async function renderMe(d, user) {
     ${tabs.length > 1 ? `<div class="authtabs" style="margin:0 0 14px">${tabs.map(([k, l]) => `<button data-me="${k}" class="${ME_TAB === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${body}</div>`;
   $('#meback').onclick = () => renderHome(d, user);
   $$('[data-me]').forEach(b => b.onclick = () => { ME_TAB = b.dataset.me; renderMe(d, user); });
+  if (ME_TAB === 'doc') bindDocReq(d, user);
   $$('[data-attm]').forEach(b => b.onclick = () => { ATT_MONTH = b.dataset.attm; const box = $('#attbox'); if (box) box.innerHTML = attendanceHtml(d.att, true); bindAttMonth(d, user); });
   $$('[data-rcpt]').forEach(b => b.onclick = () => { const p = d.account.payments.find(x => String(x.id) === b.dataset.rcpt); if (p) printStudentReceipt(d.account, p); });
 }
