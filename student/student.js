@@ -183,6 +183,12 @@ const Demo = {
   },
   ask(topic, body) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const s = this.read('students').find(x => x.id === sid); const rows = this.read('student_questions');
     rows.push({ id: 'q-' + Date.now(), student_id: sid, level: s.current_level || 'N5', topic, body, status: 'open', answer: '', shared: false, created_at: new Date().toISOString() }); this.write('student_questions', rows); return this.qa(); },
+  payproofs() { const sid = this.linkedId(); if (!sid) return null; const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })(); const pays = this.read('payments');
+    return { numbers: { bkash: st.pay_bkash || '', nagad: st.pay_nagad || '', bank: st.pay_bank || '' }, list: this.read('pay_proofs').filter(p => p.student_id === sid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))).map(p => ({ ...p, has_file: !!p.file_path, receipt_no: (pays.find(x => x.id === p.payment_id) || {}).receipt_no || null })) }; },
+  payproofSubmit(method, amount, trx, sender, paid_on, file, note) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('pay_proofs');
+    if (rows.filter(r => r.student_id === sid && r.status === 'pending').length >= 3) throw new Error('busy');
+    if (trx && (rows.some(r => (r.trx_id || '').toUpperCase() === trx && r.status !== 'rejected') || this.read('payments').some(p => (p.trx_id || '').trim().toUpperCase() === trx))) throw new Error('dup_trx');
+    rows.push({ id: 'pp-' + Date.now(), student_id: sid, method, amount, trx_id: trx, sender, paid_on, file_path: file || null, note, status: 'pending', reply: '', created_at: new Date().toISOString() }); this.write('pay_proofs', rows); return this.payproofs(); },
   docRequests() { const sid = this.linkedId(); return this.read('doc_requests').filter(r => r.student_id === sid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))); },
   docRequest(kind, purpose, note) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('doc_requests'); if (rows.filter(r => r.student_id === sid && r.status === 'pending').length >= 3) throw new Error('busy');
     rows.push({ id: 'dr-' + Date.now(), student_id: sid, kind, purpose, note, status: 'pending', reply: '', created_at: new Date().toISOString() }); this.write('doc_requests', rows); return this.docRequests(); },
@@ -303,6 +309,9 @@ const API = {
   async hwRemove(path) { if (DEMO) return; await sb.storage.from('homework').remove([path]).catch(() => {}); },
   async qa() { if (DEMO) return Demo.qa(); const { data, error } = await sb.rpc('student_qa'); if (error) throw error; return data; },
   async ask(topic, body) { if (DEMO) return Demo.ask(topic, body); const { data, error } = await sb.rpc('student_ask', { p_topic: topic, p_body: body }); if (error) throw error; return data; },
+  async payproofs() { if (PREVIEW) return null; if (DEMO) return Demo.payproofs(); const { data, error } = await sb.rpc('student_payproofs'); if (error) throw error; return data; },
+  async payproofSubmit(m, a, t, snd, dt, f, n) { if (DEMO) return Demo.payproofSubmit(m, a, t, snd, dt, f, n); const { data, error } = await sb.rpc('student_payproof_submit', { p_method: m, p_amount: a, p_trx: t, p_sender: snd, p_paid_on: dt, p_file: f || '', p_note: n }); if (error) throw error; return data; },
+  async uploadProof(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('payproof').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
   async docRequests() { if (PREVIEW) return []; if (DEMO) return Demo.docRequests(); const { data, error } = await sb.rpc('student_doc_requests'); if (error) throw error; return data || []; },
   async docRequest(kind, purpose, note) { if (DEMO) return Demo.docRequest(kind, purpose, note); const { data, error } = await sb.rpc('student_doc_request', { p_kind: kind, p_purpose: purpose, p_note: note }); if (error) throw error; return data || []; },
   async videoViews() { if (PREVIEW) return []; if (DEMO) return Demo.videoViews(); const { data, error } = await sb.rpc('student_video_views'); if (error) throw error; return data || []; },
@@ -701,6 +710,55 @@ function checkNewBadges(d) {
   try { localStorage.setItem(key, JSON.stringify(got.map(b => b.id))); } catch { /* not kept */ }
 }
 
+// ---- payment proof (টাকা পাঠানোর প্রমাণ: বিকাশ / নগদ / ব্যাংক)
+let PF = { open: false, method: 'bkash', file: null };
+const PP_ST = { pending: ['warn', '⏳ অফিস মিলিয়ে দেখছে'], approved: ['ok', '✅ জমা হয়েছে'], rejected: ['bad', '✕ মেলেনি'] };
+function payProofHtml(d, f) {
+  const P = d.pp; if (!P) return ''; const N = P.numbers || {}; const has = { bkash: N.bkash, nagad: N.nagad, bank: N.bank };
+  const methods = Object.keys(has).filter(k => has[k]); if (!methods.length && !P.list.length) return '';
+  if (!methods.includes(PF.method)) PF.method = methods[0] || 'bkash';
+  const pend = P.list.filter(x => x.status === 'pending').length; const today = bdToday();
+  const list = P.list.length ? `<div style="margin-top:10px">${P.list.slice(0, 6).map(x => `<div class="attr" style="align-items:flex-start;padding:8px 0"><span style="flex:1;min-width:0"><b>${tk(x.amount)}</b> · ${esc(METHOD[x.method] || x.method)} <span class="small muted">${fmtD(x.paid_on)}${x.trx_id ? ' · ' + esc(x.trx_id) : ''}</span>${x.receipt_no ? `<div class="small muted">রশিদ: ${esc(x.receipt_no)}</div>` : ''}${x.reply ? `<div class="small" style="margin-top:2px">🏢 ${esc(x.reply)}</div>` : ''}</span><span class="pill ${PP_ST[x.status][0]}" style="flex:none">${PP_ST[x.status][1]}</span></div>`).join('')}</div>` : '';
+  return `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:16px">📲 বিকাশ / নগদে টাকা দিন</b>${!PF.open && methods.length ? `<button class="btn sm" id="pfopen">টাকা পাঠিয়েছি</button>` : ''}</div>
+    ${methods.length ? `<div class="small" style="margin-top:6px;line-height:1.8">${has.bkash ? `বিকাশ: <b style="font-size:15px">${esc(N.bkash)}</b> <button class="linkbtn" data-cp="${esc(N.bkash)}">কপি</button><br>` : ''}${has.nagad ? `নগদ: <b style="font-size:15px">${esc(N.nagad)}</b> <button class="linkbtn" data-cp="${esc(N.nagad)}">কপি</button><br>` : ''}${has.bank ? `ব্যাংক: <b>${esc(N.bank)}</b>` : ''}</div>
+      <div class="small muted">পাঠানোর পর TrxID দিয়ে এখানে জানান। অফিস মিলিয়ে দেখে রশিদ করলে উপরের বাকি টাকা কমে যাবে। <b>শুধু এই নম্বরেই পাঠান</b> — অন্য কেউ ফোন করে অন্য নম্বর দিলে বিশ্বাস করবেন না।</div>` : ''}
+    ${PF.open ? `<div style="margin-top:12px;border-top:1px dashed var(--line,#ddd);padding-top:12px">
+      <div class="mchips" style="margin:0 0 8px">${methods.map(k => `<button data-pfm="${k}" class="${PF.method === k ? 'on' : ''}">${esc(METHOD[k])}</button>`).join('')}</div>
+      <label class="f">কত টাকা পাঠিয়েছেন<input id="pfamt" type="number" min="1" step="1" inputmode="numeric" value="${f && f.due ? f.due : ''}"></label>
+      <label class="f" style="margin-top:8px">${PF.method === 'bank' ? 'রেফারেন্স / ট্রানজেকশন নম্বর (থাকলে)' : 'TrxID (মেসেজে যে কোড আসে, যেমন 9A7B6C5D4E)'}<input id="pftrx" maxlength="30" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:1px"></label>
+      <label class="f" style="margin-top:8px">${PF.method === 'bank' ? 'কার নামে / কোন অ্যাকাউন্ট থেকে' : 'কোন নম্বর থেকে পাঠিয়েছেন'}<input id="pfsnd" maxlength="20" inputmode="${PF.method === 'bank' ? 'text' : 'tel'}" placeholder="${PF.method === 'bank' ? '' : '01XXXXXXXXX'}"></label>
+      <label class="f" style="margin-top:8px">কবে পাঠিয়েছেন<input id="pfdate" type="date" value="${today}" max="${today}"></label>
+      <label class="f" style="margin-top:8px">স্ক্রিনশট (ঐচ্ছিক, তবে দিলে দ্রুত হয়)<input id="pffile" type="file" accept="image/*,application/pdf"></label>
+      <label class="f" style="margin-top:8px">নোট (ঐচ্ছিক)<input id="pfnote" maxlength="200" placeholder="যেমন: দ্বিতীয় কিস্তি"></label>
+      <div class="row" style="gap:8px;margin-top:10px"><button class="btn ghost" id="pfcancel" style="flex:1;justify-content:center">বাতিল</button><button class="btn" id="pfsend" style="flex:2;justify-content:center" ${pend >= 3 ? 'disabled' : ''}>জানিয়ে দিন</button></div><div class="msg" id="pfmsg">${pend >= 3 ? '৩টি প্রমাণ যাচাইয়ের অপেক্ষায় — অফিস দেখার পর আবার দিন।' : ''}</div></div>` : ''}
+    ${list}</div>`;
+}
+const PP_ERR = { need_trx: 'TrxID দিন (অন্তত ৬ অক্ষর)', dup_trx: 'এই TrxID আগেই জমা দেওয়া হয়েছে', bad_date: 'তারিখটা ঠিক নেই (গত ৬০ দিনের মধ্যে হতে হবে)', bad_amount: 'টাকার পরিমাণ ঠিক নেই', busy: '৩টি প্রমাণ যাচাইয়ের অপেক্ষায় — অফিস দেখার পর আবার দিন।', bad_file: 'স্ক্রিনশট আপলোড হয়নি — আবার চেষ্টা করুন' };
+function bindPayProof(d, user) {
+  const re = () => renderMe(d, user);
+  $$('[data-cp]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.cp); toast('নম্বর কপি হয়েছে'); } catch { toast(b.dataset.cp); } });
+  const o = $('#pfopen'); if (o) o.onclick = () => { PF.open = true; re(); };
+  const c = $('#pfcancel'); if (c) c.onclick = () => { PF.open = false; re(); };
+  $$('[data-pfm]').forEach(b => b.onclick = () => { PF.method = b.dataset.pfm; re(); });
+  const send = $('#pfsend'); if (!send) return;
+  send.onclick = async () => {
+    const msg = $('#pfmsg'); const err = (t) => { msg.className = 'msg err'; msg.textContent = t; send.disabled = false; };
+    const amt = Math.round(Number($('#pfamt').value)); const trx = $('#pftrx').value.trim().toUpperCase().replace(/\s+/g, ''); const snd = $('#pfsnd').value.trim(); const dt = $('#pfdate').value; let file = ($('#pffile').files || [])[0];
+    if (!(amt > 0)) return err('কত টাকা পাঠিয়েছেন লিখুন');
+    if (PF.method !== 'bank' && trx.length < 6) return err('TrxID দিন — টাকা পাঠানোর পর মেসেজে যে কোড আসে');
+    if (PF.method === 'bank' && !trx && !file) return err('রেফারেন্স নম্বর বা জমার রশিদের ছবি দিন');
+    send.disabled = true; msg.className = 'msg ok'; msg.textContent = 'পাঠানো হচ্ছে…';
+    try {
+      let path = '';
+      if (file) { if (file.type.startsWith('image/')) file = await compressImage(file); if (file.size > 5 * 1048576) return err('ফাইল ৫ MB-এর বেশি — ছোট ছবি দিন');
+        const sid = await API.myStudentId(); if (!sid) throw new Error('not_linked'); const ext = file.type === 'application/pdf' ? 'pdf' : file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+        path = await API.uploadProof(`${sid}/${Date.now()}.${ext}`, file); }
+      d.pp = await API.payproofSubmit(PF.method, amt, trx, snd, dt, path, $('#pfnote').value.trim());
+      PF.open = false; toast('জানানো হয়েছে ✓ অফিস মিলিয়ে রশিদ করলে এখানে দেখাবে'); re();
+    } catch (e) { const k = Object.keys(PP_ERR).find(x => errMsg(e).includes(x) || String(e.message || '').includes(x)); err(k ? PP_ERR[k] : errMsg(e)); }
+  };
+}
+
 // ---- certificate requests (সার্টিফিকেটের আবেদন)
 const REQ_KIND = { hours: ['⏱', 'স্টাডি-আওয়ার সার্টিফিকেট', 'কত ঘণ্টা জাপানি শিখেছেন — জাপানের স্কুলে আবেদনে লাগে'], transcript: ['📊', 'পরীক্ষার ফলাফল (ট্রান্সক্রিপ্ট)', 'ইনস্টিটিউটের পরীক্ষাগুলোর নম্বর'], idcard: ['🪪', 'আইডি কার্ড', 'নতুন বা হারানো কার্ডের বদলে'], other: ['✉️', 'অন্য কাগজ / চিঠি', 'নিচে লিখে জানান কী দরকার'] };
 const REQ_ST = { pending: ['warn', '⏳ অফিস দেখছে'], ready: ['ok', '✅ তৈরি — অফিস থেকে নিন'], delivered: ['', '✓ নিয়েছেন'], rejected: ['bad', '✕ দেওয়া যায়নি'] };
@@ -731,7 +789,7 @@ async function renderMe(d, user) {
   let body = '';
   try {
     if (ME_TAB === 'acct') {
-      const a = await API.account(); d.account = a;
+      const a = await API.account(); d.account = a; try { d.pp = await API.payproofs(); } catch (e) { d.pp = null; console.warn(e); }
       if (!a) body = '<div class="card"><div class="empty">হিসাব পাওয়া যায়নি।</div></div>';
       else {
         const f = a.fee; const pct = f.net ? Math.min(100, Math.round(f.paid * 100 / f.net)) : 100; const late = f.due > 0 && f.next_due_date && f.next_due_date < bdToday();
@@ -742,6 +800,7 @@ async function renderMe(d, user) {
           ${f.due ? '<div class="small muted" style="margin-top:8px">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এখানে দেখাবে।</div>' : ''}</div>
           ${a.processing && a.processing.fee ? `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:16px">🇯🇵 জাপান প্রসেসিং ফি</b>${a.processing.due ? `<span class="pill warn">বাকি ${tk(a.processing.due)}</span>` : '<span class="pill ok">সব পরিশোধ ✓</span>'}</div>
             <div class="small" style="margin-top:6px">মোট ${tk(a.processing.fee)} · পরিশোধ ${tk(a.processing.paid)}</div></div>` : ''}
+          ${payProofHtml(d, f)}
           <h2 class="lvl" style="margin-top:20px">টাকা দেওয়ার তালিকা (${BN_NUM(a.payments.length)})</h2>
           ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
       }
@@ -756,6 +815,7 @@ async function renderMe(d, user) {
   $('#meback').onclick = () => renderHome(d, user);
   $$('[data-me]').forEach(b => b.onclick = () => { ME_TAB = b.dataset.me; renderMe(d, user); });
   if (ME_TAB === 'doc') bindDocReq(d, user);
+  if (ME_TAB === 'acct') bindPayProof(d, user);
   $$('[data-attm]').forEach(b => b.onclick = () => { ATT_MONTH = b.dataset.attm; const box = $('#attbox'); if (box) box.innerHTML = attendanceHtml(d.att, true); bindAttMonth(d, user); });
   $$('[data-rcpt]').forEach(b => b.onclick = () => { const p = d.account.payments.find(x => String(x.id) === b.dataset.rcpt); if (p) printStudentReceipt(d.account, p); });
 }

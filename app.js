@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests'];
-const OPTIONAL_TABLES = ['doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs'];
+const OPTIONAL_TABLES = ['pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -515,6 +515,7 @@ function render() {
   if (p[0] === 'notices') return viewNotices(q);
   if (p[0] === 'questions') return viewQuestions(q);
   if (p[0] === 'requests') return viewRequests(q);
+  if (p[0] === 'proofs') return viewProofs(q);
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
@@ -757,19 +758,19 @@ async function viewStudent(id, tab) {
 }
 
 // ------------------------------------------------------------------ payments
-function paymentModal(studentId) {
+function paymentModal(studentId, preset = null, onSaved = null) {
   const opts = S.students.filter(s => s.status !== 'dropped').sort((a, b) => (a.admission_no || '').localeCompare(b.admission_no || ''));
   if (!opts.length) return toast('আগে একজন ছাত্র ভর্তি করুন', true);
   const pre = studentId ? byId(S.students, studentId) : null;
   openModal(`<h2>টাকা জমা</h2><form class="form" id="pf">
     <label class="f full">ছাত্র<select name="student_id" required>${studentId ? '' : '<option value="">— বাছাই করুন —</option>'}${opts.map(s => `<option value="${s.id}" ${s.id === studentId ? 'selected' : ''}>${esc(s.admission_no)} · ${esc(studentName(s))} (বকেয়া ${tk(dueOf(s))})</option>`).join('')}</select></label>
-    <label class="f">টাকার পরিমাণ (৳)<input name="amount" type="number" min="1" step="1" required value="${pre && dueOf(pre) ? dueOf(pre) : ''}"></label>
-    <label class="f">তারিখ<input name="paid_on" type="date" required value="${todayISO()}"></label>
-    <label class="f">মাধ্যম<select name="method">${Object.entries(METHOD).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
-    <label class="f">ট্রানজেকশন আইডি (বিকাশ/নগদ/ব্যাংক)<input name="trx_id"></label>
+    <label class="f">টাকার পরিমাণ (৳)<input name="amount" type="number" min="1" step="1" required value="${preset ? esc(preset.amount) : pre && dueOf(pre) ? dueOf(pre) : ''}"></label>
+    <label class="f">তারিখ<input name="paid_on" type="date" required value="${esc((preset && preset.paid_on) || todayISO())}"></label>
+    <label class="f">মাধ্যম<select name="method">${Object.entries(METHOD).map(([k, l]) => `<option value="${k}" ${preset && preset.method === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label class="f">ট্রানজেকশন আইডি (বিকাশ/নগদ/ব্যাংক)<input name="trx_id" value="${esc((preset && preset.trx_id) || '')}"></label>
     <label class="f">বাবদ<select name="purpose">${Object.entries(PURPOSE).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
     <label class="f">পরের কিস্তির তারিখ (যদি থাকে)<input name="next_due_date" type="date" value="${pre && pre.next_due_date ? esc(pre.next_due_date) : ''}"></label>
-    <label class="f full">নোট<input name="note"></label>
+    <label class="f full">নোট<input name="note" value="${esc((preset && preset.note) || '')}"></label>
     <p class="full small muted" style="margin:0">রশিদ নম্বর নিজে থেকে বসবে। ভুল হলে শুধু অ্যাডমিন ঠিক করতে পারবেন।</p>
     <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="pc">বাতিল</button><button class="btn gold" type="submit">জমা করুন ও রশিদ</button></div></form>`);
   $('#pc').onclick = closeModal;
@@ -788,6 +789,7 @@ function paymentModal(studentId) {
       const st = byId(S.students, d.student_id);
       const patch = {}; if ((next || null) !== (st.next_due_date || null)) patch.next_due_date = next || null; if (st.status === 'trial') patch.status = 'active';
       if (Object.keys(patch).length) putLocal('students', await API.update('students', st.id, patch));
+      if (onSaved) { try { await onSaved(row); } catch (err) { console.warn(err); } }
       closeModal(); toast('জমা হয়েছে · ' + row.receipt_no); render(); printReceipt(row);
     } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
   };
@@ -2087,6 +2089,10 @@ function viewSettings() {
     <label class="f">পরের JLPT-র তারিখ<input name="jlpt_date" type="date" value="${esc(st.jlpt_date || '')}" ${ro}></label>
     <label class="f">পরের NAT-TEST-এর তারিখ (ঐচ্ছিক)<input name="nat_date" type="date" value="${esc(st.nat_date || '')}" ${ro}></label>
     <p class="full small muted" style="margin:0">খালি রাখলে ছাত্ররা জুলাই/ডিসেম্বরের প্রথম রবিবার (JLPT-র সাধারণ দিন) "আনুমানিক" হিসেবে দেখবে। বাংলাদেশে পরীক্ষার আসল তারিখ ঘোষণা হলে এখানে বসিয়ে দিন।</p>
+    <h3>অনলাইনে টাকা নেওয়ার নম্বর (ছাত্রদের সাইটে দেখাবে)</h3>
+    <label class="f">বিকাশ নম্বর<input name="pay_bkash" placeholder="01XXXXXXXXX (Personal/Merchant)" value="${esc(st.pay_bkash || '')}" ${ro}></label>
+    <label class="f">নগদ নম্বর<input name="pay_nagad" value="${esc(st.pay_nagad || '')}" ${ro}></label>
+    <label class="f full">ব্যাংক অ্যাকাউন্ট (ঐচ্ছিক)<input name="pay_bank" placeholder="ব্যাংক, শাখা, অ্যাকাউন্টের নাম ও নম্বর" value="${esc(st.pay_bank || '')}" ${ro}></label>
     <h3>ক্লাসের সময় ও অনলাইন ক্লাস (ছাত্রদের সাইটে রুটিন)</h3>
     <label class="f">সকালের ব্যাচের সময়<input name="time_morning" placeholder="যেমন ১০:০০ – ১২:০০" value="${esc(st.time_morning || '')}" ${ro}></label>
     <label class="f">বিকেলের ব্যাচের সময়<input name="time_evening" placeholder="যেমন ৪:০০ – ৬:০০" value="${esc(st.time_evening || '')}" ${ro}></label>
@@ -2101,7 +2107,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
+      const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', pay_bkash: (d.pay_bkash || '').trim(), pay_nagad: (d.pay_nagad || '').trim(), pay_bank: (d.pay_bank || '').trim(), time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
       if (!data.class_days.length) return toast('অন্তত একটা ক্লাসের দিন বাছুন', true);
       try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
     };
@@ -2305,6 +2311,50 @@ function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(
 
 
 
+
+// ------------------------------------------------------------------ payment proofs from the student site (v35)
+const PROOF_ST = { pending: ['due', 'যাচাই বাকি'], approved: ['active', 'রশিদ হয়েছে'], rejected: ['dropped', 'মেলেনি'] };
+function viewProofs(q) {
+  const tab = q.get('t') === 'done' ? 'done' : 'open';
+  const all = (S.pay_proofs || []).slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const open = all.filter(x => x.status === 'pending'), done = all.filter(x => x.status !== 'pending');
+  const list = tab === 'open' ? open.slice().reverse() : done;
+  const st = S.settings;
+  mount('#/proofs', `
+  <div class="top"><div><h1>অনলাইন পেমেন্ট যাচাই</h1><p>ছাত্ররা বিকাশ/নগদ/ব্যাংকে টাকা পাঠিয়ে ছাত্রদের সাইট থেকে TrxID আর স্ক্রিনশট দেয়। নিজের বিকাশ/নগদ স্টেটমেন্টে মিলিয়ে তারপর রশিদ করুন — রশিদ না করা পর্যন্ত ছাত্রের বকেয়া কমে না।</p></div></div>
+  ${!st.pay_bkash && !st.pay_nagad && !st.pay_bank ? `<div class="card" style="border-left:4px solid var(--red);margin-bottom:12px">ছাত্ররা কোন নম্বরে টাকা পাঠাবে, সেটা এখনো দেওয়া নেই। <a href="#/settings">সেটিংসে</a> বিকাশ/নগদ নম্বর বসান।</div>` : ''}
+  <div class="tabs"><button data-pt="open" class="${tab === 'open' ? 'on' : ''}">যাচাই বাকি (${open.length})</button><button data-pt="done" class="${tab === 'done' ? 'on' : ''}">শেষ (${done.length})</button></div>
+  ${list.length ? `<div class="tw"><table class="stack"><tr><th>পাঠিয়েছে</th><th>ছাত্র</th><th>মাধ্যম</th><th class="num">টাকা</th><th>TrxID</th><th>অবস্থা</th></tr>${list.map(x => { const s = byId(S.students, x.student_id) || {};
+    return `<tr class="click" data-pp="${x.id}"><td data-l="পাঠিয়েছে">${fmtD(x.paid_on)}<div class="small muted">জানিয়েছে ${fmtDT(x.created_at)}</div></td><td data-l="ছাত্র"><b>${esc(studentName(s))}</b><div class="small muted">${esc(s.admission_no || '')} · বকেয়া ${tk(s.id ? dueOf(s) : 0)}</div></td>
+      <td data-l="মাধ্যম">${esc(METHOD[x.method] || x.method)}${x.sender ? `<div class="small muted">${esc(x.sender)} থেকে</div>` : ''}</td><td data-l="টাকা" class="num"><b>${tk(x.amount)}</b></td><td data-l="TrxID"><code>${esc(x.trx_id || '—')}</code>${x.file_path ? ' 📎' : ''}</td><td data-l="অবস্থা">${badge(...PROOF_ST[x.status])}</td></tr>`; }).join('')}</table></div>`
+    : `<div class="card"><div class="empty">${tab === 'open' ? 'যাচাই করার মতো কিছু নেই 🎉' : 'এখনো কিছু নেই'}</div></div>`}`, () => {
+    $$('[data-pt]').forEach(b => b.onclick = () => { location.hash = '#/proofs' + (b.dataset.pt === 'done' ? '?t=done' : ''); });
+    $$('[data-pp]').forEach(c => c.onclick = () => proofModal(byId(S.pay_proofs, c.dataset.pp)));
+  });
+}
+function proofModal(x) {
+  const s = byId(S.students, x.student_id) || {}; const pay = x.payment_id ? byId(S.payments, x.payment_id) : null;
+  const sameTrx = x.trx_id ? S.payments.filter(p => (p.trx_id || '').trim().toUpperCase() === x.trx_id.toUpperCase()) : [];
+  openModal(`<h2>${esc(METHOD[x.method] || x.method)}-এ ${tk(x.amount)}</h2>
+    <p style="margin:0 0 8px"><b>${esc(studentName(s))}</b> <span class="small muted">${esc(s.admission_no || '')} · এখন বকেয়া ${tk(s.id ? dueOf(s) : 0)}</span></p>
+    <div class="tw"><table><tr><td>TrxID</td><td><code style="font-size:15px">${esc(x.trx_id || '—')}</code></td></tr><tr><td>যে নম্বর থেকে</td><td>${esc(x.sender || '—')}</td></tr><tr><td>পাঠানোর তারিখ</td><td>${fmtD(x.paid_on)}</td></tr>${x.note ? `<tr><td>ছাত্রের নোট</td><td>${esc(x.note)}</td></tr>` : ''}</table></div>
+    ${sameTrx.length ? `<p class="small" style="color:var(--red)">⚠ এই TrxID দিয়ে আগেই রশিদ আছে: ${sameTrx.map(p => esc(p.receipt_no)).join(', ')}</p>` : ''}
+    <div id="ppimg" style="margin:10px 0">${x.file_path ? '<div class="small muted">স্ক্রিনশট লোড হচ্ছে…</div>' : '<div class="small muted">স্ক্রিনশট দেয়নি</div>'}</div>
+    ${x.status === 'pending' ? `<p class="small muted" style="margin:0 0 8px">আগে নিজের ${esc(METHOD[x.method] || '')} অ্যাপে/স্টেটমেন্টে TrxID আর টাকা মিলিয়ে দেখুন।</p>
+      <label class="f full">ছাত্রকে বার্তা (মেলেনি হলে কারণ লিখুন)<textarea id="pprep" rows="2" maxlength="500" placeholder="যেমন: এই TrxID পাওয়া যায়নি, অফিসে যোগাযোগ করুন">${esc(x.reply || '')}</textarea></label>
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn ghost" id="ppno" style="color:var(--red);margin-right:auto">✕ মেলেনি</button><button class="btn ghost" id="ppc">পরে</button><button class="btn gold" id="ppok">✓ মিলেছে — রশিদ করুন</button></div>`
+    : `<p>${badge(...PROOF_ST[x.status])} ${x.checked_by ? `<span class="small muted">${esc(x.checked_by)} · ${fmtDT(x.checked_at)}</span>` : ''}</p>${pay ? `<p>রশিদ: <b>${esc(pay.receipt_no)}</b> <button class="btn sm ghost" id="pprc">রশিদ দেখুন</button></p>` : ''}${x.reply ? `<p class="small">বার্তা: ${esc(x.reply)}</p>` : ''}
+      <div class="row" style="justify-content:flex-end;gap:8px">${isAdmin() ? '<button class="btn ghost" id="ppdel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button class="btn" id="ppc">বন্ধ</button></div>`}`);
+  $('#ppc').onclick = closeModal;
+  if (x.file_path) API.fileUrlFrom('payproof', x.file_path).then(u => { const b = $('#ppimg'); if (!b) return; b.innerHTML = /\.pdf$/i.test(x.file_path) ? `<a class="btn sm ghost" href="${esc(u)}" target="_blank" rel="noopener">📎 PDF খুলুন</a>` : `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="স্ক্রিনশট" style="max-width:100%;max-height:420px;border-radius:8px;border:1px solid var(--line)"></a>`; }).catch(e => { const b = $('#ppimg'); if (b) b.innerHTML = `<div class="small" style="color:var(--red)">${esc(errMsg(e))}</div>`; });
+  const rc = $('#pprc'); if (rc) rc.onclick = () => printReceipt(pay);
+  const ok = $('#ppok'); if (ok) ok.onclick = () => { const reply = ($('#pprep') || {}).value || ''; closeModal();
+    paymentModal(x.student_id, { amount: x.amount, paid_on: x.paid_on, method: x.method, trx_id: x.trx_id, note: 'ছাত্রদের সাইট থেকে পাঠানো প্রমাণ' + (x.sender ? ' · ' + x.sender : '') },
+      async (row) => putLocal('pay_proofs', await API.update('pay_proofs', x.id, { status: 'approved', payment_id: row.id, reply: reply.trim(), checked_by: S.profile.name || '', checked_at: new Date().toISOString() }))); };
+  const no = $('#ppno'); if (no) no.onclick = async () => { const reply = $('#pprep').value.trim(); if (!reply) return toast('ছাত্রকে কারণটা লিখুন', true);
+    try { putLocal('pay_proofs', await API.update('pay_proofs', x.id, { status: 'rejected', reply, checked_by: S.profile.name || '', checked_at: new Date().toISOString() })); closeModal(); toast('ছাত্রকে জানানো হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+  const del = $('#ppdel'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox('এই প্রমাণটা মুছে যাবে (রশিদ থাকবে)।'))) return; try { await API.remove('pay_proofs', x.id); if (x.file_path) API.removeFile('payproof', x.file_path).catch(() => {}); S.pay_proofs = S.pay_proofs.filter(z => z.id !== x.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
+}
 
 // ------------------------------------------------------------------ certificate requests from the student site (v34)
 const REQ_KIND = { hours: 'স্টাডি-আওয়ার সার্টিফিকেট', transcript: 'পরীক্ষার ফলাফল (ট্রান্সক্রিপ্ট)', idcard: 'আইডি কার্ড', other: 'অন্য কাগজ / চিঠি' };
