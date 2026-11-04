@@ -1022,6 +1022,30 @@ async function renderHomework(d, user) {
 }
 
 
+// ------------------------------------------------------------------ Japan life guide (জাপান লাইফ গাইড)
+let JG_OPEN = 'before';
+const jgKey = (d) => 'sakura_jg_' + ((d.student || {}).admission_no || 'p');
+function jgTicks(d) { try { return JSON.parse(localStorage.getItem(jgKey(d)) || '{}'); } catch { return {}; } }
+function jgLinkHtml(d) { if (d.blocked || !window.SAKURA_JPGUIDE) return ''; return '<button class="bdlink jglink" id="jggo">🗾 জাপান লাইফ গাইড — যাওয়ার আগে ও পরে যা জানা দরকার ›</button>'; }
+function renderJapanGuide(d, user) {
+  const G = window.SAKURA_JPGUIDE; const tk = jgTicks(d);
+  const sec = (x) => { const on = JG_OPEN === x.id; const n = x.check ? x.items.filter((_, i) => tk[x.id + i]).length : 0;
+    return `<div class="card jgs"><button data-jg="${x.id}" aria-expanded="${on}"><span class="ic">${x.icon}</span><b style="flex:1">${esc(x.title)}</b>${x.check ? `<span class="small muted">${BN_NUM(n)}/${BN_NUM(x.items.length)}</span>` : ''}<span class="muted">${on ? '▲' : '▼'}</span></button>
+    ${on ? `<div class="jgb">${x.intro ? `<div class="small muted" style="margin-bottom:6px">${esc(x.intro)}</div>` : ''}
+      ${x.check ? x.items.map((t, i) => `<label class="jgck ${tk[x.id + i] ? 'done' : ''}"><input type="checkbox" data-jgt="${x.id + i}" ${tk[x.id + i] ? 'checked' : ''}><span>${esc(t)}</span></label>`).join('')
+        : x.phrases ? x.phrases.map((p, i) => `<div class="jgph"><div style="flex:1;min-width:0"><div class="ja">${esc(p[0])}</div><div class="small muted">${esc(p[1])}</div><div class="small">${esc(p[2])}</div></div><button class="btn sm ghost" data-jgsay="${i}" aria-label="শুনুন">🔊</button></div>`).join('')
+        : `<ul>${x.items.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`}</div>` : ''}</div>`; };
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🗾 জাপান লাইফ গাইড</b><button class="btn sm ghost" id="jgback">‹ ফিরে যান</button></div>
+    <div class="card acct small" style="line-height:1.6">জাপানে যাওয়ার প্রস্তুতি আর প্রথম কয়েক মাসের দরকারি তথ্য। নিয়ম মাঝে মাঝে বদলায় — চূড়ান্ত তথ্যের জন্য আপনার জাপানের স্কুল আর সিটি অফিসের কথাই মানুন। <span class="muted">(হালনাগাদ: ${esc(G.updated)})</span></div>
+    ${G.sections.map(sec).join('')}
+    <div class="small muted" style="margin-top:10px">কিছু বুঝতে না পারলে "❓ শিক্ষককে প্রশ্ন" থেকে জিজ্ঞেস করুন।</div></div>`;
+  $('#jgback').onclick = () => renderHome(d, user);
+  $$('[data-jg]').forEach(b => b.onclick = () => { JG_OPEN = JG_OPEN === b.dataset.jg ? null : b.dataset.jg; renderJapanGuide(d, user); const el = $(`[data-jg="${b.dataset.jg}"]`); if (el && JG_OPEN) el.scrollIntoView({ block: 'nearest' }); });
+  $$('[data-jgt]').forEach(c => c.onchange = () => { const t = jgTicks(d); if (c.checked) t[c.dataset.jgt] = 1; else delete t[c.dataset.jgt]; try { localStorage.setItem(jgKey(d), JSON.stringify(t)); } catch { /* not kept */ } renderJapanGuide(d, user); });
+  const ph = (G.sections.find(x => x.id === 'phrases') || {}).phrases || [];
+  $$('[data-jgsay]').forEach(b => b.onclick = () => speakJa(ph[b.dataset.jgsay][0].replace(/〇〇/g, 'えき')));
+}
+
 // ------------------------------------------------------------------ interview practice (ইন্টারভিউ প্র্যাকটিস)
 let IV = { mode: 'list', cat: 'intro', open: {}, mock: null };
 const ivData = () => window.SAKURA_INTERVIEW || { cats: {}, qs: [] };
@@ -1388,7 +1412,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${jgLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1405,6 +1429,7 @@ function renderHome(d, user) {
   bindCountdown(d, user);
   bindLeaderboard(d, user);
   const qg = $('#qago'); if (qg) qg.onclick = () => renderQA(d, user);
+  const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
   const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
   const rg = $('#rtgo'); if (rg) { const f = (e) => { if (e.target.closest('[data-join]')) return; renderRoutine(d, user); }; rg.onclick = f; rg.onkeydown = (e) => { if (e.target === rg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); renderRoutine(d, user); } }; }
