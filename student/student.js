@@ -150,6 +150,19 @@ const Demo = {
       applications: this.read('applications').filter(a => a.student_id === s.id).map(a => { const c = sch.find(x => x.id === a.school_id) || {}; return { id: a.id, school_ja: c.name_ja, school_en: c.name_en, prefecture: c.prefecture, city: c.city, intake: a.intake, status: a.status, deadline_on: a.deadline_on, submitted_on: a.submitted_on, interview_on: a.interview_on, result_on: a.result_on, depart_on: a.depart_on, school_fee: a.school_fee }; }),
       documents: this.read('documents').filter(d => d.student_id === s.id).map(d => ({ doc_type: d.doc_type, status: d.status, expires_on: d.expires_on, issued_on: d.issued_on, updated_at: d.updated_at })) };
   },
+  leaderboard(lvArg) {
+    const uid = this.uid(); const me = uid && this.read('students').find(x => x.auth_user_id === uid); const lv = lvArg || (me && me.current_level) || 'N5';
+    const t = bdToday(); const d0 = new Date(t + 'T00:00:00Z'); d0.setUTCDate(d0.getUTCDate() - ((d0.getUTCDay() + 1) % 7)); const ws = d0.toISOString().slice(0, 10);
+    const pool = this.read('students').filter(s => s.current_level === lv && !['dropped', 'completed'].includes(s.status));
+    const days = this.read('student_days'); const att = this.read('mock_attempts').filter(a => a.submitted_at && a.total);
+    const rows = pool.map(s => { const my = att.filter(a => a.student_id === s.id && new Date(Date.parse(a.submitted_at) + 6 * 3600000).toISOString().slice(0, 10) >= ws);
+      return { id: s.id, name: String(s.name_bn || s.name_en || '').trim().replace(/^((মোঃ|মোঃ|মো:|মো\.|মোহাম্মদ|মুহাম্মদ|মোহাম্মাদ|মোছাঃ|মোসাঃ|মোছা:|মোসাম্মৎ|মোছাম্মৎ|Md\.?|Mst\.?|Mohammad|Muhammad|Mohammed)\s+)+/i, '').split(/\s+/)[0], days: days.filter(x => x.student_id === s.id && x.day >= ws && x.day <= t).length, mocks: my.length, best: my.length ? Math.max(...my.map(a => Math.round(a.score * 100 / a.total))) : null }; });
+    const reg = rows.filter(r => r.days || r.mocks).sort((a, b) => b.days - a.days || b.mocks - a.mocks || a.name.localeCompare(b.name)).slice(0, 10);
+    const best = rows.filter(r => r.best != null).sort((a, b) => b.best - a.best || b.mocks - a.mocks || a.name.localeCompare(b.name)).slice(0, 10);
+    const mine = me && rows.find(r => r.id === me.id);
+    return { level: lv, week_start: ws, today: t, students: pool.length, regular: reg.map(r => ({ name: r.name, days: r.days, mocks: r.mocks, me: !!me && r.id === me.id })), best: best.map(r => ({ name: r.name, pct: r.best, mocks: r.mocks, me: !!me && r.id === me.id })),
+      me: mine ? { days: mine.days, mocks: mine.mocks, best: mine.best, rank: rows.filter(x => x.days > mine.days || (x.days === mine.days && x.mocks > mine.mocks)).length + 1 } : null };
+  },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -245,6 +258,7 @@ const API = {
   async examDates() { if (DEMO) { try { const st = JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); return { jlpt_date: st.jlpt_date || null, nat_date: st.nat_date || null }; } catch { return {}; } } const { data, error } = await sb.rpc('student_exam_dates'); if (error) throw error; return data || {}; },
   async notices() { if (DEMO) return Demo.notices(); const { data, error } = await sb.rpc('student_notices'); if (error) throw error; return data || []; },
   async japan() { if (PREVIEW) return null; if (DEMO) return Demo.japan(); const { data, error } = await sb.rpc('student_japan'); if (error) throw error; return data; },
+  async leaderboard(lv) { if (DEMO) return Demo.leaderboard(lv); const { data, error } = await sb.rpc('student_leaderboard', { p_level: lv || null }); if (error) throw error; return data; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -664,6 +678,26 @@ function renderNotices(d, user) {
   bindNotices(d, user, () => renderNotices(d, user));
 }
 
+
+// ------------------------------------------------------------------ weekly leaderboard (সাপ্তাহিক র‍্যাঙ্কিং)
+let LB_OPEN = false, LB_TAB = 'regular';
+const MEDAL = ['🥇', '🥈', '🥉'];
+function leaderboardHtml(d) {
+  const L = d.lb; if (!L) return '';
+  const me = L.me; const top = (L.regular || [])[0];
+  const head = me ? (me.days || me.mocks ? `আপনি এই সপ্তাহে <b>${BN_NUM(me.rank)} নম্বরে</b> · ${BN_NUM(me.days)} দিন পড়েছেন` : 'এই সপ্তাহে এখনো পড়া শুরু করেননি — আজই শুরু করুন!') : `${esc(L.level)} · ${BN_NUM(L.students)} জন ছাত্র`;
+  const list = LB_TAB === 'best' ? L.best : L.regular;
+  return `<div class="card lb"><div class="lbh" id="lbtog" role="button" tabindex="0" aria-expanded="${LB_OPEN}"><div style="min-width:0;flex:1"><b>🏆 এই সপ্তাহের সেরা (${esc(L.level)})</b><div class="small muted">${head}</div></div>${top && !LB_OPEN ? `<span class="small">${MEDAL[0]} ${esc(top.name)}</span>` : ''}<span class="chev">${LB_OPEN ? '▲' : '▼'}</span></div>
+    ${LB_OPEN ? `<div class="mchips" style="margin:10px 0 6px"><button data-lbt="regular" class="${LB_TAB === 'regular' ? 'on' : ''}">সবচেয়ে নিয়মিত</button><button data-lbt="best" class="${LB_TAB === 'best' ? 'on' : ''}">মক টেস্টে সেরা</button>${d.preview ? ['N5', 'N4', 'N3'].map(l => `<button data-lbl="${l}" class="${L.level === l ? 'on' : ''}">${l}</button>`).join('') : ''}</div>
+      ${list.length ? list.map((r, i) => `<div class="lbr ${r.me ? 'me' : ''}"><span class="rk">${MEDAL[i] || BN_NUM(i + 1)}</span><span style="flex:1;min-width:0">${esc(r.name || '—')}${r.me ? ' <span class="small">(আপনি)</span>' : ''}</span><b>${LB_TAB === 'best' ? BN_NUM(r.pct) + '%' : BN_NUM(r.days) + ' দিন'}</b><span class="small muted" style="width:62px;text-align:right">${BN_NUM(r.mocks)}টি টেস্ট</span></div>`).join('') : `<div class="empty" style="padding:12px">${LB_TAB === 'best' ? 'এই সপ্তাহে এখনো কেউ মক টেস্ট দেয়নি — প্রথম হোন!' : 'এই সপ্তাহে এখনো কেউ পড়েনি — প্রথম হোন!'}</div>`}
+      <div class="small muted" style="margin-top:8px">প্রতি শনিবার নতুন সপ্তাহ শুরু হয়। "আজকের পড়া", ফ্ল্যাশকার্ড বা মক টেস্ট — যেকোনোটা করলে সেদিন গোনা হয়। শুধু নামের প্রথম অংশ দেখানো হয়।</div>` : ''}</div>`;
+}
+function bindLeaderboard(d, user) {
+  const t = $('#lbtog'); if (t) { const f = () => { LB_OPEN = !LB_OPEN; renderHome(d, user); }; t.onclick = f; t.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; }
+  $$('[data-lbt]').forEach(b => b.onclick = () => { LB_TAB = b.dataset.lbt; renderHome(d, user); });
+  $$('[data-lbl]').forEach(b => b.onclick = async () => { try { d.lb = await API.leaderboard(b.dataset.lbl); renderHome(d, user); } catch (e) { toast(errMsg(e), true); } });
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -834,7 +868,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${countdownHtml(d)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -847,6 +881,7 @@ function renderHome(d, user) {
   bindFc(d, user);
   bindMistakes(d, user);
   bindCountdown(d, user);
+  bindLeaderboard(d, user);
   bindNotices(d, user, () => renderHome(d, user));
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
@@ -1062,13 +1097,14 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } return renderHome(p, user); }
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } return renderHome(p, user); }
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
     if (!d.blocked) { try { d.mistakes = await API.mistakes(); } catch (e) { d.mistakes = []; console.warn(e); } }
     try { d.exams = await API.examDates(); } catch (e) { d.exams = {}; console.warn(e); }
     try { d.notices = await API.notices(); } catch (e) { d.notices = []; console.warn(e); }
+    if (!d.blocked) { try { d.lb = await API.leaderboard(); } catch (e) { d.lb = null; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
