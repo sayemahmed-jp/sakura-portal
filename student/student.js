@@ -71,6 +71,10 @@ const Demo = {
     rows[i].auth_user_id = uid; this.write('students', rows); return 'ok';
   },
   fileUrl(path) { try { return (JSON.parse(localStorage.getItem('sakura_demo_files') || '{}'))[path] || ''; } catch { return ''; } },
+  // ---- demo study days (same rules as student_checkin / streak_of)
+  linkedId() { const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); return s ? s.id : null; },
+  streak() { const sid = this.linkedId(); if (!sid) return null; return streakFrom(this.read('student_days').filter(x => x.student_id === sid).map(x => x.day)); },
+  checkin(kind) { const sid = this.linkedId(); if (!sid) return null; const rows = this.read('student_days'); const day = bdToday(); if (!rows.some(x => x.student_id === sid && x.day === day)) { rows.push({ student_id: sid, day, kind }); this.write('student_days', rows); } return this.streak(); },
   // ---- demo mock tests: same rules and results as the database functions
   student() { const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) throw new Error('not_linked'); const d = this.me(); if (d.blocked) throw new Error('locked'); return s; },
   secRank: (x) => ({ vocab: 1, grammar: 2, reading: 3, listening: 4 }[x] || 5),
@@ -188,6 +192,8 @@ const API = {
   },
   async reset(email) { if (DEMO) return; const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }); if (error) throw error; },
   async newPassword(pw) { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw error; },
+  async streak() { if (PREVIEW) return streakFrom(PREVIEW.days || []); if (DEMO) return Demo.streak(); const { data, error } = await sb.rpc('student_streak'); if (error) throw error; return data; },
+  async checkin(kind = 'daily') { if (PREVIEW) { const t = bdToday(); PREVIEW.days = PREVIEW.days || []; if (!PREVIEW.days.includes(t)) PREVIEW.days.push(t); return streakFrom(PREVIEW.days); } if (DEMO) return Demo.checkin(kind); const { data, error } = await sb.rpc('student_checkin', { p_kind: kind }); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
   async mockStart(id) { if (PREVIEW) return Preview.start(id); if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
   async mockSave(aid, ans) { if (PREVIEW) return Preview.save(aid, ans); if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
@@ -283,6 +289,67 @@ function renderLink(d, user) {
   };
 }
 
+
+// ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
+const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
+const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
+function streakFrom(days) {   // the same counting as streak_of() in the database
+  const set = [...new Set(days)].sort(); const today = bdToday(); const d2n = (d) => Math.round(Date.parse(d + 'T00:00:00Z') / 86400000);
+  let best = 0, run = 0, prev = null, cur = 0;
+  for (const d of set) { const n = d2n(d); run = prev != null && n === prev + 1 ? run + 1 : 1; prev = n; best = Math.max(best, run); if (n >= d2n(today) - 1) cur = run; }
+  return { streak: cur, best, today: set.includes(today), today_date: today, days: set.filter(d => d2n(d) > d2n(today) - 14), total: set.length };
+}
+const BN_NUM = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+let DAILY_LV = ''; let DAILY_OPEN = null; let DAILY_PICK = null;
+function dailyFor(lv) {
+  const D = (window.SAKURA_DAILY || {})[lv]; if (!D) return null; const n = dayNo();
+  const words = Array.from({ length: 5 }, (_, i) => D.words[(n * 5 + i) % D.words.length]);
+  const kanji = D.kanji[n % D.kanji.length]; const g = D.grammar[n % D.grammar.length];
+  const order = [0, 1, 2, 3].sort((a, b) => ((a * 7 + n) % 5) - ((b * 7 + n) % 5));   // the same order all day
+  return { words, kanji, grammar: { q: g[0], opts: order.map(i => g[1][i]), correct: order.indexOf(0), expl: g[2] } };
+}
+function streakHtml(st) {
+  if (!st) return '';
+  const today = bdToday(); const d2 = (k) => new Date(Date.parse(today + 'T00:00:00Z') - k * 86400000).toISOString().slice(0, 10);
+  const dots = Array.from({ length: 7 }, (_, i) => d2(6 - i)).map(d => `<span class="dot ${st.days.includes(d) ? 'on' : ''} ${d === today ? 'td' : ''}" title="${d}"></span>`).join('');
+  return `<div class="streak"><div class="fire ${st.streak ? '' : 'off'}">🔥</div><div style="min-width:0"><b>${st.streak ? `টানা ${BN_NUM(st.streak)} দিন পড়েছেন` : 'আজ থেকে টানা পড়া শুরু করুন'}</b><div class="small muted">${st.today ? 'আজকের পড়া হয়ে গেছে ✓' : st.streak ? 'আজ পড়লে টানা হিসাব চলতে থাকবে' : 'প্রতিদিন "আজকের পড়া" শেষ করলে দিন গোনা হবে'}${st.best > 1 ? ` · সবচেয়ে বেশি ${BN_NUM(st.best)} দিন` : ''}</div></div><div class="dots" aria-label="গত ৭ দিন">${dots}</div></div>`;
+}
+function dailyHtml(d) {
+  const lvs = (d.levels || []).filter(l => (window.SAKURA_DAILY || {})[l]); if (!lvs.length) return '';
+  if (!lvs.includes(DAILY_LV)) DAILY_LV = lvs.includes((d.student || {}).current_level) ? d.student.current_level : lvs[0];
+  const x = dailyFor(DAILY_LV); if (!x) return '';
+  const st = d.streak || null; const done = st && st.today; const open = DAILY_OPEN == null ? !done : DAILY_OPEN;
+  const t = new Date(Date.now() + 6 * 3600000); const dateBn = `${BN_NUM(t.getUTCDate())} ${BN_MONTH[t.getUTCMonth()]}`;
+  const say = (j) => `<button type="button" class="say" data-sayj="${esc(j)}" aria-label="শুনুন">🔊</button>`;
+  const pick = DAILY_PICK && DAILY_PICK.day === dayNo() && DAILY_PICK.lv === DAILY_LV ? DAILY_PICK.i : null;
+  const g = x.grammar;
+  return `<div class="card daily ${done ? 'done' : ''}">
+    <div class="dhd" id="dtog" role="button" tabindex="0" aria-expanded="${open}"><div><b>📅 আজকের পড়া</b> <span class="small muted">${dateBn}</span></div>
+      <div class="row" style="gap:6px">${lvs.length > 1 ? lvs.map(l => `<button type="button" class="lvchip ${l === DAILY_LV ? 'on' : ''}" data-dlv="${l}">${l}</button>`).join('') : `<span class="lvchip on">${DAILY_LV}</span>`}<span class="chev">${open ? '▲' : '▼'}</span></div></div>
+    ${open ? `<div class="dsec">৫টি শব্দ</div>
+    ${x.words.map(w => `<div class="dw"><div style="min-width:0"><span class="jp">${esc(w[0])}</span> <span class="rd">${esc(w[1])}</span><div class="small muted">${esc(w[2])}</div></div>${say(w[1])}</div>`).join('')}
+    <div class="dsec">আজকের কানজি</div>
+    <div class="dk"><div class="kbig">${esc(x.kanji[0])}</div><div><span class="jp">${esc(x.kanji[1])}</span> <span class="rd">${esc(x.kanji[2])}</span><div class="small muted">${esc(x.kanji[3])}</div></div>${say(x.kanji[2])}</div>
+    <div class="dsec">আজকের ব্যাকরণ</div>
+    <div class="dg"><div class="jp" style="white-space:pre-line">${esc(g.q)}</div>
+      <div class="dgo">${g.opts.map((o, i) => `<button type="button" class="opt ${pick == null ? '' : i === g.correct ? 'right' : i === pick ? 'wrong' : ''}" data-dg="${i}" ${pick == null ? '' : 'disabled'}>${esc(o)}</button>`).join('')}</div>
+      ${pick == null ? '<div class="small muted" style="margin-top:6px">ঠিক উত্তরটা বেছে নিন</div>' : `<div class="small expl">${pick === g.correct ? '✓ ঠিক! ' : '✗ ঠিক উত্তর: ' + esc(g.opts[g.correct]) + '। '}${esc(g.expl)}</div>`}</div>
+    ${done ? '<div class="ddone">✓ আজকের পড়া শেষ। কাল নতুন শব্দ আসবে।</div>' : `<button class="btn" id="ddone" style="width:100%;justify-content:center;margin-top:14px">আজকের পড়া শেষ করেছি ✓</button>`}` : ''}
+  </div>`;
+}
+function bindDaily(d, user) {
+  const tog = $('#dtog'); if (tog) { const flip = (e) => { if (e.target.closest('[data-dlv]')) return; DAILY_OPEN = !(DAILY_OPEN == null ? !(d.streak && d.streak.today) : DAILY_OPEN); renderHome(d, user); }; tog.onclick = flip; tog.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(e); } }; }
+  $$('[data-dlv]').forEach(b => b.onclick = (e) => { e.stopPropagation(); DAILY_LV = b.dataset.dlv; DAILY_OPEN = true; renderHome(d, user); });
+  $$('[data-sayj]').forEach(b => b.onclick = () => { if (!speakJa(b.dataset.sayj)) toast('জাপানি ভয়েস পাওয়া যায়নি। ফোনের Settings → Text-to-speech-এ জাপানি ভাষা যোগ করুন।', true); });
+  $$('[data-dg]').forEach(b => b.onclick = () => { DAILY_PICK = { day: dayNo(), lv: DAILY_LV, i: Number(b.dataset.dg) }; renderHome(d, user); });
+  const done = $('#ddone'); if (done) done.onclick = async () => {
+    done.disabled = true;
+    try { d.streak = await API.checkin('daily'); DAILY_OPEN = false; renderHome(d, user); toast(d.streak && d.streak.streak > 1 ? `দারুণ! টানা ${BN_NUM(d.streak.streak)} দিন 🔥` : 'দারুণ! কাল আবার আসবেন 🔥'); }
+    catch (e) { done.disabled = false; toast(errMsg(e), true); }
+  };
+}
+
 // an HTML book lives in private storage, which serves it as plain text; it is opened from a local copy
 async function bookBlobUrl(u) { const r = await fetch(u); if (!r.ok) throw new Error('বইটি খোলা যায়নি (' + r.status + ')'); return URL.createObjectURL(new Blob([await r.text()], { type: 'text/html;charset=utf-8' })); }
 function matRow(m) {
@@ -310,7 +377,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB !== 'mock' ? 'on' : ''}">📚 পড়ার উপকরণ (${mats.length})</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB !== 'mock' ? 'on' : ''}">📚 পড়ার উপকরণ (${mats.length})</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -318,6 +385,7 @@ function renderHome(d, user) {
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
+  bindDaily(d, user);
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
@@ -490,6 +558,7 @@ const minsBetween = (a, b) => { const m = Math.max(0, Math.round((Date.parse(b) 
 
 function renderResult(r) {
   EXAM = null; window.onbeforeunload = null;
+  if (r.submitted_at && Date.now() - Date.parse(r.submitted_at) < 10 * 60000) API.checkin('mock').catch(() => {});
   const p = r.total ? Math.round(r.score * 100 / r.total) : 0; const secs = r.sections || {}; const cn = attemptCounts(r);
   let rev = ''; let sec = null, pas = null, n = 0;
   for (const q of r.questions || []) {
@@ -531,9 +600,10 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) return renderHome(await Preview.load(user, d), user);
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); return renderHome(p, user); }
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
+    if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
