@@ -125,6 +125,18 @@ const Demo = {
   mockSubmit(aid, answers, reason = 'submit') { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id)) throw new Error('not_found'); this.mockSave(aid, answers); return this.grade(aid, reason); },
   mockLeave(aid, answers) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && !x.submitted_at)) return 'closed'; this.mockSave(aid, answers); this.grade(aid, 'left'); return 'ok'; },
   mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, category: t.category, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason, sections: a.sections || {} }; }); },
+  account() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return null;
+    const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })();
+    const pays = this.read('payments').filter(p => p.student_id === s.id).sort((a, b) => String(b.paid_on).localeCompare(String(a.paid_on)));
+    const paid = pays.filter(p => p.purpose !== 'processing').reduce((a, p) => a + num(p.amount), 0); const ppaid = pays.filter(p => p.purpose === 'processing').reduce((a, p) => a + num(p.amount), 0);
+    const net = Math.max(0, num(s.total_fee) - num(s.discount));
+    return { institute: { bn: st.institute_bn || 'সাকুরা জাপানিজ ইনস্টিটিউট', en: st.institute_en || 'Sakura Japanese Institute', ja: st.institute_ja || 'さくら日本語学院', phone: st.phone || '', whatsapp: st.whatsapp || '', email: st.email || '', address: st.address || '' },
+      student: { name_bn: s.name_bn, name_en: s.name_en, admission_no: s.admission_no, package: s.package, batch: s.batch },
+      fee: { total: num(s.total_fee), discount: num(s.discount), net, paid, due: Math.max(0, net - paid), next_due_date: s.next_due_date || null },
+      processing: { fee: num(s.processing_fee), paid: ppaid, due: Math.max(0, num(s.processing_fee) - ppaid) },
+      payments: pays.map(p => ({ id: p.id, receipt_no: p.receipt_no, paid_on: p.paid_on, amount: num(p.amount), method: p.method, trx_id: p.trx_id || '', purpose: p.purpose })) };
+  },
   mistakes() {
     let s; try { s = this.student(); } catch { return []; }
     const fixed = this.read('student_fixed').filter(f => f.student_id === s.id); const tests = this.read('mock_tests');
@@ -213,6 +225,7 @@ const API = {
   async mistakes() { if (PREVIEW) return []; if (DEMO) return Demo.mistakes(); const { data, error } = await sb.rpc('student_mistakes'); if (error) throw error; return data || []; },
   async mistakeFixed(ids) { if (PREVIEW || !ids.length) return 0; if (DEMO) return Demo.mistakeFixed(ids); const { data, error } = await sb.rpc('student_mistake_fixed', { p_ids: ids }); if (error) throw error; return data; },
   async examDates() { if (DEMO) { try { const st = JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); return { jlpt_date: st.jlpt_date || null, nat_date: st.nat_date || null }; } catch { return {}; } } const { data, error } = await sb.rpc('student_exam_dates'); if (error) throw error; return data || {}; },
+  async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
   async mockStart(id) { if (PREVIEW) return Preview.start(id); if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
   async mockSave(aid, ans) { if (PREVIEW) return Preview.save(aid, ans); if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
@@ -457,6 +470,73 @@ function bindCountdown(d, user) {
   });
 }
 
+
+// ------------------------------------------------------------------ my page (আমার পাতা): account, attendance, Japan
+const METHOD = { cash: 'ক্যাশ', bkash: 'বিকাশ', nagad: 'নগদ', bank: 'ব্যাংক' };
+const PURPOSE = { course_fee: 'কোর্স ফি', installment: 'কিস্তি', admission: 'ভর্তি ফি', processing: 'জাপান প্রসেসিং ফি', other: 'অন্যান্য' };
+function amountWords(n) { // English amount in words, Indian grouping (as on the office receipt)
+  n = Math.round(num(n)); if (n === 0) return 'Zero';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = (x) => x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '');
+  const three = (x) => (x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
+  const parts = []; const cr = Math.floor(n / 1e7); n %= 1e7; const lk = Math.floor(n / 1e5); n %= 1e5; const th = Math.floor(n / 1e3); n %= 1e3;
+  if (cr) parts.push(three(cr) + ' Crore'); if (lk) parts.push(two(lk) + ' Lakh'); if (th) parts.push(two(th) + ' Thousand'); if (n) parts.push(three(n));
+  return parts.join(' ');
+}
+function printStudentReceipt(acc, p) {
+  const w = window.open('', '_blank'); if (!w) return toast('রশিদ খোলা যায়নি — পপ-আপ চালু করুন', true);
+  const I = acc.institute || {}; const s = acc.student || {}; const proc = p.purpose === 'processing'; const f = proc ? acc.processing : acc.fee;
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt ${esc(p.receipt_no)}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Serif+Bengali:wght@800&family=Shippori+Mincho+B1:wght@700;800&display=swap">
+  <style>@page{size:A4;margin:12mm}body{font-family:'Hind Siliguri',sans-serif;color:#26231E;margin:0;padding:10px}.box{border:1.5px solid #A3843A;max-width:760px;margin:0 auto}
+  .hd{display:flex;align-items:center;gap:12px;background:#1B2945;color:#fff;padding:14px 18px;border-bottom:4px solid #A3843A}.km{width:50px;height:50px;border-radius:50%;background:#FBF8F1;border:2px solid #C9A95C;display:grid;place-items:center;flex:none}
+  .t1{font:800 18px 'Shippori Mincho B1'}.t2{font-size:12px;color:#E2C987;letter-spacing:3px}.ct{margin-left:auto;text-align:right;font-size:11.5px;line-height:1.5}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}td,th{border:1px solid #D8CDB9;padding:7px 10px;text-align:left}th{background:#F6F0E4;width:36%;font-weight:600}
+  .pb{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:9px 16px;border-radius:6px;font:inherit;cursor:pointer}@media print{.pb{display:none}}@media(max-width:560px){.ct{display:none}}</style></head><body>
+  <button class="pb" onclick="window.print()">প্রিন্ট / PDF হিসেবে রাখুন</button>
+  <div class="box"><div class="hd"><span class="km">${KAMON}</span><div><div class="t1">${esc(I.en || 'Sakura Japanese Institute')}</div><div style="font:800 14px 'Noto Serif Bengali'">${esc(I.bn || '')}</div><div class="t2">${esc(I.ja || 'さくら日本語学院')}</div></div>
+  <div class="ct">${esc(I.phone || '')}${I.whatsapp ? ' · WhatsApp ' + esc(I.whatsapp) : ''}<br>${esc(I.email || '')}<br>${esc(I.address || '')}</div></div>
+  <div style="padding:14px 18px"><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;gap:10px;flex-wrap:wrap"><div><div style="font:700 11px 'Shippori Mincho B1';letter-spacing:3px;color:#A3843A">MONEY RECEIPT</div><div style="font:800 20px 'Noto Serif Bengali'">ফি-র রশিদ</div></div>
+  <div style="text-align:right;font-size:13px"><span style="background:#C8372B;color:#fff;padding:2px 10px;border-radius:4px;font-weight:700">ছাত্র কপি</span><br>রশিদ নং: <b>${esc(p.receipt_no)}</b> · তারিখ: <b>${fmtD(p.paid_on)}</b></div></div>
+  <table><tr><th>ছাত্র/ছাত্রীর নাম</th><td>${esc(s.name_bn || '')} ${s.name_en ? '(' + esc(s.name_en) + ')' : ''}</td></tr><tr><th>ভর্তি নম্বর</th><td>${esc(s.admission_no || '')}</td></tr>
+  <tr><th>কোর্স / ব্যাচ</th><td>${esc(s.package || '')}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</td></tr><tr><th>বাবদ</th><td>${esc(PURPOSE[p.purpose] || p.purpose)}</td></tr>
+  <tr><th>মাধ্যম</th><td>${esc(METHOD[p.method] || p.method)}${p.trx_id ? ' · TrxID: ' + esc(p.trx_id) : ''}</td></tr>
+  <tr><th>টাকার পরিমাণ</th><td><b style="font-size:17px;color:#C8372B">${tk(p.amount)}</b><br><span style="font-size:12px">In words: Taka ${amountWords(p.amount)} only</span></td></tr>
+  <tr><th>${proc ? 'প্রসেসিং ফি' : 'মোট ফি'} · মোট পরিশোধিত · বকেয়া (আজ পর্যন্ত)</th><td>${tk(proc ? f.fee : f.net)} · ${tk(f.paid)} · <b>${tk(f.due)}</b></td></tr></table>
+  <p style="font-size:11.5px;color:#6E665A;margin:12px 0 0">এটি ছাত্রদের সাইট থেকে নেওয়া রশিদের কপি। অফিসের সই করা মূল রশিদ যত্নে রাখুন।</p></div></div></body></html>`);
+  w.document.close();
+}
+let ME_TAB = 'acct';
+async function renderMe(d, user) {
+  $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; scrollTo(0, 0);
+  const tabs = [['acct', '💳 হিসাব']];
+  let body = '';
+  try {
+    if (ME_TAB === 'acct') {
+      const a = await API.account(); d.account = a;
+      if (!a) body = '<div class="card"><div class="empty">হিসাব পাওয়া যায়নি।</div></div>';
+      else {
+        const f = a.fee; const pct = f.net ? Math.min(100, Math.round(f.paid * 100 / f.net)) : 100; const late = f.due > 0 && f.next_due_date && f.next_due_date < bdToday();
+        body = `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:16px">কোর্স ফি</b>${f.due ? `<span class="pill ${late ? 'bad' : 'warn'}">বাকি ${tk(f.due)}</span>` : '<span class="pill ok">সব পরিশোধ ✓</span>'}</div>
+          <div class="bar" style="margin:10px 0 6px;height:10px"><span style="width:${pct}%;background:var(--green)"></span></div>
+          <div class="fcstat"><div><b>${tk(f.net)}</b><span>মোট ফি${f.discount ? ` (ছাড় ${tk(f.discount)})` : ''}</span></div><div><b>${tk(f.paid)}</b><span>পরিশোধ</span></div><div><b style="color:${f.due ? 'var(--red)' : 'var(--green)'}">${tk(f.due)}</b><span>বাকি</span></div></div>
+          ${f.due && f.next_due_date ? `<div class="tip">${late ? '⚠️ পরের কিস্তির তারিখ পেরিয়ে গেছে' : '📅 পরের কিস্তি'}: <b>${fmtD(f.next_due_date)}</b>${late ? ' — দয়া করে তাড়াতাড়ি অফিসে যোগাযোগ করুন।' : ''}</div>` : ''}
+          ${f.due ? '<div class="small muted" style="margin-top:8px">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এখানে দেখাবে।</div>' : ''}</div>
+          ${a.processing && a.processing.fee ? `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:16px">🇯🇵 জাপান প্রসেসিং ফি</b>${a.processing.due ? `<span class="pill warn">বাকি ${tk(a.processing.due)}</span>` : '<span class="pill ok">সব পরিশোধ ✓</span>'}</div>
+            <div class="small" style="margin-top:6px">মোট ${tk(a.processing.fee)} · পরিশোধ ${tk(a.processing.paid)}</div></div>` : ''}
+          <h2 class="lvl" style="margin-top:20px">টাকা দেওয়ার তালিকা (${BN_NUM(a.payments.length)})</h2>
+          ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
+      }
+    }
+  } catch (e) { body = `<div class="card"><div class="empty">${esc(errMsg(e))}</div></div>`; }
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">👤 আমার পাতা</b><button class="btn sm ghost" id="meback">‹ ফিরে যান</button></div>
+    ${tabs.length > 1 ? `<div class="authtabs" style="margin:0 0 14px">${tabs.map(([k, l]) => `<button data-me="${k}" class="${ME_TAB === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}${body}</div>`;
+  $('#meback').onclick = () => renderHome(d, user);
+  $$('[data-me]').forEach(b => b.onclick = () => { ME_TAB = b.dataset.me; renderMe(d, user); });
+  $$('[data-rcpt]').forEach(b => b.onclick = () => { const p = d.account.payments.find(x => String(x.id) === b.dataset.rcpt); if (p) printStudentReceipt(d.account, p); });
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -620,7 +700,7 @@ function renderHome(d, user) {
     return `<section data-lv><div class="lvl">${esc(LEVEL_NAME[g.level] || g.level)}</div>${chaps.map(c => `<div data-ch>${c.k ? `<div class="chap">${esc(c.k)}</div>` : ''}<div class="mlist">${c.items.map(matRow).join('')}</div></div>`).join('')}</section>`; };
   const counts = d.counts || {}; const total = Object.values(counts).reduce((a, b) => a + num(b), 0);
   $('#app').innerHTML = `<div class="st">
-    <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><button class="out" id="lo">লগআউট</button></div>
+    <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${d.preview ? '' : '<button class="out" id="mepg">👤 আমার পাতা</button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
@@ -632,6 +712,7 @@ function renderHome(d, user) {
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
+  const mp = $('#mepg'); if (mp) mp.onclick = () => renderMe(d, user);
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
