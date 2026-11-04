@@ -143,6 +143,13 @@ const Demo = {
     return this.read('notices').filter(n => n.published !== false && (!n.ends_on || n.ends_on >= t) && (n.level === 'all' || lv.includes(n.level)) && (n.batch === 'all' || n.batch === s.batch))
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at).localeCompare(String(a.created_at)));
   },
+  japan() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return null;
+    const st = (() => { try { return JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); } catch { return {}; } })(); const sch = this.read('jp_schools');
+    return { stage: s.japan_stage || 'none', target_school: s.target_school || '', intake: s.intake || '', rules: { passport_months: num(st.alert_passport_months) || 6, fresh_days: num(st.alert_fresh_days) || 90 },
+      applications: this.read('applications').filter(a => a.student_id === s.id).map(a => { const c = sch.find(x => x.id === a.school_id) || {}; return { id: a.id, school_ja: c.name_ja, school_en: c.name_en, prefecture: c.prefecture, city: c.city, intake: a.intake, status: a.status, deadline_on: a.deadline_on, submitted_on: a.submitted_on, interview_on: a.interview_on, result_on: a.result_on, depart_on: a.depart_on, school_fee: a.school_fee }; }),
+      documents: this.read('documents').filter(d => d.student_id === s.id).map(d => ({ doc_type: d.doc_type, status: d.status, expires_on: d.expires_on, issued_on: d.issued_on, updated_at: d.updated_at })) };
+  },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -237,6 +244,7 @@ const API = {
   async mistakeFixed(ids) { if (PREVIEW || !ids.length) return 0; if (DEMO) return Demo.mistakeFixed(ids); const { data, error } = await sb.rpc('student_mistake_fixed', { p_ids: ids }); if (error) throw error; return data; },
   async examDates() { if (DEMO) { try { const st = JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); return { jlpt_date: st.jlpt_date || null, nat_date: st.nat_date || null }; } catch { return {}; } } const { data, error } = await sb.rpc('student_exam_dates'); if (error) throw error; return data || {}; },
   async notices() { if (DEMO) return Demo.notices(); const { data, error } = await sb.rpc('student_notices'); if (error) throw error; return data || []; },
+  async japan() { if (PREVIEW) return null; if (DEMO) return Demo.japan(); const { data, error } = await sb.rpc('student_japan'); if (error) throw error; return data; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -550,10 +558,50 @@ function attendanceHtml(rows, inner) {
     <div id="attbox">${month}</div>`;
 }
 
+
+// ---- my Japan file (জাপান আবেদন)
+const JSTAGES = [['none', 'শুরু হয়নি'], ['docs', 'কাগজ জোগাড়'], ['school', 'স্কুল বাছাই'], ['applied', 'আবেদন জমা'], ['coe', 'COE পেয়েছে'], ['visa', 'ভিসা পেয়েছে'], ['departed', 'জাপানে গেছে']];
+const APP_ST = { preparing: 'কাগজ তৈরি হচ্ছে', submitted: 'স্কুলে আবেদন জমা', interview: 'ইন্টারভিউ', accepted: 'স্কুল নিয়েছে', coe_applied: 'COE-র আবেদন হয়েছে', coe_granted: 'COE পেয়েছে', visa: 'ভিসা পেয়েছে', departed: 'জাপানে গেছে', rejected: 'স্কুল নেয়নি', coe_denied: 'COE পায়নি', withdrawn: 'বাদ দেওয়া হয়েছে' };
+const APP_FLOW = ['preparing', 'submitted', 'interview', 'accepted', 'coe_applied', 'coe_granted', 'visa', 'departed'];
+const DOC_TYPES = [['photo', 'পাসপোর্ট সাইজ ছবি'], ['passport', 'পাসপোর্ট'], ['nid', 'NID / জন্ম নিবন্ধন'], ['ssc', 'SSC সনদ ও মার্কশিট'], ['hsc', 'HSC সনদ ও মার্কশিট'], ['degree', 'স্নাতক / ডিপ্লোমা সনদ'], ['jlpt', 'JLPT / NAT সনদ'], ['study_hours', 'স্টাডি-আওয়ার সার্টিফিকেট'], ['sponsor', 'স্পনসরের আয়ের প্রমাণ'], ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ'], ['other', 'অন্যান্য']];
+const REQUIRED_DOCS = ['photo', 'passport', 'nid', 'ssc', 'hsc', 'study_hours', 'sponsor', 'bank', 'relation'];
+function japanHtml(j) {
+  if (!j) return '<div class="card"><div class="empty">তথ্য পাওয়া যায়নি।</div></div>';
+  const apps = j.applications || [], docs = j.documents || []; const today = bdToday();
+  if (j.stage === 'none' && !apps.length && !docs.length) return `<div class="card acct"><b style="font-size:16px">🇯🇵 জাপানে পড়তে যাওয়া</b><p style="margin:8px 0 0;line-height:1.7">আপনার জাপান আবেদনের কাজ এখনো শুরু হয়নি। জাপানের ভাষাস্কুলে ভর্তি হতে চাইলে অফিসে কথা বলুন — কাজ শুরু হলে এখানে প্রতিটা ধাপ আর কোন কাগজ লাগবে দেখতে পাবেন।</p></div>`;
+  const si = Math.max(0, JSTAGES.findIndex(([k]) => k === j.stage));
+  const stepper = `<div class="card acct"><b style="font-size:16px">আমার জাপান যাত্রা</b>${j.target_school || j.intake ? `<div class="small muted" style="margin-top:2px">${esc([j.target_school, j.intake && j.intake + ' সেশন'].filter(Boolean).join(' · '))}</div>` : ''}
+    <div class="jsteps">${JSTAGES.slice(1).map(([k, l], i) => `<div class="js ${i + 1 < si ? 'done' : i + 1 === si ? 'cur' : ''}"><span>${i + 1 < si ? '✓' : BN_NUM(i + 1)}</span><small>${l}</small></div>`).join('')}</div></div>`;
+  const dt = (lbl, v) => v ? `<div><span class="muted">${lbl}:</span> <b>${fmtD(v)}</b>${v >= today ? ` <span class="small muted">(আর ${BN_NUM(daysBetween(today, v))} দিন)</span>` : ''}</div>` : '';
+  const appCards = apps.map(a => { const fi = APP_FLOW.indexOf(a.status); const closed = fi < 0;
+    return `<div class="card acct"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div style="min-width:0"><b>${esc(a.school_ja || a.school_en || 'স্কুল')}</b>${a.school_en && a.school_ja ? `<div class="small muted">${esc(a.school_en)}</div>` : ''}<div class="small muted">${esc([a.prefecture, a.city].filter(Boolean).join(', '))}${a.intake ? ' · ' + esc(a.intake) + ' সেশন' : ''}</div></div>
+      <span class="pill ${closed ? 'bad' : fi >= 5 ? 'ok' : 'warn'}">${esc(APP_ST[a.status] || a.status)}</span></div>
+      ${closed ? '' : `<div class="aflow">${APP_FLOW.map((k, i) => `<i class="${i < fi ? 'done' : i === fi ? 'cur' : ''}" title="${esc(APP_ST[k])}"></i>`).join('')}</div>`}
+      <div class="adates small">${dt('আবেদনের শেষ তারিখ', a.status === 'preparing' ? a.deadline_on : null)}${dt('আবেদন জমা', a.submitted_on)}${dt('ইন্টারভিউ', a.interview_on)}${dt('COE-র ফল', a.result_on)}${dt('জাপান যাত্রা', a.depart_on)}</div></div>`; }).join('');
+  const byType = Object.fromEntries(docs.map(d => [d.doc_type, d]));
+  const types = [...REQUIRED_DOCS, ...docs.map(d => d.doc_type).filter(t => !REQUIRED_DOCS.includes(t))];
+  const warn = (t, d) => {
+    if (!d) return '';
+    if (t === 'passport' && d.expires_on) { const m = daysBetween(today, d.expires_on) / 30.4; if (m < 0) return 'মেয়াদ শেষ — নতুন পাসপোর্ট লাগবে'; if (m < (j.rules || {}).passport_months) return `মেয়াদ শেষ হবে ${fmtD(d.expires_on)} — নবায়ন করুন`; }
+    if ((t === 'bank' || t === 'sponsor') && d.issued_on && daysBetween(d.issued_on, today) > ((j.rules || {}).fresh_days || 90)) return `কাগজটা পুরনো (${fmtD(d.issued_on)}) — নতুন করে আনতে হবে`;
+    return '';
+  };
+  let need = 0;
+  const rows = types.map(t => { const d = byType[t]; const st = d ? d.status : 'missing'; const w = warn(t, d); if (st === 'missing' || w) need++;
+    const lbl = (DOC_TYPES.find(([k]) => k === t) || [t, t])[1];
+    return `<div class="doc ${w ? 'w' : st}"><span class="ds">${st === 'verified' && !w ? '✓' : st === 'received' && !w ? '◐' : '!'}</span><div style="min-width:0;flex:1"><b>${esc(lbl)}</b>${REQUIRED_DOCS.includes(t) ? '' : ' <span class="small muted">(ঐচ্ছিক)</span>'}
+      <div class="small ${w || st === 'missing' ? 'red' : 'muted'}">${w ? '⚠️ ' + esc(w) : st === 'missing' ? 'এখনো জমা দেননি — অফিসে দিন' : st === 'received' ? 'জমা হয়েছে, অফিস যাচাই করছে' : 'যাচাই হয়েছে'}</div></div></div>`; }).join('');
+  return `${stepper}
+    ${apps.length ? `<h2 class="lvl" style="margin-top:18px">স্কুলে আবেদন (${BN_NUM(apps.length)})</h2>${appCards}` : ''}
+    <h2 class="lvl" style="margin-top:18px">কাগজপত্র ${need ? `<span class="pill bad" style="font-size:12px;vertical-align:middle">${BN_NUM(need)}টি বাকি</span>` : '<span class="pill ok" style="font-size:12px;vertical-align:middle">সব ঠিক আছে ✓</span>'}</h2>
+    <div class="card" style="padding:4px 14px">${rows}</div>
+    <p class="small muted" style="margin-top:8px">কাগজ জমা দিতে বা কিছু বুঝতে না পারলে অফিসে যোগাযোগ করুন।</p>`;
+}
+
 let ME_TAB = 'acct';
 async function renderMe(d, user) {
   $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; scrollTo(0, 0);
-  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা']];
+  const tabs = [['acct', '💳 হিসাব'], ['att', '📅 হাজিরা'], ['jp', '🇯🇵 জাপান']];
   let body = '';
   try {
     if (ME_TAB === 'acct') {
@@ -572,6 +620,7 @@ async function renderMe(d, user) {
           ${a.payments.length ? `<div class="card" style="padding:0;overflow:hidden"><table class="hist"><tr><th>তারিখ</th><th>বাবদ</th><th class="num">টাকা</th><th></th></tr>${a.payments.map(p => `<tr><td>${fmtD(p.paid_on)}<div class="small muted">${esc(p.receipt_no)}</div></td><td>${esc(PURPOSE[p.purpose] || p.purpose)}<div class="small muted">${esc(METHOD[p.method] || p.method)}</div></td><td class="num"><b>${tk(p.amount)}</b></td><td><button class="btn sm ghost" data-rcpt="${esc(p.id)}">রশিদ</button></td></tr>`).join('')}</table></div>` : '<div class="card"><div class="empty">এখনো কোনো টাকা দেওয়ার রেকর্ড নেই।</div></div>'}`;
       }
     }
+    if (ME_TAB === 'jp') { body = japanHtml(await API.japan()); }
     if (ME_TAB === 'att') { const rows = await API.attendance(); d.att = rows; body = attendanceHtml(rows); }
   } catch (e) { body = `<div class="card"><div class="empty">${esc(errMsg(e))}</div></div>`; }
   $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">👤 আমার পাতা</b><button class="btn sm ghost" id="meback">‹ ফিরে যান</button></div>
