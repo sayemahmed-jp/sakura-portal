@@ -1192,6 +1192,22 @@ function startNotifyPoll(d) {   // while the site is open (also in the backgroun
   }, 10 * 60000);
 }
 
+// ------------------------------------------------------------------ the home menu: every tool as one tidy grid of tiles
+function menuGridHtml(d) {
+  const qn = qaUnread(d).length; const bd = d.preview ? null : badgeList(d);
+  const T = [
+    ['qago', '❓', 'শিক্ষককে প্রশ্ন', qn ? BN_NUM(qn) : '', true],
+    ['ivgo', '🎤', 'ইন্টারভিউ', '', true],
+    ['jggo', '🗾', 'জাপান গাইড', '', !!window.SAKURA_JPGUIDE],
+    ['refgo', '🤝', 'বন্ধুকে আনুন', '', !d.preview],
+    ['bdgo', '🏅', bd ? `ব্যাজ ${BN_NUM(bd.filter(b => b.done).length)}/${BN_NUM(bd.length)}` : 'ব্যাজ', '', !d.preview],
+    ['accgo', '💳', 'ফি ও হিসাব', '', !d.preview],
+    ['attgo', '📅', 'আমার হাজিরা', '', !d.preview],
+    ['docgo', '📄', 'সার্টিফিকেট', '', !d.preview]
+  ].filter(t => t[4]);
+  return `<div class="mgrid">${T.map(([id, ic, l, n]) => `<button class="mtile" id="${id}"><span class="mi">${ic}</span><span class="ml">${l}</span>${n ? `<span class="bn">${n}</span>` : ''}</button>`).join('')}</div>`;
+}
+
 // ------------------------------------------------------------------ bring a friend (বন্ধুকে আনুন)
 const REF_ST = { new: ['warn', 'নতুন'], contacted: ['warn', 'অফিস কথা বলেছে'], trial: ['ok', 'ট্রায়াল ক্লাস'], joined: ['ok', '🎉 ভর্তি হয়েছে'], lost: ['', 'আসেনি'] };
 const refLink = (code) => new URL('../web/?ref=' + encodeURIComponent(code), location.href).href;
@@ -1641,7 +1657,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${ivLinkHtml(d)}${jgLinkHtml(d)}${refLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${menuGridHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : (mats.length || vids.length) ? `${videoCardHtml(d, vids)}${mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>` : ''}`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1662,6 +1678,7 @@ function renderHome(d, user) {
   $$('[data-fbq]').forEach(b => b.onclick = () => { FB = null; renderFeedback(d, user, Number(b.dataset.fbq)); });
   const fh = $('#fbhide'); if (fh) fh.onclick = () => { try { localStorage.setItem(fbHideKey(d), '1'); } catch { /* not kept */ } $('.fbc').remove(); };
   const bl = $('#bellgo'); if (bl) bl.onclick = () => renderInbox(d, user);
+  [['accgo', 'acct'], ['attgo', 'att'], ['docgo', 'doc']].forEach(([id, t]) => { const b = $('#' + id); if (b) b.onclick = () => { ME_TAB = t; renderMe(d, user); }; });
   const rf = $('#refgo'); if (rf) rf.onclick = () => renderRefer(d, user);
   const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
