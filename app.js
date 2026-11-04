@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -517,6 +517,7 @@ function render() {
   if (p[0] === 'requests') return viewRequests(q);
   if (p[0] === 'proofs') return viewProofs(q);
   if (p[0] === 'feedback') return viewFeedback(q);
+  if (p[0] === 'docinbox') return viewDocInbox(q);
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
@@ -679,8 +680,8 @@ async function viewStudent(id, tab) {
   if (tab === 'docs') {
     const docs = new Map(S.documents.filter(d => d.student_id === s.id).map(d => [d.doc_type, d]));
     const done = DOC_TYPES.filter(([k]) => docs.get(k) && docs.get(k).status !== 'missing').length;
-    body = `<div class="card" style="margin-bottom:14px"><div class="row"><b>${done} / ${DOC_TYPES.length}</b> <span class="muted">কাগজ জমা হয়েছে</span><span class="spacer"></span><div class="bar" style="width:200px"><i style="width:${Math.round(done * 100 / DOC_TYPES.length)}%"></i></div></div></div>
-    <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; const al = docAlertFor(s, k); const dd = DOC_DATE[k]; return `<tr data-doc="${k}"><td><b>${l}</b>${dd ? `<label class="small muted ddt">${dd[1]} <input type="date" data-dt="${dd[0]}" value="${esc(d[dd[0]] || '')}"></label>` : ''}${al ? `<div style="margin-top:4px">${badge(al.level === 'red' ? 'due' : 'trial', al.issue)}</div>` : ''}</td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
+    body = `<div class="card" style="margin-bottom:14px"><div class="row"><b>${done} / ${DOC_TYPES.length}</b> <span class="muted">কাগজ জমা হয়েছে</span><span class="spacer"></span>${[...docs.values()].some(x => x.file_path) ? '<button class="btn sm ghost" id="dzip">⬇ সব কাগজ ZIP</button>' : ''}<div class="bar" style="width:200px"><i style="width:${Math.round(done * 100 / DOC_TYPES.length)}%"></i></div></div></div>
+    <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; const al = docAlertFor(s, k); const dd = DOC_DATE[k]; return `<tr data-doc="${k}"><td><b>${l}</b>${d.student_upload_at ? `<div class="small" style="color:var(--navy)">📱 ছাত্র নিজে দিয়েছে · ${fmtDT(d.student_upload_at)}</div>` : ''}${d.feedback && d.status === 'missing' ? `<div class="small" style="color:var(--red)">↩ ফেরত পাঠানো: ${esc(d.feedback)}</div>` : ''}${dd ? `<label class="small muted ddt">${dd[1]} <input type="date" data-dt="${dd[0]}" value="${esc(d[dd[0]] || '')}"></label>` : ''}${al ? `<div style="margin-top:4px">${badge(al.level === 'red' ? 'due' : 'trial', al.issue)}</div>` : ''}</td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}${d.file_path && d.status === 'received' && d.id ? `<button class="btn sm ghost" data-ret="${d.id}" title="ছাত্রকে আবার দিতে বলুন" style="color:var(--red)">↩</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
     <p class="small muted">ছবি বা PDF আপলোড করা যায়। ফাইল সুরক্ষিত থাকে, শুধু স্টাফরা লগইন করে দেখতে পারেন।</p>`;
   }
   if (tab === 'exams') {
@@ -735,6 +736,7 @@ async function viewStudent(id, tab) {
         const row = ex ? await API.update('documents', ex.id, { ...patch, updated_at: new Date().toISOString() }) : await API.insert('documents', { student_id: s.id, doc_type: k, status: 'missing', ...patch });
         putLocal('documents', row); return row;
       };
+      const z = $('#dzip'); if (z) z.onclick = () => downloadDocsZip(s);
       $$('tr[data-doc]').forEach(tr => {
         const k = tr.dataset.doc;
         $('[data-dst]', tr).onchange = async (e) => { try { await saveDoc(k, { status: e.target.value }); toast('আপডেট হয়েছে'); } catch (err) { toast(errMsg(err), true); } };
@@ -752,6 +754,7 @@ async function viewStudent(id, tab) {
             toast('আপলোড হয়েছে'); render();
           } catch (err) { toast(errMsg(err), true); }
         };
+        const rt = $('[data-ret]', tr); if (rt) rt.onclick = () => docReturnModal(byId(S.documents, rt.dataset.ret));
         const v = $('[data-view]', tr); if (v) v.onclick = async () => { try { const u = await API.fileUrl(v.dataset.view); const w = window.open(); if (w) { w.opener = null; w.location = u; } } catch (err) { toast(errMsg(err), true); } };
       });
     }
@@ -2314,6 +2317,54 @@ function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(
 
 
 
+
+// ------------------------------------------------------------------ papers students scanned on the student site (v38)
+function viewDocInbox(q) {
+  const tab = q.get('t') === 'all' ? 'all' : 'new';
+  const all = S.documents.filter(d => d.student_upload_at).sort((a, b) => String(b.student_upload_at).localeCompare(String(a.student_upload_at)));
+  const fresh = all.filter(d => d.status === 'received'); const list = tab === 'new' ? fresh : all;
+  const per = new Map(); for (const d of list) { if (!per.has(d.student_id)) per.set(d.student_id, []); per.get(d.student_id).push(d); }
+  mount('#/docinbox', `
+  <div class="top"><div><h1>ছাত্রদের পাঠানো কাগজ</h1><p>ছাত্ররা ছাত্রদের সাইটের "জাপান → আমার কাগজপত্র" থেকে ফোনে স্ক্যান করে কাগজ দেয়। দেখে ঠিক থাকলে ✓ যাচাই করুন, ঝাপসা বা ভুল হলে ↩ কারণ লিখে ফেরত দিন — ছাত্র সাইটে দেখে আবার দেবে। সব কাগজ ছাত্রের প্রোফাইলের "কাগজপত্র" ট্যাবেও থাকে।</p></div></div>
+  <div class="tabs"><button data-dt2="new" class="${tab === 'new' ? 'on' : ''}">দেখা বাকি (${fresh.length})</button><button data-dt2="all" class="${tab === 'all' ? 'on' : ''}">ছাত্রদের দেওয়া সব (${all.length})</button></div>
+  ${per.size ? [...per.entries()].map(([sid, ds]) => { const st = byId(S.students, sid) || {}; const tot = S.documents.filter(x => x.student_id === sid && x.status !== 'missing').length;
+    return `<div class="card" style="margin-bottom:12px"><div class="row" style="margin-bottom:8px"><div><a href="#/student/${sid}?t=docs"><b>${esc(studentName(st))}</b></a> <span class="small muted">${esc(st.admission_no || '')} · ${tot}/${DOC_TYPES.length}টি কাগজ জমা</span></div><span class="spacer"></span><button class="btn sm ghost" data-zip="${sid}">⬇ সব কাগজ ZIP</button></div>
+      <div class="tw"><table><tr><th>কাগজ</th><th>ছাত্র দিয়েছে</th><th>অবস্থা</th><th></th></tr>${ds.map(d => `<tr><td><b>${esc(docLabel(d.doc_type))}</b>${d.expires_on && d.doc_type === 'passport' ? `<div class="small muted">মেয়াদ ${fmtD(d.expires_on)}</div>` : ''}${d.issued_on ? `<div class="small muted">তারিখ ${fmtD(d.issued_on)}</div>` : ''}</td><td>${fmtDT(d.student_upload_at)}</td>
+        <td>${badge(d.status === 'verified' ? 'active' : d.status === 'received' ? 'trial' : 'dropped', d.status === 'missing' && d.feedback ? 'ফেরত পাঠানো' : DOC_STATUS[d.status])}</td>
+        <td><div class="row" style="gap:6px;justify-content:flex-end">${d.file_path ? `<button class="btn sm ghost" data-v2="${esc(d.file_path)}">👁 দেখুন</button>` : ''}${d.status === 'received' ? `<button class="btn sm" data-ok2="${d.id}">✓ যাচাই</button><button class="btn sm ghost" data-ret="${d.id}" style="color:var(--red)">↩ ফেরত</button>` : ''}</div></td></tr>`).join('')}</table></div></div>`; }).join('')
+    : `<div class="card"><div class="empty">${tab === 'new' ? 'দেখার মতো নতুন কাগজ নেই 🎉' : 'এখনো কোনো ছাত্র নিজে কাগজ দেয়নি'}</div></div>`}`, () => {
+    $$('[data-dt2]').forEach(b => b.onclick = () => { location.hash = '#/docinbox' + (b.dataset.dt2 === 'all' ? '?t=all' : ''); });
+    $$('[data-v2]').forEach(b => b.onclick = async () => { const w = window.open('', '_blank'); try { const u = await API.fileUrl(b.dataset.v2); if (w) { w.opener = null; w.location = u; } } catch (e) { if (w) w.close(); toast(errMsg(e), true); } });
+    $$('[data-ok2]').forEach(b => b.onclick = async () => { b.disabled = true; try { putLocal('documents', await API.update('documents', b.dataset.ok2, { status: 'verified', feedback: '', updated_at: new Date().toISOString() })); toast('যাচাই হয়েছে ✓'); render(); } catch (e) { b.disabled = false; toast(errMsg(e), true); } });
+    $$('[data-ret]').forEach(b => b.onclick = () => docReturnModal(byId(S.documents, b.dataset.ret)));
+    $$('[data-zip]').forEach(b => b.onclick = () => downloadDocsZip(byId(S.students, b.dataset.zip)));
+  });
+}
+function docReturnModal(d) {
+  if (!d) return; const st = byId(S.students, d.student_id) || {};
+  openModal(`<h2>↩ ${esc(docLabel(d.doc_type))} ফেরত পাঠান</h2><p class="small muted" style="margin:0 0 8px">${esc(studentName(st))} ছাত্রদের সাইটে কারণটা দেখবে আর নতুন করে দেবে।</p>
+    <div class="mchips" style="margin:0 0 8px;display:flex;flex-wrap:wrap;gap:6px">${['ছবি ঝাপসা — পরিষ্কার করে আবার তুলুন', 'সব পাতা নেই — বাকি পাতাগুলোও দিন', 'কাগজের কোণা কাটা পড়েছে', 'ভুল কাগজ দিয়েছেন', 'মেয়াদ শেষ / পুরোনো কাগজ — নতুনটা দিন'].map(t => `<button type="button" class="btn sm ghost" data-rs="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+    <form id="drf" class="form"><label class="f full">কারণ<textarea name="r" rows="3" maxlength="300" required></textarea></label><div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="drc">বাতিল</button><button class="btn">ফেরত পাঠান</button></div></form>`);
+  $('#drc').onclick = closeModal; $$('[data-rs]').forEach(b => b.onclick = () => { $('#drf').r.value = b.dataset.rs; });
+  $('#drf').onsubmit = async (e) => { e.preventDefault(); const r = e.target.r.value.trim(); if (!r) return;
+    try { putLocal('documents', await API.update('documents', d.id, { status: 'missing', feedback: r, updated_at: new Date().toISOString() })); closeModal(); toast('ছাত্রকে জানানো হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
+}
+let _jszip = null;
+function loadJsZip() { if (window.JSZip) return Promise.resolve(window.JSZip); if (_jszip) return _jszip;
+  _jszip = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'; sc.onload = () => res(window.JSZip); sc.onerror = () => { _jszip = null; rej(new Error('ZIP বানানোর ফাইল লোড হয়নি')); }; document.head.appendChild(sc); }); return _jszip; }
+async function downloadDocsZip(st) {
+  if (!st) return; const ds = S.documents.filter(d => d.student_id === st.id && d.file_path); if (!ds.length) return toast('কোনো ফাইল নেই', true);
+  toast(`${ds.length}টি ফাইল নামানো হচ্ছে…`);
+  try {
+    const JSZip = await loadJsZip(); const zip = new JSZip(); const order = DOC_TYPES.map(x => x[0]);
+    for (const d of ds) { const u = await API.fileUrl(d.file_path); const r = await fetch(u); if (!r.ok) throw new Error(docLabel(d.doc_type) + ' নামানো যায়নি');
+      const ext = (d.file_path.split('.').pop() || 'bin').toLowerCase(); const i = order.indexOf(d.doc_type) + 1;
+      zip.file(`${String(i).padStart(2, '0')}-${docLabel(d.doc_type).replace(/[\\/:*?"<>|]/g, '-')}.${ext}`, await r.blob()); }
+    const blob = await zip.generateAsync({ type: 'blob' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `${st.admission_no || 'student'}-${(st.name_en || '').replace(/[^A-Za-z0-9]+/g, '-')}-documents.zip`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast('ZIP নামানো হয়েছে');
+  } catch (e) { toast(errMsg(e), true); }
+}
 
 // ------------------------------------------------------------------ monthly class survey (v36) — shown without names
 function viewFeedback(q) {

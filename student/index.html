@@ -234,6 +234,12 @@
   .mtile:hover{border-color:#C9A24B;transform:translateY(-1px)}.mtile:active{transform:scale(.97)}
   .mtile .mi{font-size:24px;line-height:1}.mtile .ml{font-size:12px;font-weight:600;line-height:1.25;text-align:center;color:var(--navy)}
   .mtile .bn{position:absolute;top:6px;right:8px;min-width:18px;height:18px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+  .dpages{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+  .dpg{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#f4f1ea}
+  .dpg img{width:100%;height:100%;object-fit:cover}.dpg span{position:absolute;left:4px;bottom:4px;background:rgba(27,41,69,.8);color:#fff;font-size:11px;border-radius:6px;padding:1px 6px}
+  .dpg button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(200,55,43,.9);color:#fff;font-size:12px;cursor:pointer}
+  .dpg.add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:2px dashed #C9A24B;background:#FFFBF0;color:var(--navy)}
+  .dupl{border:2px solid var(--navy)}.dci{padding:12px 14px;margin:0}.dci.on{box-shadow:0 0 0 2px #C9A24B inset}
   .sech{font:800 21px 'Noto Serif Bengali',serif;color:var(--navy);margin:2px 0 12px}
   .mlist2{display:grid;gap:8px;margin:0 0 14px}
   .mrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;font:inherit;color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(27,41,69,.05)}

@@ -196,6 +196,11 @@ const Demo = {
     if (rows.filter(r => r.student_id === sid && r.status === 'pending').length >= 3) throw new Error('busy');
     if (trx && (rows.some(r => (r.trx_id || '').toUpperCase() === trx && r.status !== 'rejected') || this.read('payments').some(p => (p.trx_id || '').trim().toUpperCase() === trx))) throw new Error('dup_trx');
     rows.push({ id: 'pp-' + Date.now(), student_id: sid, method, amount, trx_id: trx, sender, paid_on, file_path: file || null, note, status: 'pending', reply: '', created_at: new Date().toISOString() }); this.write('pay_proofs', rows); return this.payproofs(); },
+  docs() { const sid = this.linkedId(); return this.read('documents').filter(x => x.student_id === sid).map(x => ({ doc_type: x.doc_type, status: x.status, file_path: x.file_path || null, feedback: x.feedback || '', expires_on: x.expires_on, issued_on: x.issued_on, updated_at: x.updated_at, student_upload_at: x.student_upload_at })); },
+  docUpload(type, path, exp, iss) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('documents'); const i = rows.findIndex(x => x.student_id === sid && x.doc_type === type); const now = new Date().toISOString();
+    if (i >= 0 && rows[i].status === 'verified') throw new Error('verified');
+    const row = { ...(i >= 0 ? rows[i] : { id: 'doc-' + Date.now(), student_id: sid, doc_type: type, note: '' }), status: 'received', file_path: path, feedback: '', student_upload_at: now, updated_at: now };
+    if (exp) row.expires_on = exp; if (iss) row.issued_on = iss; if (i >= 0) rows[i] = row; else rows.push(row); this.write('documents', rows); return this.docs(); },
   docRequests() { const sid = this.linkedId(); return this.read('doc_requests').filter(r => r.student_id === sid).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))); },
   docRequest(kind, purpose, note) { const sid = this.linkedId(); if (!sid) throw new Error('not_linked'); const rows = this.read('doc_requests'); if (rows.filter(r => r.student_id === sid && r.status === 'pending').length >= 3) throw new Error('busy');
     rows.push({ id: 'dr-' + Date.now(), student_id: sid, kind, purpose, note, status: 'pending', reply: '', created_at: new Date().toISOString() }); this.write('doc_requests', rows); return this.docRequests(); },
@@ -322,6 +327,10 @@ const API = {
   async payproofs() { if (PREVIEW) return null; if (DEMO) return Demo.payproofs(); const { data, error } = await sb.rpc('student_payproofs'); if (error) throw error; return data; },
   async payproofSubmit(m, a, t, snd, dt, f, n) { if (DEMO) return Demo.payproofSubmit(m, a, t, snd, dt, f, n); const { data, error } = await sb.rpc('student_payproof_submit', { p_method: m, p_amount: a, p_trx: t, p_sender: snd, p_paid_on: dt, p_file: f || '', p_note: n }); if (error) throw error; return data; },
   async uploadProof(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('payproof').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
+  async docs() { if (PREVIEW) return []; if (DEMO) return Demo.docs(); const { data, error } = await sb.rpc('student_docs'); if (error) throw error; return data || []; },
+  async docUpload(t, p, e, i) { if (DEMO) return Demo.docUpload(t, p, e, i); const { data, error } = await sb.rpc('student_doc_upload', { p_type: t, p_path: p, p_expires: e, p_issued: i }); if (error) throw error; return data || []; },
+  async uploadDoc(path, blob) { if (DEMO) return Demo.uploadHw(path, blob); const { error } = await sb.storage.from('documents').upload(path, blob, { upsert: false, contentType: blob.type || undefined }); if (error) throw error; return path; },
+  async docFileUrl(path) { if (DEMO) return Demo.fileUrl(path); const { data, error } = await sb.storage.from('documents').createSignedUrl(path, 600); if (error) throw error; return data.signedUrl; },
   async docRequests() { if (PREVIEW) return []; if (DEMO) return Demo.docRequests(); const { data, error } = await sb.rpc('student_doc_requests'); if (error) throw error; return data || []; },
   async docRequest(kind, purpose, note) { if (DEMO) return Demo.docRequest(kind, purpose, note); const { data, error } = await sb.rpc('student_doc_request', { p_kind: kind, p_purpose: purpose, p_note: note }); if (error) throw error; return data || []; },
   async videoViews() { if (PREVIEW) return []; if (DEMO) return Demo.videoViews(); const { data, error } = await sb.rpc('student_video_views'); if (error) throw error; return data || []; },
@@ -645,7 +654,6 @@ function attendanceHtml(rows, inner) {
 const JSTAGES = [['none', 'শুরু হয়নি'], ['docs', 'কাগজ জোগাড়'], ['school', 'স্কুল বাছাই'], ['applied', 'আবেদন জমা'], ['coe', 'COE পেয়েছে'], ['visa', 'ভিসা পেয়েছে'], ['departed', 'জাপানে গেছে']];
 const APP_ST = { preparing: 'কাগজ তৈরি হচ্ছে', submitted: 'স্কুলে আবেদন জমা', interview: 'ইন্টারভিউ', accepted: 'স্কুল নিয়েছে', coe_applied: 'COE-র আবেদন হয়েছে', coe_granted: 'COE পেয়েছে', visa: 'ভিসা পেয়েছে', departed: 'জাপানে গেছে', rejected: 'স্কুল নেয়নি', coe_denied: 'COE পায়নি', withdrawn: 'বাদ দেওয়া হয়েছে' };
 const APP_FLOW = ['preparing', 'submitted', 'interview', 'accepted', 'coe_applied', 'coe_granted', 'visa', 'departed'];
-const DOC_TYPES = [['photo', 'পাসপোর্ট সাইজ ছবি'], ['passport', 'পাসপোর্ট'], ['nid', 'NID / জন্ম নিবন্ধন'], ['ssc', 'SSC সনদ ও মার্কশিট'], ['hsc', 'HSC সনদ ও মার্কশিট'], ['degree', 'স্নাতক / ডিপ্লোমা সনদ'], ['jlpt', 'JLPT / NAT সনদ'], ['study_hours', 'স্টাডি-আওয়ার সার্টিফিকেট'], ['sponsor', 'স্পনসরের আয়ের প্রমাণ'], ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ'], ['other', 'অন্যান্য']];
 const REQUIRED_DOCS = ['photo', 'passport', 'nid', 'ssc', 'hsc', 'study_hours', 'sponsor', 'bank', 'relation'];
 function japanHtml(j) {
   if (!j) return '<div class="card"><div class="empty">তথ্য পাওয়া যায়নি।</div></div>';
@@ -1232,6 +1240,83 @@ async function renderRefer(d, user) {
   const sh = $('#refshare'); if (sh) sh.onclick = () => navigator.share({ title: I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট', text: msg.replace('\n' + link, ''), url: link }).catch(() => {});
 }
 
+// ------------------------------------------------------------------ my papers for Japan (আমার কাগজপত্র): scan with the phone, the office collects them
+const DOC_TYPES = [
+  ['photo', 'পাসপোর্ট সাইজ ছবি', 'সাদা ব্যাকগ্রাউন্ডে, সাম্প্রতিক'], ['passport', 'পাসপোর্ট', 'ছবি আর তথ্যের পাতা'], ['nid', 'NID / জন্ম নিবন্ধন', 'দুই পাশ'],
+  ['ssc', 'SSC সনদ ও মার্কশিট', 'সনদ + মার্কশিট, সব পাতা'], ['hsc', 'HSC সনদ ও মার্কশিট', 'সনদ + মার্কশিট, সব পাতা'], ['degree', 'স্নাতক / ডিপ্লোমা সনদ', 'থাকলে'],
+  ['jlpt', 'JLPT / NAT সনদ', 'পাস করলে'], ['study_hours', 'স্টাডি-আওয়ার সার্টিফিকেট', 'ইনস্টিটিউট দেয় — "সার্টিফিকেট" থেকে চান'], ['sponsor', 'স্পনসরের আয়ের প্রমাণ', 'ট্যাক্স / আয়ের কাগজ'],
+  ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি', 'স্পনসরের, সাম্প্রতিক'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ', 'জন্ম নিবন্ধন / ফ্যামিলি সার্টিফিকেট'], ['other', 'অন্যান্য', 'অফিস চাইলে']
+];
+const DOC_DATE = { passport: ['expires_on', 'পাসপোর্টের মেয়াদ শেষের তারিখ'], bank: ['issued_on', 'স্টেটমেন্টের তারিখ'], sponsor: ['issued_on', 'কাগজের তারিখ'] };
+let DU = null;   // the paper being scanned: { type, pages: [{ blob, url }], pdf: File|null, bw: false, busy }
+function docsRowHtml(d) { if (d.preview) return ''; const L = d.docs || []; const n = DOC_TYPES.filter(([k]) => { const x = L.find(y => y.doc_type === k); return x && x.status !== 'missing'; }).length; const back = L.filter(x => x.status === 'missing' && x.feedback).length;
+  return `<button class="mrow" id="dcgo"><span class="ri">📂</span><span class="rt"><b>আমার কাগজপত্র</b><small>${back ? `<span style="color:var(--red)">${BN_NUM(back)}টি আবার দিতে হবে</span> · ` : ''}${BN_NUM(n)}/${BN_NUM(DOC_TYPES.length)}টি জমা — ফোনে স্ক্যান করে দিন</small></span>${back ? `<span class="bn">${BN_NUM(back)}</span>` : ''}<span class="rc">›</span></button>`; }
+let _jspdf = null;
+function loadJsPdf() { if (window.jspdf) return Promise.resolve(window.jspdf); if (_jspdf) return _jspdf;
+  _jspdf = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; sc.onload = () => res(window.jspdf); sc.onerror = () => { _jspdf = null; rej(new Error('PDF বানানোর ফাইল লোড হয়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন')); }; document.head.appendChild(sc); });
+  return _jspdf; }
+async function scanPage(file, bw) {   // a phone photo → upright, max 2000px JPEG; "সাদা-কালো" makes a clean scan look
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file));
+  const k = Math.min(1, 2000 / Math.max(bmp.width, bmp.height)); const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  const g = c.getContext('2d'); g.drawImage(bmp, 0, 0, c.width, c.height);
+  if (bw) { const im = g.getImageData(0, 0, c.width, c.height); const a = im.data; for (let i = 0; i < a.length; i += 4) { let y = .299 * a[i] + .587 * a[i + 1] + .114 * a[i + 2]; y = Math.max(0, Math.min(255, (y - 128) * 1.45 + 150)); a[i] = a[i + 1] = a[i + 2] = y; } g.putImageData(im, 0, 0); }
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .82)); return { blob, w: c.width, h: c.height };
+}
+async function renderDocs(d, user) {
+  scrollTo(0, 0); if (!d.docs) { $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; try { d.docs = await API.docs(); } catch (e) { d.docs = []; toast(errMsg(e), true); } }
+  const L = d.docs || []; const got = (k) => L.find(x => x.doc_type === k);
+  const done = DOC_TYPES.filter(([k]) => got(k) && got(k).status !== 'missing').length;
+  const pill = (x) => !x || (x.status === 'missing' && !x.feedback) ? '<span class="pill">জমা হয়নি</span>' : x.status === 'missing' ? '<span class="pill bad">↩ আবার দিন</span>' : x.status === 'verified' ? '<span class="pill ok">✓ যাচাই হয়েছে</span>' : '<span class="pill warn">⏳ অফিস দেখছে</span>';
+  const up = DU ? `<div class="card acct dupl"><div class="row" style="justify-content:space-between"><b>📷 ${esc((DOC_TYPES.find(x => x[0] === DU.type) || [])[1])}</b><button class="out" id="ducancel" style="padding:2px 9px">✕</button></div>
+      <div class="small muted" style="margin:4px 0 10px">${DU.type === 'photo' ? 'একটা পরিষ্কার ছবি দিন (সাদা ব্যাকগ্রাউন্ড)।' : 'প্রতিটা পাতার আলাদা ছবি তুলুন — সব পাতা মিলে একটা PDF হয়ে যাবে। কাগজ সমান জায়গায় রেখে, ভালো আলোতে, ওপর থেকে সোজা করে তুলুন। চাইলে আগে থেকে বানানো PDF-ও দিতে পারেন।'}</div>
+      ${DU.pdf ? `<div class="attr" style="padding:6px 0">📄 <b style="flex:1;overflow-wrap:anywhere">${esc(DU.pdf.name)}</b><span class="small muted">${(DU.pdf.size / 1048576).toFixed(1)} MB</span></div>`
+        : `<div class="dpages">${DU.pages.map((pg, i) => `<div class="dpg"><img src="${pg.url}" alt="পাতা ${i + 1}"><span>${BN_NUM(i + 1)}</span><button data-pgdel="${i}" aria-label="বাদ দিন">✕</button></div>`).join('')}
+          ${DU.type === 'photo' && DU.pages.length ? '' : `<label class="dpg add"><input type="file" id="dupick" accept="image/*" ${DU.type === 'photo' ? '' : 'multiple'} capture="environment" hidden><b style="font-size:26px;line-height:1">📷</b><small>${DU.pages.length ? 'আরও পাতা' : 'ছবি তুলুন'}</small></label>`}</div>
+          ${DU.type === 'photo' ? '' : `<div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap"><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="dubw" ${DU.bw ? 'checked' : ''}> সাদা-কালো স্ক্যান (লেখা আরও পরিষ্কার)</label><span class="spacer" style="flex:1"></span><label class="linkbtn" style="cursor:pointer">📄 PDF দিন<input type="file" id="dupdf" accept="application/pdf" hidden></label></div>`}`}
+      ${DOC_DATE[DU.type] ? `<label class="f" style="margin-top:10px">${DOC_DATE[DU.type][1]}<input type="date" id="dudate" value="${esc((got(DU.type) || {})[DOC_DATE[DU.type][0]] || '')}"></label>` : ''}
+      <button class="btn" id="dusend" style="width:100%;justify-content:center;margin-top:12px" ${DU.busy || !(DU.pdf || DU.pages.length) ? 'disabled' : ''}>${DU.busy ? esc(DU.busy) : 'অফিসে জমা দিন'}</button><div class="msg" id="dumsg"></div></div>` : '';
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">📂 আমার কাগজপত্র</b><button class="btn sm ghost" id="dcback">‹ ফিরে যান</button></div>
+    <div class="card acct"><div class="row" style="justify-content:space-between"><b>${BN_NUM(done)}/${BN_NUM(DOC_TYPES.length)}টি কাগজ জমা হয়েছে</b><span class="small muted">জাপানে আবেদনের জন্য</span></div><div class="vbar"><i style="width:${Math.round(100 * done / DOC_TYPES.length)}%"></i></div>
+      <div class="small muted" style="line-height:1.6">ফোনের ক্যামেরা দিয়ে কাগজের ছবি তুলে এখানে জমা দিন — অফিস এখান থেকেই নিয়ে নেবে, যাচাই করবে। ঝাপসা বা কাটা হলে অফিস "আবার দিন" লিখে ফেরত দেবে। <b>মূল কাগজ</b> পরে অফিসে দেখাতে হতে পারে।</div></div>
+    ${up}
+    <div class="mlist2">${DOC_TYPES.map(([k, l, hint]) => { const x = got(k); const lock = x && x.status === 'verified';
+      return `<div class="card dci ${DU && DU.type === k ? 'on' : ''}"><div class="row" style="gap:10px;align-items:flex-start"><div style="flex:1;min-width:0"><b>${esc(l)}</b><div class="small muted">${esc(hint)}</div>
+        ${x && x.feedback && x.status === 'missing' ? `<div class="qans" style="margin-top:6px"><b>🏢 অফিস:</b> ${esc(x.feedback)}</div>` : ''}
+        ${x && x.student_upload_at ? `<div class="small muted" style="margin-top:4px">জমা দিয়েছেন ${localD(x.student_upload_at)}${x.expires_on && k === 'passport' ? ' · মেয়াদ ' + fmtD(x.expires_on) : ''}</div>` : ''}</div>${pill(x)}</div>
+        <div class="row" style="gap:6px;margin-top:8px">${x && x.file_path ? `<button class="btn sm ghost" data-dview="${esc(x.file_path)}">👁 দেখুন</button>` : ''}${lock ? '<span class="small muted">বদলাতে চাইলে অফিসে বলুন</span>' : `<button class="btn sm ${x && x.status !== 'missing' ? 'ghost' : ''}" data-dup="${k}">${x && x.file_path ? '📷 নতুন করে দিন' : '📷 স্ক্যান করে দিন'}</button>`}</div></div>`; }).join('')}</div></div>`;
+  const re = () => renderDocs(d, user);
+  const clear = () => { if (DU) DU.pages.forEach(p => URL.revokeObjectURL(p.url)); DU = null; };
+  $('#dcback').onclick = () => { clear(); renderHome(d, user); };
+  $$('[data-dup]').forEach(b => b.onclick = () => { clear(); DU = { type: b.dataset.dup, pages: [], pdf: null, bw: false, busy: '' }; re(); const c = $('.dupl'); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+  $$('[data-dview]').forEach(b => b.onclick = async () => { const w = window.open('', '_blank'); try { const u = await API.docFileUrl(b.dataset.dview); if (w) w.location = u; else location.href = u; } catch (e) { if (w) w.close(); toast(errMsg(e), true); } });
+  if (!DU) return;
+  $('#ducancel').onclick = () => { clear(); re(); };
+  const bw = $('#dubw'); if (bw) bw.onchange = () => { DU.bw = bw.checked; toast(DU.bw ? 'নতুন তোলা পাতাগুলো সাদা-কালো হবে' : 'রঙিন থাকবে'); };
+  $$('[data-pgdel]').forEach(b => b.onclick = () => { const [p] = DU.pages.splice(Number(b.dataset.pgdel), 1); URL.revokeObjectURL(p.url); re(); });
+  const pk = $('#dupick'); if (pk) pk.onchange = async () => { const fs = [...pk.files]; if (!fs.length) return; if (DU.pages.length + fs.length > 15) return toast('একবারে সর্বোচ্চ ১৫ পাতা', true);
+    DU.busy = 'ছবি ঠিক করা হচ্ছে…'; re(); try { for (const f of fs) { const pg = await scanPage(f, DU.bw); DU.pages.push({ ...pg, url: URL.createObjectURL(pg.blob) }); } } catch (e) { toast('ছবিটা পড়া যায়নি — আবার তুলুন', true); } DU.busy = ''; re(); };
+  const pf = $('#dupdf'); if (pf) pf.onchange = () => { const f = pf.files[0]; if (!f) return; if (f.size > 10 * 1048576) return toast('PDF ১০ MB-এর বেশি — ছোট করে দিন', true); DU.pages.forEach(p => URL.revokeObjectURL(p.url)); DU.pages = []; DU.pdf = f; re(); };
+  $('#dusend').onclick = async () => {
+    const msg = $('#dumsg'); const dt = $('#dudate'); const dk = DOC_DATE[DU.type]; const dv = dt ? dt.value : '';
+    if (dk && DU.type === 'passport' && dt && !dt.value) { msg.className = 'msg err'; msg.textContent = 'পাসপোর্টের মেয়াদ শেষের তারিখ দিন'; return; }
+    try {
+      let blob, ext;
+      if (DU.pdf) { blob = DU.pdf; ext = 'pdf'; }
+      else if (DU.type === 'photo') { blob = DU.pages[0].blob; ext = 'jpg'; }
+      else { DU.busy = 'PDF বানানো হচ্ছে…'; re(); const { jsPDF } = await loadJsPdf(); const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true }); const W = 210, H = 297, M = 6;
+        for (let i = 0; i < DU.pages.length; i++) { const pg = DU.pages[i]; if (i) doc.addPage('a4'); const r = Math.min((W - 2 * M) / pg.w, (H - 2 * M) / pg.h); const w = pg.w * r, h = pg.h * r;
+          const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(pg.blob); }); doc.addImage(data, 'JPEG', (W - w) / 2, (H - h) / 2, w, h, undefined, 'FAST'); }
+        blob = doc.output('blob'); ext = 'pdf'; }
+      if (blob.size > 10 * 1048576) throw new Error('ফাইল ১০ MB-এর বেশি হয়ে গেছে — পাতা কমিয়ে বা সাদা-কালো করে আবার দিন');
+      DU.busy = 'জমা হচ্ছে…'; re();
+      const sid = await API.myStudentId(); if (!sid) throw new Error('not_linked');
+      const path = await API.uploadDoc(`${sid}/${DU.type}-${Date.now()}.${ext}`, blob);
+      d.docs = await API.docUpload(DU.type, path, dk && dk[0] === 'expires_on' ? (dv || null) : null, dk && dk[0] === 'issued_on' ? (dv || null) : null);
+      const name = (DOC_TYPES.find(x => x[0] === DU.type) || [])[1]; clear(); toast(`${name} জমা হয়েছে ✓ অফিস দেখে নেবে`); re();
+    } catch (e) { if (DU) DU.busy = ''; re(); const m = $('#dumsg'); if (m) { m.className = 'msg err'; m.textContent = /verified/.test(errMsg(e)) ? 'অফিস এটা যাচাই করে ফেলেছে — বদলাতে চাইলে অফিসে বলুন' : errMsg(e); } }
+  };
+}
+
 // ------------------------------------------------------------------ Japan life guide (জাপান লাইফ গাইড)
 let JG_OPEN = 'before';
 const jgKey = (d) => 'sakura_jg_' + ((d.student || {}).admission_no || 'p');
@@ -1671,7 +1756,7 @@ function renderHome(d, user) {
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`; }
   else if (NAVSEC === 'test') body = `<h1 class="sech">📝 মক টেস্ট</h1>${MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])}`;
-  else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'কাগজপত্র আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
+  else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${docsRowHtml(d)}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'স্কুল, ধাপ আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
   else if (NAVSEC === 'me') { const bd = d.preview ? null : badgeList(d); const ib = inboxCount(d);
     body = `<h1 class="sech">👤 আমি</h1><div class="card acct"><b style="font-size:16px">${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</div></div>
       <div class="mlist2">${d.preview ? '' : row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
@@ -1682,6 +1767,7 @@ function renderHome(d, user) {
   $$('[data-sec]').forEach(b => b.onclick = () => { NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
   const jp = $('#jpgo'); if (jp) jp.onclick = () => { ME_TAB = 'jp'; renderMe(d, user); };
   const ibg = $('#ibgo'); if (ibg) ibg.onclick = () => renderInbox(d, user);
+  const dcg = $('#dcgo'); if (dcg) dcg.onclick = () => { DU = null; renderDocs(d, user); };
   const lo = $('#lo'); if (lo) lo.onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
@@ -1936,6 +2022,7 @@ async function start() {
     if (!d.blocked) { try { d.videoViews = await API.videoViews(); } catch (e) { d.videoViews = []; console.warn(e); } }
     try { d.docreq = await API.docRequests(); } catch (e) { d.docreq = []; console.warn(e); }
     try { d.fb = await API.feedback(); } catch (e) { d.fb = null; console.warn(e); }
+    try { d.docs = await API.docs(); } catch (e) { d.docs = null; console.warn(e); }
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') { notifyMarkAll(d); startNotifyPoll(d); }
     renderHome(d, user);
   } catch (e) {
