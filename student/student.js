@@ -739,6 +739,127 @@ function bindLeaderboard(d, user) {
   $$('[data-lbl]').forEach(b => b.onclick = async () => { try { d.lb = await API.leaderboard(b.dataset.lbl); renderHome(d, user); } catch (e) { toast(errMsg(e), true); } });
 }
 
+
+// ------------------------------------------------------------------ kana practice (কানা অনুশীলন): chart with stroke order, and quizzes
+const KANA_ROWS = [   // [row name, [[hiragana, romaji, Bangla], …]] — '' keeps the 5-column chart in place
+  ['あ', [['あ', 'a', 'আ'], ['い', 'i', 'ই'], ['う', 'u', 'উ'], ['え', 'e', 'এ'], ['お', 'o', 'ও']]],
+  ['か', [['か', 'ka', 'কা'], ['き', 'ki', 'কি'], ['く', 'ku', 'কু'], ['け', 'ke', 'কে'], ['こ', 'ko', 'কো']]],
+  ['さ', [['さ', 'sa', 'সা'], ['し', 'shi', 'শি'], ['す', 'su', 'সু'], ['せ', 'se', 'সে'], ['そ', 'so', 'সো']]],
+  ['た', [['た', 'ta', 'তা'], ['ち', 'chi', 'চি'], ['つ', 'tsu', 'ৎসু'], ['て', 'te', 'তে'], ['と', 'to', 'তো']]],
+  ['な', [['な', 'na', 'না'], ['に', 'ni', 'নি'], ['ぬ', 'nu', 'নু'], ['ね', 'ne', 'নে'], ['の', 'no', 'নো']]],
+  ['は', [['は', 'ha', 'হা'], ['ひ', 'hi', 'হি'], ['ふ', 'fu', 'ফু'], ['へ', 'he', 'হে'], ['ほ', 'ho', 'হো']]],
+  ['ま', [['ま', 'ma', 'মা'], ['み', 'mi', 'মি'], ['む', 'mu', 'মু'], ['め', 'me', 'মে'], ['も', 'mo', 'মো']]],
+  ['や', [['や', 'ya', 'ইয়া'], '', ['ゆ', 'yu', 'ইউ'], '', ['よ', 'yo', 'ইয়ো']]],
+  ['ら', [['ら', 'ra', 'রা'], ['り', 'ri', 'রি'], ['る', 'ru', 'রু'], ['れ', 're', 'রে'], ['ろ', 'ro', 'রো']]],
+  ['わ', [['わ', 'wa', 'ওয়া'], '', '', '', ['を', 'wo', 'ও']]],
+  ['ん', [['ん', 'n', 'ন্/ং'], '', '', '', '']],
+  ['が', [['が', 'ga', 'গা'], ['ぎ', 'gi', 'গি'], ['ぐ', 'gu', 'গু'], ['げ', 'ge', 'গে'], ['ご', 'go', 'গো']], 'd'],
+  ['ざ', [['ざ', 'za', 'যা'], ['じ', 'ji', 'জি'], ['ず', 'zu', 'যু'], ['ぜ', 'ze', 'যে'], ['ぞ', 'zo', 'যো']], 'd'],
+  ['だ', [['だ', 'da', 'দা'], ['ぢ', 'ji', 'জি'], ['づ', 'zu', 'যু'], ['で', 'de', 'দে'], ['ど', 'do', 'দো']], 'd'],
+  ['ば', [['ば', 'ba', 'বা'], ['び', 'bi', 'বি'], ['ぶ', 'bu', 'বু'], ['べ', 'be', 'বে'], ['ぼ', 'bo', 'বো']], 'd'],
+  ['ぱ', [['ぱ', 'pa', 'পা'], ['ぴ', 'pi', 'পি'], ['ぷ', 'pu', 'পু'], ['ぺ', 'pe', 'পে'], ['ぽ', 'po', 'পো']], 'd'],
+  ['きゃ', [['きゃ', 'kya', 'কিয়া'], ['きゅ', 'kyu', 'কিউ'], ['きょ', 'kyo', 'কিয়ো']], 'y'],
+  ['しゃ', [['しゃ', 'sha', 'শা'], ['しゅ', 'shu', 'শু'], ['しょ', 'sho', 'শো']], 'y'],
+  ['ちゃ', [['ちゃ', 'cha', 'চা'], ['ちゅ', 'chu', 'চু'], ['ちょ', 'cho', 'চো']], 'y'],
+  ['にゃ', [['にゃ', 'nya', 'নিয়া'], ['にゅ', 'nyu', 'নিউ'], ['にょ', 'nyo', 'নিয়ো']], 'y'],
+  ['ひゃ', [['ひゃ', 'hya', 'হিয়া'], ['ひゅ', 'hyu', 'হিউ'], ['ひょ', 'hyo', 'হিয়ো']], 'y'],
+  ['みゃ', [['みゃ', 'mya', 'মিয়া'], ['みゅ', 'myu', 'মিউ'], ['みょ', 'myo', 'মিয়ো']], 'y'],
+  ['りゃ', [['りゃ', 'rya', 'রিয়া'], ['りゅ', 'ryu', 'রিউ'], ['りょ', 'ryo', 'রিয়ো']], 'y'],
+  ['ぎゃ', [['ぎゃ', 'gya', 'গিয়া'], ['ぎゅ', 'gyu', 'গিউ'], ['ぎょ', 'gyo', 'গিয়ো']], 'y'],
+  ['じゃ', [['じゃ', 'ja', 'জা'], ['じゅ', 'ju', 'জু'], ['じょ', 'jo', 'জো']], 'y'],
+  ['びゃ', [['びゃ', 'bya', 'বিয়া'], ['びゅ', 'byu', 'বিউ'], ['びょ', 'byo', 'বিয়ো']], 'y'],
+  ['ぴゃ', [['ぴゃ', 'pya', 'পিয়া'], ['ぴゅ', 'pyu', 'পিউ'], ['ぴょ', 'pyo', 'পিয়ো']], 'y'],
+];
+const KANA_GROUPS = [['', 'মূল ৪৬টি'], ['d', 'が・ぱ (দাকুতেন)'], ['y', 'যুক্ত অক্ষর (ইয়োওন)']];
+const toKata = (h) => h.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+let KN = { script: 'h', mode: 'chart', group: '', pick: null, quiz: null, rows: ['あ', 'か', 'さ'], qmode: 'see' };
+function kanaAll(rowNames) { const out = []; KANA_ROWS.forEach(([r, cells]) => { if (rowNames && !rowNames.includes(r)) return; cells.forEach(c => { if (c) out.push(c); }); }); return out; }
+const kChar = (h) => KN.script === 'k' ? toKata(h) : h;
+const knKey = (d) => 'sakura_kana_' + ((d.student || {}).admission_no || 'preview');
+function knStats(d) { try { return JSON.parse(localStorage.getItem(knKey(d)) || '{}'); } catch { return {}; } }
+function knSave(d, st) { try { localStorage.setItem(knKey(d), JSON.stringify(st)); } catch { /* not kept */ } }
+function strokeSvg(text, cls) {   // one or two characters (yōon), drawn with KanjiVG stroke paths
+  const S = window.KANA_STROKES || {}; const chars = [...text]; const w = 109;
+  let i = 0; const parts = chars.map((c, ci) => { const d = S[c]; if (!d) return ''; const small = 'ゃゅょャュョっッ'.includes(c) && chars.length > 1;
+    const tf = `translate(${ci * w},${small ? 20 : 0}) ${small ? 'scale(.8)' : ''}`;
+    return `<g transform="${tf}">${d.p.map((p, k) => `<path d="${p}" pathLength="1" class="st" style="--i:${i++}"/>`).join('')}${d.n.map((n, k) => `<text x="${n[0]}" y="${n[1]}" class="sn">${k + 1}</text>`).join('')}</g>`; }).join('');
+  return `<svg viewBox="0 0 ${w * chars.length} ${w}" class="${cls}" aria-hidden="true"><g class="grid">${chars.map((c, ci) => `<rect x="${ci * w + 2}" y="2" width="${w - 4}" height="${w - 4}" rx="6"/><path d="M${ci * w + w / 2} 4V${w - 4}M${ci * w + 4} ${w / 2}H${ci * w + w - 4}"/>`).join('')}</g><g class="ghost">${chars.map((c, ci) => { const d = S[c]; const small = 'ゃゅょャュョっッ'.includes(c) && chars.length > 1; return d ? `<g transform="translate(${ci * w},${small ? 20 : 0}) ${small ? 'scale(.8)' : ''}">${d.p.map(p => `<path d="${p}"/>`).join('')}</g>` : ''; }).join('')}</g>${parts}</svg>`;
+}
+function kanaHtml(d) {
+  const head = `<div class="row" style="justify-content:space-between;gap:8px;margin:0 0 10px;flex-wrap:wrap"><div class="mchips" style="margin:0"><button data-kns="h" class="${KN.script === 'h' ? 'on' : ''}">ひらがな</button><button data-kns="k" class="${KN.script === 'k' ? 'on' : ''}">カタカナ</button></div>
+    <div class="mchips" style="margin:0"><button data-knm="chart" class="${KN.mode === 'chart' ? 'on' : ''}">📋 চার্ট</button><button data-knm="quiz" class="${KN.mode === 'quiz' ? 'on' : ''}">✏️ কুইজ</button></div></div>`;
+  if (KN.mode === 'quiz') return head + kanaQuizHtml(d);
+  const st = knStats(d);
+  const cell = (c) => { if (!c) return '<span class="kcell e"></span>'; const ch = kChar(c[0]); const x = st[ch]; const lvl = x && x[1] >= 3 ? (x[0] / x[1] >= .8 ? 'g' : x[0] / x[1] >= .5 ? 'y' : 'r') : '';
+    return `<button class="kcell ${KN.pick === c[0] ? 'on' : ''}" data-knp="${esc(c[0])}"><b>${esc(ch)}</b><span>${esc(c[1])}</span><small>${esc(c[2])}</small>${lvl ? `<i class="kdot ${lvl}"></i>` : ''}</button>`; };
+  const rows = KANA_ROWS.filter(r => (r[2] || '') === KN.group);
+  const cols = KN.group === 'y' ? 3 : 5;
+  let detail = '';
+  if (KN.pick) { const all = kanaAll(); const c = all.find(x => x[0] === KN.pick); const i = all.indexOf(c); const ch = kChar(c[0]);
+    detail = `<div class="card kdet"><div class="row" style="justify-content:space-between"><button class="btn sm ghost" data-knp="${esc((all[i - 1] || all[all.length - 1])[0])}">‹</button><div style="text-align:center"><b style="font-size:20px">${esc(c[1])}</b> <span class="muted">· ${esc(c[2])}</span></div><button class="btn sm ghost" data-knp="${esc((all[i + 1] || all[0])[0])}">›</button></div>
+      <div class="kbox" id="kbox">${strokeSvg(ch, 'ksvg play')}</div>
+      <div class="row" style="justify-content:center;gap:8px"><button class="btn sm" id="knsay">🔊 শুনুন</button><button class="btn sm ghost" id="knre">✍️ আবার লেখা দেখুন</button></div>
+      <div class="small muted" style="text-align:center;margin-top:6px">লাল সংখ্যা = কোন দাগ আগে। খাতায় একই ক্রমে ৫ বার লিখুন।</div></div>`; }
+  return head + `<div class="mchips" style="margin:0 0 8px">${KANA_GROUPS.map(([g, l]) => `<button data-kng="${g}" class="${KN.group === g ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${detail}<div class="card kchart" style="--cols:${cols}">${rows.map(([, cells]) => cells.map(cell).join('')).join('')}</div>
+    <div class="small muted" style="margin-top:6px">অক্ষরে চাপ দিলে উচ্চারণ আর লেখার ক্রম দেখাবে। কুইজে কেমন করছেন সেই অনুযায়ী কোণে রঙ: 🟢 ভালো · 🟡 মাঝারি · 🔴 আরও অনুশীলন দরকার।</div>
+    <div class="small muted" style="margin-top:4px;font-size:11px">লেখার ক্রমের তথ্য: <a href="https://kanjivg.tagaini.net" target="_blank" rel="noopener">KanjiVG</a> (CC BY-SA 3.0)</div>`;
+}
+function kanaQuizHtml(d) {
+  const Q = KN.quiz;
+  if (!Q) {
+    const rowsAll = KANA_ROWS.map(r => r[0]);
+    return `<div class="card kq"><b>কোন অক্ষরগুলো অনুশীলন করবেন?</b>
+      <div class="krows">${KANA_ROWS.map(([r, , g]) => `<button data-knr="${esc(r)}" class="${KN.rows.includes(r) ? 'on' : ''} ${g ? 'x' : ''}">${esc(kChar(r))}</button>`).join('')}</div>
+      <div class="row" style="gap:6px;margin:8px 0 12px;flex-wrap:wrap"><button class="linkbtn" data-knall="base">মূল ৪৬টি সব</button><button class="linkbtn" data-knall="all">সবগুলো</button><button class="linkbtn" data-knall="none">কোনোটাই না</button></div>
+      <b>কীভাবে?</b><div class="mchips" style="margin:6px 0 12px"><button data-knq="see" class="${KN.qmode === 'see' ? 'on' : ''}">অক্ষর দেখে উচ্চারণ</button><button data-knq="hear" class="${KN.qmode === 'hear' ? 'on' : ''}">শুনে অক্ষর বাছাই</button></div>
+      <button class="btn" id="kngo" style="width:100%;justify-content:center" ${kanaAll(KN.rows).length >= 4 ? '' : 'disabled'}>শুরু করুন (১০টি প্রশ্ন)</button>
+      ${kanaAll(KN.rows).length < 4 ? '<div class="small muted" style="margin-top:6px">অন্তত দুটো সারি বেছে নিন</div>' : ''}</div>`;
+  }
+  const q = Q.list[Q.i];
+  if (!q) { const weak = Object.entries(Q.wrong).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    return `<div class="card kq" style="text-align:center"><div style="font-size:40px">${Q.right >= 9 ? '🎉' : Q.right >= 6 ? '👍' : '💪'}</div><b style="font-size:20px">${BN_NUM(Q.list.length)}টির মধ্যে ${BN_NUM(Q.right)}টি ঠিক</b>
+      ${weak.length ? `<p class="muted" style="margin:8px 0 4px">এগুলো আবার দেখে নিন:</p><div class="row" style="justify-content:center;gap:8px">${weak.map(([c]) => `<button class="kchip" data-knpq="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : '<p class="muted">সব ঠিক! পরের সারিগুলো যোগ করে চেষ্টা করুন।</p>'}
+      <div class="row" style="gap:8px;margin-top:14px"><button class="btn ghost" id="knset" style="flex:1;justify-content:center">অক্ষর বদলান</button><button class="btn" id="knagain" style="flex:1;justify-content:center">আবার খেলুন</button></div></div>`; }
+  const ans = Q.ans;
+  const opt = (o, i) => { const cls = ans == null ? '' : o === q.c ? 'right' : i === ans ? 'wrong' : '';
+    return `<button class="opt kopt ${cls}" data-kna="${i}" ${ans == null ? '' : 'disabled'}>${Q.mode === 'see' ? `<b>${esc(o[1])}</b> <span class="muted">${esc(o[2])}</span>` : `<b class="kbig2">${esc(kChar(o[0]))}</b>`}</button>`; };
+  return `<div class="card kq"><div class="row" style="justify-content:space-between"><span class="small muted">${BN_NUM(Q.i + 1)}/${BN_NUM(Q.list.length)} · ঠিক ${BN_NUM(Q.right)}</span><button class="linkbtn" id="knstop">থামুন</button></div>
+    <div class="kqbig">${Q.mode === 'see' ? `<b>${esc(kChar(q.c[0]))}</b>` : '<button class="btn" id="knplay" style="font-size:18px">🔊 আবার শুনুন</button>'}</div>
+    <div class="kopts">${q.opts.map(opt).join('')}</div>
+    ${ans == null ? '' : `<div class="small expl" style="text-align:center">${q.opts[ans] === q.c ? '✓ ঠিক!' : '✗'} <b style="font-size:18px">${esc(kChar(q.c[0]))}</b> = ${esc(q.c[1])} (${esc(q.c[2])})</div><button class="btn" id="knnext" style="width:100%;justify-content:center;margin-top:10px">${Q.i + 1 < Q.list.length ? 'পরেরটা ›' : 'ফলাফল দেখুন'}</button>`}</div>`;
+}
+function kanaStart() {
+  const pool = kanaAll(KN.rows); const pickN = (arr, n, not) => { const a = arr.filter(x => x !== not); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, n); };
+  const list = []; let last = null;
+  for (let k = 0; k < 10; k++) { let c; do { c = pool[Math.floor(Math.random() * pool.length)]; } while (pool.length > 1 && c === last); last = c;
+    const opts = [c, ...pickN(pool, 3, c)]; for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    list.push({ c, opts }); }
+  KN.quiz = { list, i: 0, right: 0, ans: null, wrong: {}, mode: KN.qmode };
+}
+function bindKana(d, user) {
+  const re = () => renderHome(d, user);
+  $$('[data-kns]').forEach(b => b.onclick = () => { KN.script = b.dataset.kns; KN.quiz = null; re(); });
+  $$('[data-knm]').forEach(b => b.onclick = () => { KN.mode = b.dataset.knm; re(); });
+  $$('[data-kng]').forEach(b => b.onclick = () => { KN.group = b.dataset.kng; KN.pick = null; re(); });
+  $$('[data-knp]').forEach(b => b.onclick = () => { KN.pick = b.dataset.knp; re(); speakJa(kChar(KN.pick)); const k = $('.kdet'); if (k) k.scrollIntoView({ block: 'nearest' }); });
+  const say = $('#knsay'); if (say) say.onclick = () => { if (!speakJa(kChar(KN.pick))) toast('জাপানি ভয়েস পাওয়া যায়নি। ফোনের Settings → Text-to-speech-এ জাপানি ভাষা যোগ করুন।', true); };
+  const rp = $('#knre'); if (rp) rp.onclick = () => { const box = $('#kbox'); box.innerHTML = strokeSvg(kChar(KN.pick), 'ksvg play'); };
+  $$('[data-knr]').forEach(b => b.onclick = () => { const r = b.dataset.knr; KN.rows = KN.rows.includes(r) ? KN.rows.filter(x => x !== r) : [...KN.rows, r]; re(); });
+  $$('[data-knall]').forEach(b => b.onclick = () => { KN.rows = b.dataset.knall === 'none' ? [] : KANA_ROWS.filter(r => b.dataset.knall === 'all' || !r[2]).map(r => r[0]); re(); });
+  $$('[data-knq]').forEach(b => b.onclick = () => { KN.qmode = b.dataset.knq; re(); });
+  const go = $('#kngo'); if (go) go.onclick = () => { kanaStart(); re(); if (KN.quiz.mode === 'hear') speakJa(kChar(KN.quiz.list[0].c[0])); };
+  const play = $('#knplay'); if (play) play.onclick = () => speakJa(kChar(KN.quiz.list[KN.quiz.i].c[0]));
+  $$('[data-kna]').forEach(b => b.onclick = () => { const Q = KN.quiz; const q = Q.list[Q.i]; Q.ans = Number(b.dataset.kna); const ok = q.opts[Q.ans] === q.c; const ch = kChar(q.c[0]);
+    const st = knStats(d); const x = st[ch] || [0, 0]; x[1]++; if (ok) { x[0]++; Q.right++; } else Q.wrong[ch] = (Q.wrong[ch] || 0) + 1; st[ch] = x; knSave(d, st);
+    re(); if (Q.mode === 'see') speakJa(ch); });
+  const nx = $('#knnext'); if (nx) nx.onclick = () => { const Q = KN.quiz; Q.i++; Q.ans = null; if (!Q.list[Q.i]) API.checkin('daily').then(s => { d.streak = s; }).catch(() => {}); re(); if (Q.list[Q.i] && Q.mode === 'hear') speakJa(kChar(Q.list[Q.i].c[0])); };
+  const stp = $('#knstop'); if (stp) stp.onclick = () => { KN.quiz = null; re(); };
+  const ag = $('#knagain'); if (ag) ag.onclick = () => { kanaStart(); re(); if (KN.quiz.mode === 'hear') speakJa(kChar(KN.quiz.list[0].c[0])); };
+  const se = $('#knset'); if (se) se.onclick = () => { KN.quiz = null; re(); };
+  $$('[data-knpq]').forEach(b => b.onclick = () => { const h = KN.script === 'k' ? b.dataset.knpq.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)) : b.dataset.knpq; KN.quiz = null; KN.mode = 'chart'; KN.pick = h; const row = KANA_ROWS.find(r => r[1].some(c => c && c[0] === h)); KN.group = row ? (row[2] || '') : ''; re(); });
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -909,17 +1030,18 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+      ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
   $('#lo').onclick = async () => { await API.signOut(); renderAuth(); };
   const mp = $('#mepg'); if (mp) mp.onclick = () => renderMe(d, user);
-  $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); });
+  $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
   bindFc(d, user);
+  bindKana(d, user);
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);
@@ -956,7 +1078,8 @@ const MOCK_ERR = { limit: 'এই টেস্ট যতবার দেওয�
 const mockErr = (e) => { const m = errMsg(e); const k = Object.keys(MOCK_ERR).find(x => m.includes(x)); return k ? MOCK_ERR[k] : m; };
 const optsOf = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
 const fmtClock = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-function speakJa(text, onEnd) {
+function speakJa(text, onEnd) { try { return speakJa0(text, onEnd); } catch (e) { console.warn(e); return false; } }
+function speakJa0(text, onEnd) {
   if (!('speechSynthesis' in window)) { toast('এই ব্রাউজারে শোনার সুবিধা নেই — Chrome ব্যবহার করুন', true); return false; }
   speechSynthesis.cancel();
   const clean = String(text || '').split('\n').map(l => l.replace(/^[^：:\s]{1,6}[：:]\s*/, '')).join('。');
