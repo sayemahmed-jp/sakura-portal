@@ -124,7 +124,7 @@ const Demo = {
   mockSave(aid, answers) { const s = this.student(); const all = this.read('mock_attempts'); const a = all.find(x => x.id === aid && x.student_id === s.id && !x.submitted_at && Date.now() <= Date.parse(x.deadline) + 120000); if (!a) return 'closed'; a.answers = answers || {}; this.write('mock_attempts', all); return 'ok'; },
   mockSubmit(aid, answers, reason = 'submit') { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id)) throw new Error('not_found'); this.mockSave(aid, answers); return this.grade(aid, reason); },
   mockLeave(aid, answers) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && !x.submitted_at)) return 'closed'; this.mockSave(aid, answers); this.grade(aid, 'left'); return 'ok'; },
-  mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason }; }); },
+  mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, category: t.category, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason, sections: a.sections || {} }; }); },
   mockReview(aid) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && x.submitted_at)) throw new Error('not_found'); return this.review(aid); },
 };
 
@@ -289,6 +289,48 @@ function renderLink(d, user) {
   };
 }
 
+
+
+// ------------------------------------------------------------------ my progress (আমার উন্নতি)
+const SEC_TIP = {
+  vocab: 'শব্দ আর কানজিতে জোর দিন: প্রতিদিন "আজকের পড়া" আর ফ্ল্যাশকার্ড করুন, কানজি টেস্টগুলো দিন।',
+  grammar: 'ব্যাকরণে জোর দিন: ব্যাকরণ টেস্টগুলো দিন, ভুল প্রশ্নের ব্যাখ্যা মন দিয়ে পড়ুন, আর বইয়ের ব্যাকরণ অংশ আবার দেখুন।',
+  reading: 'পড়ায় জোর দিন: পূর্ণ মক টেস্টের পড়ার লেখা ধীরে পড়ুন, প্রশ্নের উত্তর লেখার কোন লাইনে আছে খুঁজে বের করার অভ্যাস করুন।',
+  listening: 'শোনায় জোর দিন: বইয়ের সংলাপগুলো 🔊 চেপে বারবার শুনুন, আর শোনার অনুশীলনের টেস্ট দিন।' };
+const pctOf = (a) => a.total ? Math.round(a.score * 100 / a.total) : 0;
+function progressHtml(h) {
+  const xs = (h || []).filter(a => a.total).slice().sort((a, b) => String(a.submitted_at).localeCompare(String(b.submitted_at)));
+  if (!xs.length) return '';
+  const ps = xs.map(pctOf); const avg = Math.round(ps.reduce((a, b) => a + b, 0) / ps.length); const best = Math.max(...ps);
+  const passed = xs.filter(a => pctOf(a) >= (a.pass_pct || 60)).length;
+  // trend: last 3 against the 3 before
+  let trend = '';
+  if (ps.length >= 4) { const k = Math.min(3, Math.floor(ps.length / 2)); const m = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const diff = Math.round(m(ps.slice(-k)) - m(ps.slice(-2 * k, -k)));
+    trend = diff > 0 ? `<span class="tr up">↑ আগের চেয়ে ${BN_NUM(diff)}% ভালো</span>` : diff < 0 ? `<span class="tr down">↓ আগের চেয়ে ${BN_NUM(-diff)}% কম</span>` : '<span class="tr">আগের মতোই</span>'; }
+  // chart of the last 20 attempts
+  const last = xs.slice(-20); const W = 320, H = 130, L = 26, R = 8, T = 10, B = 18;
+  const x = (i) => last.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (last.length - 1); const y = (p) => T + (100 - p) * (H - T - B) / 100;
+  const passLine = Math.round(last.reduce((a, b) => a + (b.pass_pct || 60), 0) / last.length);
+  const pts = last.map((a, i) => `${x(i).toFixed(1)},${y(pctOf(a)).toFixed(1)}`).join(' ');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" class="pchart" role="img" aria-label="মক টেস্টের নম্বর, শেষ ${BN_NUM(last.length)}টি">
+    ${[0, 50, 100].map(p => `<line x1="${L}" x2="${W - R}" y1="${y(p)}" y2="${y(p)}" class="g"/><text x="${L - 4}" y="${y(p) + 3.5}" text-anchor="end">${BN_NUM(p)}</text>`).join('')}
+    <line x1="${L}" x2="${W - R}" y1="${y(passLine)}" y2="${y(passLine)}" class="pass"/><text x="${W - R}" y="${y(passLine) - 3}" text-anchor="end" class="pt">পাস ${BN_NUM(passLine)}%</text>
+    ${last.length > 1 ? `<polyline points="${pts}" class="ln"/>` : ''}
+    ${last.map((a, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(pctOf(a)).toFixed(1)}" r="3.6" class="${pctOf(a) >= (a.pass_pct || 60) ? 'ok' : 'bad'}"><title>${esc(a.title)} · ${pctOf(a)}%</title></circle>`).join('')}
+    <text x="${L}" y="${H - 3}">পুরনো</text><text x="${W - R}" y="${H - 3}" text-anchor="end">নতুন</text></svg>`;
+  // sections over the last 10 attempts that have them
+  const recent = xs.filter(a => a.sections && Object.keys(a.sections).length).slice(-10); const acc = {};
+  recent.forEach(a => Object.entries(a.sections).forEach(([k, v]) => { const t = acc[k] || (acc[k] = { s: 0, t: 0 }); t.s += Number(v.score) || 0; t.t += Number(v.total) || 0; }));
+  const secs = ['vocab', 'grammar', 'reading', 'listening'].filter(k => acc[k] && acc[k].t).map(k => ({ k, p: Math.round(acc[k].s * 100 / acc[k].t), t: acc[k].t }));
+  const weak = secs.filter(z => z.t >= 3).sort((a, b) => a.p - b.p)[0];
+  return `<div class="card prog"><div class="row" style="justify-content:space-between;align-items:baseline;gap:8px"><b style="font-size:16px">📈 আমার উন্নতি</b>${trend}</div>
+    <div class="fcstat"><div><b>${BN_NUM(xs.length)}</b><span>টেস্ট দিয়েছেন</span></div><div><b>${BN_NUM(avg)}%</b><span>গড়</span></div><div><b>${BN_NUM(best)}%</b><span>সেরা</span></div><div><b>${BN_NUM(passed)}</b><span>পাস</span></div></div>
+    ${svg}
+    ${secs.length ? `<div class="dsec">ভাগ অনুযায়ী (শেষ ${BN_NUM(recent.length)}টি টেস্ট)</div>${secs.map(z => `<div class="psec ${weak && weak.k === z.k ? 'weak' : ''}"><span>${SEC[z.k]}</span><div class="bar"><span style="width:${z.p}%;background:${z.p >= 60 ? 'var(--green)' : z.p >= 40 ? 'var(--gold)' : 'var(--red)'}"></span></div><b>${BN_NUM(z.p)}%</b></div>`).join('')}
+    ${weak && weak.p < 80 ? `<div class="tip">💡 <b>সবচেয়ে দুর্বল: ${SEC[weak.k]}।</b> ${SEC_TIP[weak.k]}</div>` : secs.length ? '<div class="tip">💡 সব ভাগেই ভালো করছেন, এভাবেই চালিয়ে যান!</div>' : ''}` : ''}
+  </div>`;
+}
 
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
@@ -460,7 +502,7 @@ function renderHome(d, user) {
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
     : `${streakHtml(d.streak)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? progressHtml(d.history) + mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
