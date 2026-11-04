@@ -815,8 +815,9 @@ function strokeSvg(text, cls) {   // one or two characters (yōon), drawn with K
 }
 function kanaHtml(d) {
   const head = `<div class="row" style="justify-content:space-between;gap:8px;margin:0 0 10px;flex-wrap:wrap"><div class="mchips" style="margin:0"><button data-kns="h" class="${KN.script === 'h' ? 'on' : ''}">ひらがな</button><button data-kns="k" class="${KN.script === 'k' ? 'on' : ''}">カタカナ</button></div>
-    <div class="mchips" style="margin:0"><button data-knm="chart" class="${KN.mode === 'chart' ? 'on' : ''}">📋 চার্ট</button><button data-knm="quiz" class="${KN.mode === 'quiz' ? 'on' : ''}">✏️ কুইজ</button></div></div>`;
+    <div class="mchips" style="margin:0"><button data-knm="chart" class="${KN.mode === 'chart' ? 'on' : ''}">📋 চার্ট</button><button data-knm="quiz" class="${KN.mode === 'quiz' ? 'on' : ''}">✏️ কুইজ</button><button data-knm="speak" class="${KN.mode === 'speak' ? 'on' : ''}">🎙 বলা</button></div></div>`;
   if (KN.mode === 'quiz') return head + kanaQuizHtml(d);
+  if (KN.mode === 'speak') return head.replace(/<div class="mchips" style="margin:0"><button data-kns[\s\S]*?<\/div>/, '<div></div>') + speakHtml(d);
   const st = knStats(d);
   const cell = (c) => { if (!c) return '<span class="kcell e"></span>'; const ch = kChar(c[0]); const x = st[ch]; const lvl = x && x[1] >= 3 ? (x[0] / x[1] >= .8 ? 'g' : x[0] / x[1] >= .5 ? 'y' : 'r') : '';
     return `<button class="kcell ${KN.pick === c[0] ? 'on' : ''}" data-knp="${esc(c[0])}"><b>${esc(ch)}</b><span>${esc(c[1])}</span><small>${esc(c[2])}</small>${lvl ? `<i class="kdot ${lvl}"></i>` : ''}</button>`; };
@@ -833,6 +834,48 @@ function kanaHtml(d) {
     <div class="small muted" style="margin-top:6px">অক্ষরে চাপ দিলে উচ্চারণ আর লেখার ক্রম দেখাবে। কুইজে কেমন করছেন সেই অনুযায়ী কোণে রঙ: 🟢 ভালো · 🟡 মাঝারি · 🔴 আরও অনুশীলন দরকার।</div>
     <div class="small muted" style="margin-top:4px;font-size:11px">লেখার ক্রমের তথ্য: <a href="https://kanjivg.tagaini.net" target="_blank" rel="noopener">KanjiVG</a> (CC BY-SA 3.0)</div>`;
 }
+
+// ---- speaking practice (বলার অনুশীলন): listen, record yourself, compare; Chrome can also say what it heard
+let SP = { lv: '', i: null, rec: null, url: null, heard: null, busy: false, slow: false };
+function spList(lv) { const D = (window.SAKURA_DAILY || {})[lv]; return D ? D.words.filter(w => w[3] && w[3].length <= 40) : []; }
+const normJa = (t) => String(t || '').replace(/[\s、。！？!?「」・,.]/g, '').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+function lcsRatio(a, b) { a = normJa(a); b = normJa(b); if (!a || !b) return 0; const m = Array(b.length + 1).fill(0); for (let i = 1; i <= a.length; i++) { let prev = 0; for (let j = 1; j <= b.length; j++) { const t = m[j]; m[j] = a[i - 1] === b[j - 1] ? prev + 1 : Math.max(m[j], m[j - 1]); prev = t; } } return m[b.length] / Math.max(a.length, b.length); }
+function speakHtml(d) {
+  const lvs = (d.levels || []).filter(l => (window.SAKURA_DAILY || {})[l]); if (!lvs.length) return '<div class="card"><div class="empty">বাক্য পাওয়া যায়নি</div></div>';
+  if (!lvs.includes(SP.lv)) SP.lv = lvs.includes((d.student || {}).current_level) ? d.student.current_level : lvs[0];
+  const list = spList(SP.lv); if (SP.i == null || SP.i >= list.length) SP.i = (dayNo() * 7) % list.length; const w = list[SP.i];
+  const canRec = !!(navigator.mediaDevices && window.MediaRecorder); const canHear = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const score = SP.heard != null ? lcsRatio(SP.heard, w[3]) : null;
+  return `<div class="card kq"><div class="row" style="justify-content:space-between;gap:8px"><div class="mchips" style="margin:0">${lvs.map(l => `<button data-spl="${l}" class="${l === SP.lv ? 'on' : ''}">${l}</button>`).join('')}</div><span class="small muted">${BN_NUM(SP.i + 1)}/${BN_NUM(list.length)}</span></div>
+    <div class="spsent">${esc(w[3])}</div><div class="small muted" style="text-align:center">শব্দ: ${esc(w[0])} (${esc(w[1])}) — ${esc(w[2])}</div>
+    <div class="row" style="justify-content:center;gap:8px;margin:12px 0"><button class="btn" id="spsay">🔊 শুনুন</button><button class="btn ghost" id="spslow">🐢 ধীরে</button></div>
+    <div class="sprec">${canRec ? `<button class="btn ${SP.rec ? 'recon' : 'gold'}" id="sprec" style="min-width:180px;justify-content:center">${SP.rec ? '⏹ থামান' : '🎙 আমার গলায় বলুন'}</button>` : '<div class="small muted">এই ব্রাউজারে রেকর্ড করা যায় না — Chrome ব্যবহার করুন।</div>'}
+      ${SP.url ? `<audio controls src="${SP.url}" style="width:100%;margin-top:10px"></audio><div class="small muted" style="text-align:center">নিজের রেকর্ড আর 🔊 শুনুন মিলিয়ে দেখুন — কোথায় আলাদা লাগছে?</div>` : ''}
+      ${SP.heard === '' && canHear ? '<div class="spheard no">ফোন কথাটা ধরতে পারেনি (ইন্টারনেট লাগে) — নিজের রেকর্ড শুনে মিলিয়ে নিন।</div>' : ''}${SP.heard ? `<div class="spheard ${score >= .7 ? 'ok' : 'no'}">${canHear ? `ফোন যা শুনল: <b>${esc(SP.heard || '—')}</b><br>${score >= .9 ? '🎉 চমৎকার! প্রায় হুবহু মিলেছে' : score >= .7 ? '👍 ভালো হয়েছে, আরেকটু পরিষ্কার করে বলুন' : '💪 আবার চেষ্টা করুন — ধীরে, স্পষ্ট করে'} (${BN_NUM(Math.round(score * 100))}%)` : ''}</div>` : ''}</div>
+    <div class="row" style="gap:8px;margin-top:12px"><button class="btn ghost" id="spprev" style="flex:1;justify-content:center">‹ আগেরটা</button><button class="btn ghost" id="spnext" style="flex:1;justify-content:center">পরেরটা ›</button></div>
+    <div class="small muted" style="margin-top:8px">${canHear ? 'বলার সময় Chrome আপনার কথা শুনে লিখে দেখায় — মিলের হার শুধু অনুমান, শিক্ষকের মতামতই আসল।' : 'রেকর্ড শুধু আপনার ফোনেই থাকে, কোথাও পাঠানো হয় না।'}</div></div>`;
+}
+function bindSpeak(d, user) {
+  const re = () => renderHome(d, user); const list = spList(SP.lv); const w = list[SP.i]; if (!w) return;
+  $$('[data-spl]').forEach(b => b.onclick = () => { SP.lv = b.dataset.spl; SP.i = null; SP.url = null; SP.heard = null; re(); });
+  const say = $('#spsay'); if (say) say.onclick = () => speakJa(w[3]);
+  const slow = $('#spslow'); if (slow) slow.onclick = () => { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(w[3]); u.lang = 'ja-JP'; u.rate = .6; const v = speechSynthesis.getVoices().find(x => /^ja/i.test(x.lang)); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) { speakJa(w[3]); } };
+  const mv = (k) => { SP.i = (SP.i + k + list.length) % list.length; SP.url = null; SP.heard = null; re(); };
+  const pv = $('#spprev'); if (pv) pv.onclick = () => mv(-1); const nx = $('#spnext'); if (nx) nx.onclick = () => mv(1);
+  const rec = $('#sprec'); if (rec) rec.onclick = async () => {
+    if (SP.rec) { SP.rec.stop(); return; }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const chunks = []; const mr = new MediaRecorder(stream);
+      mr.ondataavailable = (e) => chunks.push(e.data);
+      mr.onstop = () => { stream.getTracks().forEach(t => t.stop()); clearTimeout(SP.tm); if (SP.url) URL.revokeObjectURL(SP.url); SP.url = URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || 'audio/webm' })); SP.rec = null; if (SP.sr) { try { SP.sr.stop(); } catch { /* done */ } } if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) SP.heard = ''; setTimeout(re, 300); };
+      SP.rec = mr; SP.heard = null; mr.start(); SP.tm = setTimeout(() => { if (SP.rec) SP.rec.stop(); }, 10000);
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) { const sr = new SR(); sr.lang = 'ja-JP'; sr.interimResults = false; sr.maxAlternatives = 1; sr.onresult = (e) => { SP.heard = e.results[0][0].transcript; }; sr.onerror = () => { if (SP.heard == null) SP.heard = ''; }; sr.onend = () => { if (SP.heard == null) SP.heard = ''; if (!SP.rec) re(); }; SP.sr = sr; try { sr.start(); } catch { /* already */ } }
+      re();
+    } catch (e) { SP.rec = null; toast('মাইক্রোফোন চালু করা যায়নি — ব্রাউজারে মাইকের অনুমতি দিন।', true); }
+  };
+}
+
 function kanaQuizHtml(d) {
   const Q = KN.quiz;
   if (!Q) {
@@ -1157,7 +1200,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
-    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
+    : `${streakHtml(d.streak)}${d.preview ? '' : `<button class="bdlink" id="bdgo">🏅 আমার ব্যাজ: ${BN_NUM(badgeList(d).filter(b => b.done).length)}/${BN_NUM(badgeList(d).length)} ›</button>`}${qaLinkHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
       ${HOME_TAB === 'kana' ? kanaHtml(d) : HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
@@ -1169,6 +1212,7 @@ function renderHome(d, user) {
   bindDaily(d, user);
   bindFc(d, user);
   bindKana(d, user);
+  if (HOME_TAB === 'kana' && KN.mode === 'speak') bindSpeak(d, user);
   bindMistakes(d, user);
   bindCountdown(d, user);
   bindLeaderboard(d, user);
