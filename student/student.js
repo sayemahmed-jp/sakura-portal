@@ -125,6 +125,22 @@ const Demo = {
   mockSubmit(aid, answers, reason = 'submit') { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id)) throw new Error('not_found'); this.mockSave(aid, answers); return this.grade(aid, reason); },
   mockLeave(aid, answers) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && !x.submitted_at)) return 'closed'; this.mockSave(aid, answers); this.grade(aid, 'left'); return 'ok'; },
   mockHistory() { let s; try { s = this.student(); } catch { return []; } const ts = this.read('mock_tests'); return this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).map(a => { const t = ts.find(x => x.id === a.test_id) || {}; return { attempt_id: a.id, test_id: a.test_id, title: t.title, level: t.level, category: t.category, pass_pct: t.pass_pct, started_at: a.started_at, submitted_at: a.submitted_at, score: a.score, total: a.total, answered: a.answered, end_reason: a.end_reason, sections: a.sections || {} }; }); },
+  mistakes() {
+    let s; try { s = this.student(); } catch { return []; }
+    const fixed = this.read('student_fixed').filter(f => f.student_id === s.id); const tests = this.read('mock_tests');
+    const att = this.read('mock_attempts').filter(a => a.student_id === s.id && a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
+    const out = [];
+    for (const q of this.read('mock_questions')) {
+      const t = tests.find(x => x.id === q.test_id); if (!t || t.show_answers === false) continue;
+      const mine = att.filter(a => a.test_id === q.test_id); if (!mine.length) continue;
+      const v = mine[0].answers[q.id]; if (v != null && String(v) === String(q.correct)) continue;
+      const f = fixed.find(x => x.question_id === q.id); if (f && f.fixed_at > mine[0].submitted_at) continue;
+      out.push({ id: q.id, test_title: t.title, level: t.level, section: q.section, passage: q.passage, question: q.question, options: q.options, correct: q.correct, explanation: q.explanation, script: q.script, audio_path: q.audio_path || null,
+        mine: v == null ? null : Number(v), times_wrong: mine.filter(a => String(a.answers[q.id]) !== String(q.correct)).length, last_at: mine[0].submitted_at });
+    }
+    return out.sort((a, b) => b.last_at.localeCompare(a.last_at));
+  },
+  mistakeFixed(ids) { const s = this.student(); const rows = this.read('student_fixed').filter(f => !(f.student_id === s.id && ids.includes(f.question_id))); ids.forEach(id => rows.push({ student_id: s.id, question_id: id, fixed_at: new Date().toISOString() })); this.write('student_fixed', rows); return ids.length; },
   mockReview(aid) { const s = this.student(); if (!this.read('mock_attempts').some(x => x.id === aid && x.student_id === s.id && x.submitted_at)) throw new Error('not_found'); return this.review(aid); },
 };
 
@@ -194,6 +210,8 @@ const API = {
   async newPassword(pw) { const { error } = await sb.auth.updateUser({ password: pw }); if (error) throw error; },
   async streak() { if (PREVIEW) return streakFrom(PREVIEW.days || []); if (DEMO) return Demo.streak(); const { data, error } = await sb.rpc('student_streak'); if (error) throw error; return data; },
   async checkin(kind = 'daily') { if (PREVIEW) { const t = bdToday(); PREVIEW.days = PREVIEW.days || []; if (!PREVIEW.days.includes(t)) PREVIEW.days.push(t); return streakFrom(PREVIEW.days); } if (DEMO) return Demo.checkin(kind); const { data, error } = await sb.rpc('student_checkin', { p_kind: kind }); if (error) throw error; return data; },
+  async mistakes() { if (PREVIEW) return []; if (DEMO) return Demo.mistakes(); const { data, error } = await sb.rpc('student_mistakes'); if (error) throw error; return data || []; },
+  async mistakeFixed(ids) { if (PREVIEW || !ids.length) return 0; if (DEMO) return Demo.mistakeFixed(ids); const { data, error } = await sb.rpc('student_mistake_fixed', { p_ids: ids }); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
   async mockStart(id) { if (PREVIEW) return Preview.start(id); if (!DEMO) { const { data: ss } = await sb.auth.getSession(); API._token = ss.session ? ss.session.access_token : null; } if (DEMO) return Demo.mockStart(id); const { data, error } = await sb.rpc('student_mock_start', { p_test: id }); if (error) throw error; return data; },
   async mockSave(aid, ans) { if (PREVIEW) return Preview.save(aid, ans); if (DEMO) return Demo.mockSave(aid, ans); const { data, error } = await sb.rpc('student_mock_save', { p_attempt: aid, p_answers: ans }); if (error) throw error; return data; },
@@ -330,6 +348,63 @@ function progressHtml(h) {
     ${secs.length ? `<div class="dsec">ভাগ অনুযায়ী (শেষ ${BN_NUM(recent.length)}টি টেস্ট)</div>${secs.map(z => `<div class="psec ${weak && weak.k === z.k ? 'weak' : ''}"><span>${SEC[z.k]}</span><div class="bar"><span style="width:${z.p}%;background:${z.p >= 60 ? 'var(--green)' : z.p >= 40 ? 'var(--gold)' : 'var(--red)'}"></span></div><b>${BN_NUM(z.p)}%</b></div>`).join('')}
     ${weak && weak.p < 80 ? `<div class="tip">💡 <b>সবচেয়ে দুর্বল: ${SEC[weak.k]}।</b> ${SEC_TIP[weak.k]}</div>` : secs.length ? '<div class="tip">💡 সব ভাগেই ভালো করছেন, এভাবেই চালিয়ে যান!</div>' : ''}` : ''}
   </div>`;
+}
+
+
+// ------------------------------------------------------------------ mistake notebook (ভুলের খাতা)
+let MK = null;   // { mode: 'list' | 'practice', q: [...], i, pick, right, fixed: [] }
+function mistakesCardHtml(d) {
+  const m = d.mistakes || []; if (!m.length) return (d.history || []).length ? '<div class="card mk"><b>📒 ভুলের খাতা</b><div class="small muted" style="margin-top:4px">খাতা খালি — সব ভুল ঠিক করে ফেলেছেন! 🎉</div></div>' : '';
+  const by = {}; m.forEach(x => { by[x.section] = (by[x.section] || 0) + 1; });
+  return `<div class="card mk"><div class="row" style="justify-content:space-between;gap:8px"><b>📒 ভুলের খাতা <span class="cnt1">${BN_NUM(m.length)}</span></b><button class="linkbtn" id="mklist">সব দেখুন</button></div>
+    <div class="small muted" style="margin:4px 0 8px">মক টেস্টে যেগুলো ভুল হয়েছে বা উত্তর দেননি। অনুশীলনে ঠিক উত্তর দিলে খাতা থেকে সরে যাবে।</div>
+    <div class="teaser" style="margin:0 0 10px">${Object.entries(by).map(([k, n]) => `<span>${SEC[k] || k}: ${BN_NUM(n)}</span>`).join('')}</div>
+    <button class="btn" id="mkgo" style="width:100%;justify-content:center">ভুলগুলো আবার অনুশীলন করুন (${BN_NUM(Math.min(10, m.length))}টি)</button></div>`;
+}
+function mkQuestionHtml(x, n, opts) {
+  const o = optsOf(x);
+  return `${x.passage ? `<div class="card passage" style="margin:0 0 8px">${esc(x.passage)}</div>` : ''}
+    <div class="qt"><b>${n}.</b> <span style="white-space:pre-line">${esc(x.question)}</span></div>
+    ${x.section === 'listening' ? `<div style="margin:8px 0"><button type="button" class="btn sm" data-mkl="${esc(x.id)}">🔊 শুনুন</button></div>` : ''}
+    ${o.map((op, i) => opts.render(op, i)).join('')}`;
+}
+function mistakesViewHtml(d) {
+  const m = d.mistakes || [];
+  if (MK.mode === 'list') {
+    return `<div class="row" style="justify-content:space-between;margin:0 0 10px"><b style="font-size:17px">📒 ভুলের খাতা (${BN_NUM(m.length)})</b><button class="btn sm ghost" id="mkclose">‹ ফিরে যান</button></div>
+      ${m.length ? m.map((x, i) => `<div class="q card">${mkQuestionHtml(x, i + 1, { render: (op, j) => `<div class="opt ${j === Number(x.correct) ? 'right' : j === x.mine ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === x.mine ? ' <b>✗</b>' : ''}</div>` })}
+        <div class="small muted" style="margin-top:6px">${esc(x.test_title)} · ${SEC[x.section] || ''} · ${x.mine == null ? 'উত্তর দেননি' : 'ভুল'}${x.times_wrong > 1 ? ` · ${BN_NUM(x.times_wrong)} বার ভুল` : ''}</div>
+        ${x.explanation ? `<div class="small expl">💡 ${esc(x.explanation)}</div>` : ''}</div>`).join('') : '<div class="card"><div class="empty">খাতা খালি 🎉</div></div>'}
+      ${m.length ? '<button class="btn" id="mkgo" style="width:100%;justify-content:center;margin-top:12px">অনুশীলন শুরু করুন</button>' : ''}`;
+  }
+  const x = MK.q[MK.i];
+  if (!x) return `<div class="card" style="text-align:center"><div style="font-size:40px">${MK.right === MK.q.length ? '🎉' : '💪'}</div><b style="font-size:18px">${BN_NUM(MK.q.length)}টির মধ্যে ${BN_NUM(MK.right)}টি ঠিক</b>
+    <p class="muted" style="margin:6px 0 0">${MK.right ? `ঠিক হওয়া ${BN_NUM(MK.right)}টি প্রশ্ন খাতা থেকে সরে গেছে।` : 'ব্যাখ্যাগুলো আরেকবার পড়ে নিন, পরে আবার চেষ্টা করুন।'}${(d.mistakes || []).length ? ` খাতায় এখনো ${BN_NUM(d.mistakes.length)}টি আছে।` : ''}</p>
+    <button class="btn" id="mkclose" style="width:100%;justify-content:center;margin-top:14px">ঠিক আছে</button></div>`;
+  const pick = MK.pick; const ok = pick != null && pick === Number(x.correct);
+  return `<div class="row" style="justify-content:space-between;margin:0 0 8px"><span class="small muted">ভুলের খাতা · ${BN_NUM(MK.i + 1)}/${BN_NUM(MK.q.length)} · ${SEC[x.section] || ''}</span><button class="linkbtn" id="mkclose">থামুন</button></div>
+    <div class="q card">${mkQuestionHtml(x, MK.i + 1, { render: (op, j) => pick == null ? `<button type="button" class="opt" data-mkp="${j}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span></button>` : `<div class="opt ${j === Number(x.correct) ? 'right' : j === pick ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === pick ? ' <b>✗</b>' : ''}</div>` })}
+      ${pick == null ? '' : `<div class="small expl" style="margin-top:8px"><b style="color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? '✓ ঠিক! খাতা থেকে সরে গেল।' : '✗ এখনো ভুল — ঠিক উত্তর সবুজ রঙে।'}</b> ${esc(x.explanation || '')}</div>
+      ${x.section === 'listening' && x.script ? `<details class="small" style="margin-top:6px"><summary>শোনার লেখা দেখুন</summary><div style="white-space:pre-line;margin-top:4px">${esc(x.script)}</div></details>` : ''}
+      <button class="btn" id="mknext" style="width:100%;justify-content:center;margin-top:12px">${MK.i + 1 < MK.q.length ? 'পরের প্রশ্ন ›' : 'শেষ'}</button>`}</div>`;
+}
+function bindMistakes(d, user) {
+  const re = () => { renderHome(d, user); };
+  const go = $('#mkgo'); if (go) go.onclick = () => { const m = (d.mistakes || []).slice(); for (let i = m.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [m[i], m[j]] = [m[j], m[i]]; } MK = { mode: 'practice', q: m.slice(0, 10), i: 0, pick: null, right: 0 }; re(); const t = $('.authtabs'); if (t) t.scrollIntoView({ block: 'start' }); };
+  const li = $('#mklist'); if (li) li.onclick = () => { MK = { mode: 'list' }; re(); const t = $('.authtabs'); if (t) t.scrollIntoView({ block: 'start' }); };
+  const cl = $('#mkclose'); if (cl) cl.onclick = () => { MK = null; re(); };
+  $$('[data-mkp]').forEach(b => b.onclick = async () => {
+    const x = MK.q[MK.i]; MK.pick = Number(b.dataset.mkp);
+    if (MK.pick === Number(x.correct)) { MK.right++; d.mistakes = (d.mistakes || []).filter(z => z.id !== x.id); API.mistakeFixed([x.id]).catch(e => toast(errMsg(e), true)); }
+    re();
+  });
+  const nx = $('#mknext'); if (nx) nx.onclick = () => { MK.i++; MK.pick = null; if (!MK.q[MK.i] && MK.q.length >= 3) API.checkin('daily').then(s => { d.streak = s; }).catch(() => {}); re(); };
+  $$('[data-mkl]').forEach(b => b.onclick = async () => {
+    const all = MK.mode === 'list' ? d.mistakes : MK.q; const x = all.find(z => String(z.id) === b.dataset.mkl); if (!x) return; b.disabled = true;
+    try { if (x.audio_path) { const u = await API.fileUrl(x.audio_path); let au = b.parentElement.querySelector('audio'); if (!au) { au = document.createElement('audio'); au.controls = true; au.style.cssText = 'width:100%;margin-top:6px'; b.parentElement.appendChild(au); } au.src = u; au.play().catch(() => {}); } else if (!speakJa(x.script)) toast('জাপানি ভয়েস পাওয়া যায়নি।', true); }
+    catch (e) { toast(errMsg(e), true); }
+    setTimeout(() => { b.disabled = false; }, 1200);
+  });
 }
 
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
@@ -502,7 +577,7 @@ function renderHome(d, user) {
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`
     : `${streakHtml(d.streak)}${dailyHtml(d)}<div class="authtabs" style="margin:0 0 14px"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 ফ্ল্যাশকার্ড</button><button data-ht="mock" class="${HOME_TAB === 'mock' ? 'on' : ''}">📝 মক টেস্ট (${(d.mocks || []).length})</button></div>
-      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? progressHtml(d.history) + mockListHtml(d.mocks || []) + historyHtml(d.history || []) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
+      ${HOME_TAB === 'fc' ? fcHomeHtml(d) : HOME_TAB === 'mock' ? (MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])) : mats.length ? `<div class="card open" style="padding:12px 16px"><b>স্বাগতম!</b> <span class="muted">আপনার লেভেলের ${mats.length}টি উপকরণ নিচে আছে। এগুলো শুধু আপনার নিজের পড়ার জন্য — অন্য কাউকে দেবেন না।</span></div>
       <input class="search" id="q" type="search" placeholder="খুঁজুন: পাঠের নাম, অধ্যায়…" aria-label="খুঁজুন">${groups.map(levelBlock).join('')}<div class="empty" id="none" hidden>কিছু পাওয়া যায়নি</div>`
       : '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো উপকরণ যোগ করা হয়নি। শিগগিরই যোগ হবে।</div></div>'}`}
     <p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p></div>`;
@@ -511,6 +586,7 @@ function renderHome(d, user) {
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
   bindFc(d, user);
+  bindMistakes(d, user);
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
@@ -729,6 +805,7 @@ async function start() {
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
+    if (!d.blocked) { try { d.mistakes = await API.mistakes(); } catch (e) { d.mistakes = []; console.warn(e); } }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);
