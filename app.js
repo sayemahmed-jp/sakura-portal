@@ -81,7 +81,7 @@ const isAdmin = () => S.profile && S.profile.role === 'admin';
 const isTeacher = () => S.profile && S.profile.role === 'teacher';
 const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
-const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock'];
+const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
 const ADMIN_ROUTES = ['people', 'weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites'];
-const OPTIONAL_TABLES = ['staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices'];
+const OPTIONAL_TABLES = ['notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -434,6 +434,7 @@ function renderLogin() {
 
 // ------------------------------------------------------------------ shell & router
 const ICON = {
+  mega: '<path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a4.5 4.5 0 0 1 0 7M19.5 6a8 8 0 0 1 0 12"/>',
   quiz: '<rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="M8.5 12.5l2 2 4-4.5M8.5 18h7"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3M14 9l2 2"/>',
   trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
@@ -453,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/materials', '#/mocks']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -511,6 +512,7 @@ function render() {
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
   if (p[0] === 'materials') return viewMaterials(q);
+  if (p[0] === 'notices') return viewNotices(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
   if (p[0] === 'settings') return viewSettings();
@@ -2268,6 +2270,57 @@ async function printIdCards(list) {
 const newParentToken = () => { const b = new Uint8Array(24); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const parentLink = (tok) => `${location.origin}${location.pathname}#/p/${tok}`;
 function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(), name: s.name_bn || s.name_en, link }); }
+
+
+// ------------------------------------------------------------------ notice board (v27)
+const NOTICE_LV = { all: 'সব লেভেল', N5: 'N5', N4: 'N4', N3: 'N3' };
+const NOTICE_BATCH = { all: 'সব ব্যাচ', morning: BATCH.morning, evening: BATCH.evening };
+const noticeLive = (n) => n.published !== false && (!n.ends_on || n.ends_on >= todayISO());
+function viewNotices() {
+  const list = (S.notices || []).slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  const live = list.filter(noticeLive), old = list.filter(n => !noticeLive(n));
+  const card = (n) => `<div class="card click notice ${noticeLive(n) ? '' : 'off'}" data-nt="${n.id}"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px">
+      <div style="min-width:0"><b style="font-size:16px">${n.pinned ? '📌 ' : ''}${esc(n.title)}</b><div class="small muted" style="margin-top:2px">${esc(NOTICE_LV[n.level] || n.level)} · ${esc(NOTICE_BATCH[n.batch] || n.batch)} · ${fmtDT(n.created_at)}${n.author ? ' · ' + esc(n.author) : ''}${n.ends_on ? ' · শেষ ' + fmtD(n.ends_on) : ''}</div></div>
+      <div class="row" style="gap:6px;flex:none">${n.published === false ? badge('dropped', 'লুকানো') : !noticeLive(n) ? badge('dropped', 'মেয়াদ শেষ') : badge('active', 'ছাত্ররা দেখে')}<button class="btn sm ghost" data-nwa="${n.id}" data-stop>WhatsApp</button></div></div>
+      ${n.body ? `<div style="white-space:pre-line;margin-top:8px;line-height:1.7">${esc(n.body)}</div>` : ''}</div>`;
+  mount('#/notices', `
+  <div class="top"><div><h1>নোটিশ বোর্ড</h1><p>এখানে লেখা নোটিশ ছাত্রদের সাইটে উপরে দেখায় — সবাইকে, অথবা শুধু একটা লেভেল বা ব্যাচকে।</p></div>
+    <div class="row"><button class="btn" id="nadd">+ নতুন নোটিশ</button></div></div>
+  ${live.length ? live.map(card).join('') : '<div class="card"><div class="empty">এখন কোনো চালু নোটিশ নেই। "+ নতুন নোটিশ" দিয়ে লিখুন — যেমন ছুটি, পরীক্ষার তারিখ বা ক্লাসের সময় বদল।</div></div>'}
+  ${old.length ? `<h2 style="margin:22px 0 8px">পুরনো / লুকানো (${old.length})</h2>${old.map(card).join('')}` : ''}`, () => {
+    $('#nadd').onclick = () => noticeModal(null);
+    $$('[data-nt]').forEach(c => c.onclick = () => noticeModal(byId(S.notices, c.dataset.nt)));
+    $$('[data-nwa]').forEach(b => b.onclick = (e) => { e.stopPropagation(); const n = byId(S.notices, b.dataset.nwa);
+      const text = `📢 ${S.settings.institute_bn}\n*${n.title}*\n\n${n.body || ''}\n\nছাত্রদের সাইট: ${studentSiteUrl()}`;
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); });
+  });
+}
+function noticeModal(n) {
+  const v = n || { level: 'all', batch: 'all', pinned: false, published: true };
+  openModal(`<h2>${n ? 'নোটিশ বদলান' : 'নতুন নোটিশ'}</h2>
+  <form id="nf" class="form">
+    <label class="f full">শিরোনাম<input name="title" required maxlength="120" value="${esc(v.title || '')}" placeholder="যেমন: আগামী শুক্রবার ক্লাস বন্ধ"></label>
+    <label class="f full">বিস্তারিত<textarea name="body" maxlength="2000" rows="5" placeholder="যা জানাতে চান…">${esc(v.body || '')}</textarea></label>
+    <label class="f">কারা দেখবে — লেভেল<select name="level">${Object.entries(NOTICE_LV).map(([k, l]) => `<option value="${k}" ${v.level === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+    <label class="f">ব্যাচ<select name="batch">${Object.entries(NOTICE_BATCH).map(([k, l]) => `<option value="${k}" ${v.batch === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>
+    <label class="f">কোন দিন পর্যন্ত দেখাবে (খালি = সবসময়)<input name="ends_on" type="date" value="${esc(v.ends_on || '')}"></label>
+    <label class="f" style="flex-direction:row;align-items:center;gap:8px;margin-top:22px"><input name="pinned" type="checkbox" ${v.pinned ? 'checked' : ''} style="width:auto"> 📌 সবার উপরে রাখুন</label>
+    <label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input name="published" type="checkbox" ${v.published === false ? '' : 'checked'} style="width:auto"> ছাত্ররা দেখতে পাবে</label>
+    <div class="full row" style="justify-content:flex-end">${n ? '<button type="button" class="btn ghost" id="ndel" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="ncc">বাতিল</button><button class="btn" type="submit">${n ? 'সংরক্ষণ' : 'প্রকাশ করুন'}</button></div>
+  </form>`);
+  const f = $('#nf'); $('#ncc').onclick = closeModal;
+  f.onsubmit = async (e) => {
+    e.preventDefault(); const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
+    const d = { title: f.title.value.trim(), body: f.body.value.trim(), level: f.level.value, batch: f.batch.value, ends_on: f.ends_on.value || null, pinned: f.pinned.checked, published: f.published.checked, updated_at: new Date().toISOString() };
+    if (!n) d.author = S.profile.name || '';
+    try { const row = n ? await API.update('notices', n.id, d) : await API.insert('notices', d); putLocal('notices', row); closeModal(); toast(n ? 'সংরক্ষণ হয়েছে' : 'নোটিশ প্রকাশ হয়েছে'); render(); }
+    catch (err) { btn.disabled = false; toast(errMsg(err), true); }
+  };
+  const del = $('#ndel'); if (del) del.onclick = async () => {
+    closeModal(); if (!(await confirmBox(`"${n.title}" নোটিশটা মুছে যাবে।`))) return;
+    try { await API.remove('notices', n.id); S.notices = S.notices.filter(x => x.id !== n.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); }
+  };
+}
 
 // ------------------------------------------------------------------ study materials & student site (v14 database)
 const MAT_BUCKET = 'materials';

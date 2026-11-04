@@ -137,6 +137,12 @@ const Demo = {
       processing: { fee: num(s.processing_fee), paid: ppaid, due: Math.max(0, num(s.processing_fee) - ppaid) },
       payments: pays.map(p => ({ id: p.id, receipt_no: p.receipt_no, paid_on: p.paid_on, amount: num(p.amount), method: p.method, trx_id: p.trx_id || '', purpose: p.purpose })) };
   },
+  notices() {
+    const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
+    const lv = this.levels(s); const t = bdToday();
+    return this.read('notices').filter(n => n.published !== false && (!n.ends_on || n.ends_on >= t) && (n.level === 'all' || lv.includes(n.level)) && (n.batch === 'all' || n.batch === s.batch))
+      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || String(b.created_at).localeCompare(String(a.created_at)));
+  },
   attendance() {
     const uid = this.uid(); const s = uid && this.read('students').find(x => x.auth_user_id === uid); if (!s) return [];
     const ses = this.read('sessions');
@@ -230,6 +236,7 @@ const API = {
   async mistakes() { if (PREVIEW) return []; if (DEMO) return Demo.mistakes(); const { data, error } = await sb.rpc('student_mistakes'); if (error) throw error; return data || []; },
   async mistakeFixed(ids) { if (PREVIEW || !ids.length) return 0; if (DEMO) return Demo.mistakeFixed(ids); const { data, error } = await sb.rpc('student_mistake_fixed', { p_ids: ids }); if (error) throw error; return data; },
   async examDates() { if (DEMO) { try { const st = JSON.parse(localStorage.getItem('sakura_demo_settings') || '{}'); return { jlpt_date: st.jlpt_date || null, nat_date: st.nat_date || null }; } catch { return {}; } } const { data, error } = await sb.rpc('student_exam_dates'); if (error) throw error; return data || {}; },
+  async notices() { if (DEMO) return Demo.notices(); const { data, error } = await sb.rpc('student_notices'); if (error) throw error; return data || []; },
   async attendance() { if (PREVIEW) return []; if (DEMO) return Demo.attendance(); const { data, error } = await sb.rpc('student_attendance'); if (error) throw error; return data || []; },
   async account() { if (PREVIEW) return null; if (DEMO) return Demo.account(); const { data, error } = await sb.rpc('student_account'); if (error) throw error; return data; },
   async mockList() { if (DEMO) return Demo.mockList(); const { data, error } = await sb.rpc('student_mock_list'); if (error) throw error; return data || []; },
@@ -575,6 +582,39 @@ async function renderMe(d, user) {
   $$('[data-rcpt]').forEach(b => b.onclick = () => { const p = d.account.payments.find(x => String(x.id) === b.dataset.rcpt); if (p) printStudentReceipt(d.account, p); });
 }
 
+
+// ------------------------------------------------------------------ notice board (নোটিশ)
+let NT_OPEN = {};
+const ntSeenKey = (d) => 'sakura_seen_notices_' + ((d.student || {}).admission_no || 'p');
+function ntSeen(d) { try { return JSON.parse(localStorage.getItem(ntSeenKey(d)) || '[]'); } catch { return []; } }
+function ntMarkSeen(d, ids) { const s = new Set(ntSeen(d)); ids.forEach(i => s.add(String(i))); try { localStorage.setItem(ntSeenKey(d), JSON.stringify([...s].slice(-200))); } catch { /* not kept */ } }
+const ntWhen = (iso) => { const d = new Date(iso); return `${BN_NUM(d.getDate())} ${BN_MONTH[d.getMonth()]}`; };
+function noticeRow(d, n, seen) {
+  const open = !!NT_OPEN[n.id]; const isNew = !seen.includes(String(n.id));
+  return `<div class="nt ${open ? 'open' : ''}" data-nt="${esc(n.id)}" role="button" tabindex="0" aria-expanded="${open}">
+    <div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><b>${n.pinned ? '📌 ' : ''}${esc(n.title)}</b>${isNew ? ' <span class="newtag">নতুন</span>' : ''}<div class="small muted">${ntWhen(n.created_at)}${n.author ? ' · ' + esc(n.author) : ''}</div></div><span class="chev">${open ? '▲' : '▼'}</span></div>
+    ${open && n.body ? `<div class="ntb">${esc(n.body)}</div>` : ''}</div>`;
+}
+function noticesHtml(d) {
+  const ns = d.notices || []; if (!ns.length) return '';
+  const seen = ntSeen(d); const unread = ns.filter(n => !seen.includes(String(n.id))).length;
+  const show = ns.filter(n => n.pinned || !seen.includes(String(n.id))).slice(0, 3); const list = show.length ? show : ns.slice(0, 1);
+  return `<div class="card ntc"><div class="row" style="justify-content:space-between;align-items:baseline"><b>📢 নোটিশ${unread ? ` <span class="cnt1">${BN_NUM(unread)} নতুন</span>` : ''}</b>${ns.length > list.length ? `<button class="linkbtn" id="ntall">সব নোটিশ (${BN_NUM(ns.length)})</button>` : ''}</div>
+    ${list.map(n => noticeRow(d, n, seen)).join('')}</div>`;
+}
+function bindNotices(d, user, rerender) {
+  $$('[data-nt]').forEach(el => { const f = () => { const id = el.dataset.nt; NT_OPEN[id] = !NT_OPEN[id]; if (NT_OPEN[id]) ntMarkSeen(d, [id]); rerender(); }; el.onclick = f; el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(); } }; });
+  const all = $('#ntall'); if (all) all.onclick = () => renderNotices(d, user);
+}
+function renderNotices(d, user) {
+  const ns = d.notices || []; const seen = ntSeen(d);
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">📢 সব নোটিশ</b><button class="btn sm ghost" id="ntback">‹ ফিরে যান</button></div>
+    <div class="card ntc">${ns.length ? ns.map(n => noticeRow(d, n, seen)).join('') : '<div class="empty">কোনো নোটিশ নেই</div>'}</div></div>`;
+  scrollTo(0, 0);
+  $('#ntback').onclick = () => renderHome(d, user);
+  bindNotices(d, user, () => renderNotices(d, user));
+}
+
 // ------------------------------------------------------------------ daily study (আজকের পড়া) and streak
 const bdToday = () => new Date(Date.now() + 6 * 3600000).toISOString().slice(0, 10);   // Bangladesh date
 const dayNo = () => Math.floor((Date.now() + 6 * 3600000) / 86400000);
@@ -740,6 +780,7 @@ function renderHome(d, user) {
   $('#app').innerHTML = `<div class="st">
     <div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${d.preview ? '' : '<button class="out" id="mepg">👤 আমার পাতা</button>'}<button class="out" id="lo">লগআউট</button></div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}
+    ${noticesHtml(d)}
     ${d.blocked ? `<div class="card lock"><h2 style="margin-top:0">🔒 বইগুলো এখনো বন্ধ</h2><p style="margin:0 0 6px">${esc(WHY[d.blocked] || '')}</p>
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
@@ -757,6 +798,7 @@ function renderHome(d, user) {
   bindFc(d, user);
   bindMistakes(d, user);
   bindCountdown(d, user);
+  bindNotices(d, user, () => renderHome(d, user));
   $$('[data-start]').forEach(b => b.onclick = () => askStartMock(b.dataset.start));
   $$('[data-rev]').forEach(b => b.onclick = () => showReview(b.dataset.rev));
   const byId = (id) => mats.find(m => String(m.id) === String(id));
@@ -971,12 +1013,13 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } return renderHome(p, user); }
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } return renderHome(p, user); }
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
     if (!d.blocked) { try { d.mistakes = await API.mistakes(); } catch (e) { d.mistakes = []; console.warn(e); } }
     try { d.exams = await API.examDates(); } catch (e) { d.exams = {}; console.warn(e); }
+    try { d.notices = await API.notices(); } catch (e) { d.notices = []; console.warn(e); }
     renderHome(d, user);
   } catch (e) {
     $('#app').innerHTML = shellCard(`<h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><div class="row" style="gap:8px"><button class="btn" id="rt">আবার চেষ্টা</button><button class="btn ghost" id="lo">লগআউট</button></div>`);

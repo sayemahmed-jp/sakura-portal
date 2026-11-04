@@ -274,3 +274,5 @@ details summary{cursor:pointer}
 .mqa{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--green-bg);border:1px dashed #9CC9AB;font-size:14px;display:flex;flex-direction:column;gap:2px}
 .mqa b{color:var(--green)}.mqa span{color:var(--ink2);font-size:13.5px}
 @media (max-width:860px){.mqo{grid-template-columns:1fr}}
+.notice{margin-bottom:10px;border-left:4px solid var(--gold)}
+.notice.off{opacity:.6;border-left-color:var(--line)}
