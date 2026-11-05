@@ -245,6 +245,25 @@
   .idb{display:flex;gap:14px;padding:14px}.idp{width:92px;height:116px;flex:none;border-radius:10px;background:#F3EEDF;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden;color:#999;font-size:12px}.idp img{width:100%;height:100%;object-fit:cover}
   .idi{display:flex;flex-direction:column;gap:2px;min-width:0}.idi .nm{font:800 19px 'Noto Serif Bengali',serif;color:var(--navy)}.idi span{font-size:13px;color:var(--muted)}.idno{font:800 22px/1.2 ui-monospace,monospace;letter-spacing:2px;color:var(--red);margin:6px 0 2px}
   .idq{display:flex;flex-direction:column;align-items:center;padding:6px 14px 16px;border-top:1px dashed var(--line)}.idq svg{width:190px;height:190px}.idq small{font-size:12px;color:var(--muted);letter-spacing:1px}
+  .phd.slim small{display:none}.phd.slim b{font:800 19px 'Noto Serif Bengali',serif;letter-spacing:.5px}
+  .greet{margin:6px 2px 14px}.greet h1{font:800 24px/1.25 'Noto Serif Bengali',serif;color:var(--navy);margin:0}.greet p{margin:2px 0 0;color:var(--muted);font-size:14px}
+  .today{background:#1B2945;color:#F6F1E4;border-radius:20px;padding:16px 14px 10px;margin:0 0 14px;position:relative;overflow:hidden}
+  .thead{display:flex;justify-content:space-between;align-items:center;margin:0 4px 8px}.thead b{display:block;font:800 19px 'Noto Serif Bengali',serif}.thead span{font-size:13px;color:#C9B98F}
+  .ring{position:relative;width:54px;height:54px;flex:none}.ring svg{width:100%;height:100%;transform:rotate(-90deg)}.ring circle{fill:none;stroke-width:5}.ring .rb{stroke:rgba(255,255,255,.12)}.ring .rf{stroke:#E0503F;stroke-linecap:round;transition:stroke-dasharray .6s ease}
+  .ring em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:14px;color:#fff}
+  .tjob{display:flex;align-items:center;gap:12px;width:100%;padding:11px 8px;margin:0;border:0;border-top:1px solid rgba(255,255,255,.09);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:10px}
+  .tjob:hover,.tjob:focus-visible{background:rgba(255,255,255,.06);outline:none}
+  .tck{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid rgba(226,201,135,.55);display:grid;place-items:center;font-size:14px;font-weight:800}
+  .tjob.ok .tck{background:#C9A24B;border-color:#C9A24B;color:#1B2945}.tjob.ok .tt b{color:#D9CFB5}
+  .tt{flex:1;min-width:0;display:flex;flex-direction:column}.tt b{font-size:15.5px;color:#fff}.tt small{font-size:12.5px;color:#B7AE96;line-height:1.4}
+  .tjob .rc{color:#C9B98F;font-size:20px}.tjoin{flex:none;background:#E0503F;color:#fff;text-decoration:none;font-size:12.5px;font-weight:700;padding:6px 10px;border-radius:999px}
+  .tfoot{margin:4px 8px 4px;font-size:12.5px;color:#C9B98F}
+  .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 16px}
+  .quick button{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:var(--navy);cursor:pointer;padding:4px 0}
+  .quick .qi{position:relative;width:54px;height:54px;border-radius:18px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;font-size:25px;box-shadow:0 2px 6px rgba(27,41,69,.06)}
+  .quick button:active .qi{transform:scale(.94)}.quick .qi i{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-style:normal;font-weight:700;display:grid;place-items:center;padding:0 4px;border:2px solid var(--bg,#F5F0E6)}
+  .instc{padding:10px 12px}
+  @media (prefers-reduced-motion:reduce){.ring .rf{transition:none}}
   .sech{font:800 21px 'Noto Serif Bengali',serif;color:var(--navy);margin:2px 0 12px}
   .mlist2{display:grid;gap:8px;margin:0 0 14px}
   .mrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;font:inherit;color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(27,41,69,.05)}
@@ -303,6 +322,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=46"></script>
+<script src="student.js?v=47"></script>
 </body>
 </html>

@@ -1749,6 +1749,35 @@ function matRow(m) {
 }
 
 let NAVSEC = 'home';
+// ---- home: a greeting, today's three jobs in one place, and the four things students open most
+function greetHtml(d) {
+  const s = d.student || {}; const h = new Date(Date.now() + 6 * 3600000).getUTCHours();
+  const hi = h < 5 ? 'শুভ রাত্রি' : h < 12 ? 'সুপ্রভাত' : h < 16 ? 'শুভ দুপুর' : h < 18 ? 'শুভ বিকেল' : h < 21 ? 'শুভ সন্ধ্যা' : 'শুভ রাত্রি';
+  const first = String(s.name_bn || s.name_en || '').trim().split(/\s+/).filter(w => !/^(মোঃ|মো:|মোহাম্মদ|md\.?|mohammad|mohammed)$/i.test(w))[0] || '';
+  const t = new Date(Date.now() + 6 * 3600000); const wd = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'][t.getUTCDay()];
+  return `<div class="greet"><h1>${hi}${first ? ', ' + esc(first) : ''}</h1><p>${wd}, ${BN_NUM(t.getUTCDate())} ${BN_MONTH[t.getUTCMonth()]}</p></div>`;
+}
+function todayHtml(d) {
+  if (d.blocked) return ''; const st = d.streak || {}; const studied = !!st.today;
+  const pend = (d.homework || []).filter(hwPending); const hwState = !(d.homework || []).length ? null : pend.length === 0;
+  const R = d.routine; const next = R ? routineDays(R, 45).find(x => !x.off) : null; const classToday = next && next.i === 0;
+  const jobs = [
+    { id: 'tdaily', done: studied, t: studied ? 'আজকের পড়া শেষ' : 'আজকের পড়া', sub: studied ? 'দারুণ! কাল আবার নতুন পড়া আসবে' : '৫টি শব্দ, ১টি কাঞ্জি, ১টি ব্যাকরণ — ৫ মিনিট' },
+    hwState === null ? null : { id: 'hwgo', done: hwState, t: hwState ? 'বাড়ির কাজ সব জমা' : `বাড়ির কাজ ${BN_NUM(pend.length)}টি বাকি`, sub: hwState ? 'নতুন কাজ এলে এখানে দেখাবে' : (pend.find(h => h.due_on) ? 'শেষ তারিখ ' + fmtD(pend.filter(h => h.due_on).sort((a, b) => a.due_on.localeCompare(b.due_on))[0].due_on) : esc(pend[0].title)) },
+    next ? { id: 'rtgo', done: null, t: classToday ? 'আজ ক্লাস আছে' : 'পরের ক্লাস ' + dayWord(next), sub: [batchTime(R), next.plan && next.plan.topic].filter(Boolean).join(' · ') || 'রুটিন দেখুন', link: safeLink((next.plan || {}).online_link || R.online_link) } : null
+  ].filter(Boolean);
+  const todo = jobs.filter(j => j.done !== null); const n = todo.filter(j => j.done).length; const pct = todo.length ? n / todo.length : 0;
+  const C = 2 * Math.PI * 21;
+  return `<section class="today" aria-label="আজকের কাজ"><div class="thead"><div><b>আজকের কাজ</b><span>${todo.length && n === todo.length ? 'সব শেষ — চমৎকার!' : `${BN_NUM(n)}/${BN_NUM(todo.length)}টি শেষ`}</span></div>
+      <div class="ring" role="img" aria-label="${BN_NUM(n)}/${BN_NUM(todo.length)}টি শেষ"><svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" class="rb"/>${pct > 0 ? `<circle cx="25" cy="25" r="21" class="rf" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}"/>` : ''}</svg><em>${st.streak ? '🔥' + BN_NUM(st.streak) : BN_NUM(n)}</em></div></div>
+    ${jobs.map(j => `<button class="tjob ${j.done ? 'ok' : ''}" id="${j.id}"><span class="tck">${j.done === null ? '🗓' : j.done ? '✓' : ''}</span><span class="tt"><b>${j.t}</b><small>${j.sub}</small></span>${j.link ? `<a class="tjoin" href="${esc(j.link)}" target="_blank" rel="noopener" data-join>যোগ দিন</a>` : '<span class="rc">›</span>'}</button>`).join('')}
+    ${st.streak ? `<p class="tfoot">টানা ${BN_NUM(st.streak)} দিন পড়ছেন${st.best > st.streak ? ` · সেরা ${BN_NUM(st.best)} দিন` : ''}</p>` : studied ? '' : '<p class="tfoot">প্রতিদিন আজকের পড়া শেষ করলে টানা পড়ার 🔥 গোনা শুরু হবে</p>'}</section>`;
+}
+function quickHtml(d, vids) {
+  if (d.blocked) return ''; const qn = qaUnread(d).length;
+  const Q = [['qmock', '📝', 'মক টেস্ট'], ['qfc', '🃏', 'ফ্ল্যাশকার্ড'], vids.length ? ['vidgo', '🎬', 'ভিডিও ক্লাস'] : ['qmat', '📚', 'উপকরণ'], ['qago', '❓', 'প্রশ্ন করুন', qn]];
+  return `<nav class="quick" aria-label="দ্রুত যান">${Q.map(([id, ic, l, n]) => `<button id="${id}"><span class="qi">${ic}${n ? `<i>${BN_NUM(n)}</i>` : ''}</span><span>${l}</span></button>`).join('')}</nav>`;
+}
 const SECS = [['home', '🏠', 'হোম'], ['study', '📚', 'পড়া'], ['test', '📝', 'টেস্ট'], ['japan', '🗾', 'জাপান'], ['me', '👤', 'আমি']];
 const O = (html, n) => html ? `<div class="ob" style="order:${n}">${html}</div>` : '';   // a home block with its place in the phone layout
 function renderHome(d, user) {
@@ -1761,7 +1790,7 @@ function renderHome(d, user) {
   const counts = d.counts || {}; const total = Object.values(counts).reduce((a, b) => a + num(b), 0);
   if (HOME_TAB === 'mock') { NAVSEC = 'test'; HOME_TAB = 'mat'; }   // coming back from a test
   if (d.blocked || !SECS.some(x => x[0] === NAVSEC)) NAVSEC = 'home';
-  const head = `<div class="phd"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.blocked ? '<button class="out" id="lo">লগআউট</button>' : ''}</div></div>
+  const head = `<div class="phd ${NAVSEC === 'home' && !d.blocked ? 'slim' : ''}"><div class="sw"><span class="kamon">${KAMON}</span><div style="min-width:0"><b>${NAVSEC === 'home' && !d.blocked ? 'সাকুরা' : esc(s.name_bn || s.name_en)}</b><small>${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</small></div></div><div class="row" style="gap:6px;flex:none">${bellHtml(d)}${d.blocked ? '<button class="out" id="lo">লগআউট</button>' : ''}</div></div>
     ${d.preview ? `<div class="pvbar"><b>👁 প্রিভিউ</b> — ছাত্ররা যা দেখে, আপনি সেটাই দেখছেন। সব লেভেল দেখা যাচ্ছে, আর <span class="hidtag">লুকানো</span> চিহ্ন দেওয়া জিনিস ছাত্ররা এখনো দেখে না। এখানে টেস্ট দিলে নম্বর কোথাও জমা হয় না। <a href="../#/mocks">পোর্টালে ফিরুন</a></div>` : ''}`;
   const foot = `<p class="small muted" style="text-align:center;margin-top:24px">${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}${I.phone ? ' · ' + esc(I.phone) : ''}</p>`;
   const row = (id, ic, t, sub, n) => `<button class="mrow" id="${id}"><span class="ri">${ic}</span><span class="rt"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</span>${n ? `<span class="bn">${n}</span>` : ''}<span class="rc">›</span></button>`;
@@ -1770,7 +1799,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`;
-  else if (NAVSEC === 'home') body = `${installCardHtml(d)}${noticesHtml(d)}${feedbackCardHtml(d)}${routineCardHtml(d)}${homeworkCardHtml(d)}${streakHtml(d.streak)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}`;
+  else if (NAVSEC === 'home') body = `${greetHtml(d)}${todayHtml(d)}${quickHtml(d, vids)}${noticesHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}${feedbackCardHtml(d)}${installCardHtml(d)}`;
   else if (NAVSEC === 'study') { const qn = qaUnread(d).length;
     body = `<h1 class="sech">📚 পড়া</h1><div class="mlist2">${vids.length ? row('vidgo', '🎬', 'ভিডিও ক্লাস', `${BN_NUM(vids.filter(v => vidDone(d, v.id)).length)}/${BN_NUM(vids.length)}টি দেখা শেষ`) : ''}${row('qago', '❓', 'শিক্ষককে প্রশ্ন', 'কিছু না বুঝলে জিজ্ঞেস করুন', qn ? BN_NUM(qn) : '')}</div>
       <div class="authtabs" style="margin:0 0 14px;flex-wrap:nowrap"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 কার্ড</button></div>
@@ -1809,6 +1838,10 @@ function renderHome(d, user) {
   [['accgo', 'acct'], ['attgo', 'att'], ['docgo', 'doc']].forEach(([id, t]) => { const b = $('#' + id); if (b) b.onclick = () => { ME_TAB = t; renderMe(d, user); }; });
   const rf = $('#refgo'); if (rf) rf.onclick = () => renderRefer(d, user);
   const jg = $('#jggo'); if (jg) jg.onclick = () => { scrollTo(0, 0); renderJapanGuide(d, user); };
+  const td = $('#tdaily'); if (td) td.onclick = () => { DAILY_OPEN = true; renderHome(d, user); const c = $('.daily'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  const qm = $('#qmock'); if (qm) qm.onclick = () => { NAVSEC = 'test'; renderHome(d, user); scrollTo(0, 0); };
+  const qf = $('#qfc'); if (qf) qf.onclick = () => { NAVSEC = 'study'; HOME_TAB = 'fc'; renderHome(d, user); scrollTo(0, 0); };
+  const qt = $('#qmat'); if (qt) qt.onclick = () => { NAVSEC = 'study'; HOME_TAB = 'mat'; renderHome(d, user); scrollTo(0, 0); };
   const ig = $('#ivgo'); if (ig) ig.onclick = () => renderInterview(d, user);
   const vg = $('#vidgo'); if (vg) vg.onclick = () => { VID_OPEN = null; renderVideos(d, user); };
   const rg = $('#rtgo'); if (rg) { const f = (e) => { if (e.target.closest('[data-join]')) return; renderRoutine(d, user); }; rg.onclick = f; rg.onkeydown = (e) => { if (e.target === rg && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); renderRoutine(d, user); } }; }
