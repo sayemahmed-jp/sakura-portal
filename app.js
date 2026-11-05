@@ -2315,7 +2315,7 @@ function staffCardModal(p, own) {
   $('#scf').onsubmit = async (e) => { e.preventDefault(); const d = formData(e.target); const patch = adm ? { designation: d.designation.trim(), phone: d.phone.trim(), blood_group: d.blood_group, joined_on: d.joined_on || null, valid_until: d.valid_until || null } : { phone: d.phone.trim(), blood_group: d.blood_group };
     try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে — কার্ডে দেখুন'); staffCardModal(p, own); } catch (err) { toast(errMsg(err), true); } };
 }
-function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) || {}; const tag = ROLE_EN[p.role] || 'STAFF';
+function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) || {}; const tag = /ব্যবস্থাপনা|managing|\bMD\b/i.test(c.designation || '') ? 'MANAGING DIRECTOR' : (ROLE_EN[p.role] || 'STAFF');
     return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
       <div class="body"><div class="ph">${photo ? `<img src="${esc(photo)}" alt="">` : `<span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span>`}</div>
       <div class="info"><div class="en">${esc(p.name || '')}</div><div class="bn">${esc(c.designation || '')}</div>
