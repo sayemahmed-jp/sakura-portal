@@ -156,8 +156,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback'];
-const OPTIONAL_TABLES = ['class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback', 'staff_cards'];
+const OPTIONAL_TABLES = ['staff_cards', 'class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -470,7 +470,7 @@ function shell(active, inner) {
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
     <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
-      <div class="acts">${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
+      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
   </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
@@ -481,6 +481,7 @@ function mount(active, inner, after) {
   $('#scrim').onclick = () => $('#side').classList.remove('open');
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
   const cp = $('#chpw'); if (cp) cp.onclick = changePasswordModal;
+  const mc = $('#mycard'); if (mc) mc.onclick = () => staffCardModal(S.profile, true);
   if (after) after();
 }
 function render() {
@@ -587,7 +588,7 @@ function viewStudents(q) {
     return true;
   }).sort((a, b) => (b.admission_no || '').localeCompare(a.admission_no || ''));
   mount('#/students', `
-  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${isTeacher() ? '' : list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}${isTeacher() ? '' : '<a class="btn" href="#/students/new">+ নতুন ছাত্র</a>'}</div></div>
+  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${!isAdmin() ? '' : list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}${isTeacher() ? '' : '<a class="btn" href="#/students/new">+ নতুন ছাত্র</a>'}</div></div>
   <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
     <input class="search" name="s" placeholder="নাম, ভর্তি নম্বর বা ফোন দিয়ে খুঁজুন" value="${esc(f.s)}">
     <select name="l"><option value="">সব লেভেল</option>${LEVELS.map(l => `<option ${f.l === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -599,7 +600,7 @@ function viewStudents(q) {
   () => {
     $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); const p = new URLSearchParams(Object.entries(d).filter(([, v]) => v)); location.hash = '#/students?' + p; };
     $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
-    const ia = $('#idall'); if (ia) ia.onclick = () => printIdCards([...list].sort((a, b) => (a.admission_no || '').localeCompare(b.admission_no || '')));
+    const ia = isAdmin() && $('#idall'); if (ia) ia.onclick = () => printIdCards([...list].sort((a, b) => (a.admission_no || '').localeCompare(b.admission_no || '')));
     bindGo();
   });
 }
@@ -713,13 +714,13 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
+  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
     if (tab === 'mock') bindGo();
     const dos = $('#dos'); if (dos) dos.onclick = () => printDossier(s);
-    if ($('#idc')) { $('#idc').onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
+    if ($('#plink')) { const ic = $('#idc'); if (ic) ic.onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
     const del = $('#del'); if (del) del.onclick = async () => {
@@ -2260,6 +2261,87 @@ const profileLink = (s) => `${location.origin}${location.pathname}#/student/${s.
 function qrSvg(text) { const q = window.qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }); }
 function cardValidTill(s) { const from = s.start_date || s.admission_date || todayISO(); return addMonthsISO(from, num(S.settings.id_valid_months) || 12); }
 
+// ------------------------------------------------------------------ staff and teacher ID cards (v39): the director sees all, everyone else only their own
+const ROLE_EN = { admin: 'DIRECTOR', staff: 'OFFICE STAFF', teacher: 'TEACHER' };
+const BLOOD = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+function cardOf(p) {   // the person's card; in the demo it is made on the spot, like the database trigger does
+  if (!p) return null; let c = (S.staff_cards || []).find(x => x.profile_id === p.id); if (c || !DEMO) return c || null;
+  const pre = 'SJI-' + ({ admin: 'D', teacher: 'T' }[p.role] || 'S') + '-'; const n = (S.staff_cards || []).filter(x => (x.staff_no || '').startsWith(pre)).length + 1;
+  c = { id: p.id, profile_id: p.id, staff_no: pre + String(n).padStart(3, '0'), designation: { admin: 'পরিচালক', teacher: 'শিক্ষক' }[p.role] || 'অফিস স্টাফ', phone: '', blood_group: '', photo_path: '', joined_on: todayISO(), valid_until: addMonthsISO(todayISO(), 24) };
+  S.staff_cards = [...(S.staff_cards || []), c]; return c;
+}
+async function saveCard(pid, patch) {
+  if (DEMO) { S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? { ...x, ...patch } : x); return; }
+  if (isAdmin()) { const { data, error } = await sb.from('staff_cards').update({ ...patch, updated_at: new Date().toISOString() }).eq('profile_id', pid).select().single(); if (error) throw error; S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? data : x); }
+  else { const { error } = await sb.rpc('my_staff_card_update', { p_phone: patch.phone ?? null, p_blood: patch.blood_group ?? null, p_photo: patch.photo_path || '' }); if (error) throw error; S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? { ...x, ...patch } : x); }
+}
+function staffCardModal(p, own) {
+  if (!p) return; const c = cardOf(p); if (!c) return toast('কার্ড এখনো তৈরি হয়নি — পরিচালককে v39 আপডেট চালাতে বলুন', true);
+  const adm = isAdmin(); const ro = (k) => adm ? '' : 'readonly';
+  openModal(`<h2>🪪 ${own ? 'আমার আইডি কার্ড' : esc(p.name || '') + '-এর আইডি কার্ড'}</h2>
+    <div class="row" style="gap:14px;align-items:flex-start;margin-bottom:10px"><div id="scph" style="width:84px;height:104px;border:2px solid #A3843A;border-radius:8px;background:#EFE6D3;display:grid;place-items:center;overflow:hidden;flex:none"><span style="font:800 26px 'Shippori Mincho B1';color:#A3843A">${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span></div>
+      <div><div style="font-size:12px;color:var(--muted)">আইডি নম্বর</div><div style="font:800 22px ui-monospace,monospace;letter-spacing:1px;color:var(--red)">${esc(c.staff_no || '—')}</div><div class="small muted">নিজে থেকে তৈরি · ${esc(ROLE_NAME[p.role] || '')}</div>
+      <label class="btn sm ghost" style="margin-top:8px;cursor:pointer">📷 ছবি ${c.photo_path ? 'বদলান' : 'দিন'}<input type="file" id="scfile" accept="image/*" hidden></label></div></div>
+    <form id="scf" class="form">
+      <label class="f">পদবি<input name="designation" value="${esc(c.designation)}" ${ro()} placeholder="যেমন: সিনিয়র শিক্ষক"></label>
+      <label class="f">মোবাইল<input name="phone" value="${esc(c.phone)}" inputmode="tel"></label>
+      <label class="f">রক্তের গ্রুপ<select name="blood_group">${BLOOD.map(b => `<option ${c.blood_group === b ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
+      <label class="f">যোগদান<input name="joined_on" type="date" value="${esc(c.joined_on || '')}" ${ro()}></label>
+      <label class="f">কার্ডের মেয়াদ<input name="valid_until" type="date" value="${esc(c.valid_until || '')}" ${ro()}></label>
+      ${adm ? '' : '<p class="full small muted" style="margin:0">পদবি, যোগদান আর মেয়াদ শুধু পরিচালক বদলাতে পারেন। আপনার কার্ড শুধু আপনি আর পরিচালক দেখতে পান।</p>'}
+      <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="scc">বন্ধ</button><button type="button" class="btn ghost" id="scp">🖨 প্রিন্ট</button><button class="btn">সংরক্ষণ</button></div></form>`);
+  if (c.photo_path) API.fileUrlFrom('staffphoto', c.photo_path).then(u => { const b = $('#scph'); if (b) b.innerHTML = `<img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => {});
+  $('#scc').onclick = closeModal; $('#scp').onclick = () => printStaffCards([p]);
+  $('#scfile').onchange = async (e) => { let f = e.target.files[0]; if (!f) return; if (f.size > 3 * 1048576) return toast('ছবি ৩ MB-এর ছোট দিন', true);
+    try { const path = `${p.id}/${Date.now()}.${(f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')}`; await API.uploadTo('staffphoto', path, f); await saveCard(p.id, { photo_path: path }); toast('ছবি যোগ হয়েছে'); const u = await API.fileUrlFrom('staffphoto', path).catch(() => ''); const bx = $('#scph'); if (bx && u) bx.innerHTML = `<img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover">`; } catch (err) { toast(errMsg(err), true); } };
+  $('#scf').onsubmit = async (e) => { e.preventDefault(); const d = formData(e.target); const patch = adm ? { designation: d.designation.trim(), phone: d.phone.trim(), blood_group: d.blood_group, joined_on: d.joined_on || null, valid_until: d.valid_until || null } : { phone: d.phone.trim(), blood_group: d.blood_group };
+    try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে'); closeModal(); } catch (err) { toast(errMsg(err), true); } };
+}
+async function printStaffCards(people) {
+  people = people.filter(Boolean).filter(p => isAdmin() || p.id === S.profile.id); if (!people.length) return toast('প্রিন্ট করার মতো কার্ড নেই', true);
+  const w = window.open('', '_blank'); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  w.document.write('<p style="font-family:sans-serif;padding:20px">কার্ড তৈরি হচ্ছে…</p>');
+  try { await loadQR(); } catch (e) { w.close(); return toast(errMsg(e), true); }
+  const st = S.settings; const photos = {};
+  await Promise.all(people.map(async p => { const c = cardOf(p); if (c && c.photo_path) try { photos[p.id] = await API.fileUrlFrom('staffphoto', c.photo_path); } catch { /* no photo */ } }));
+  const card = (p) => { const c = cardOf(p) || {}; const tag = ROLE_EN[p.role] || 'STAFF';
+    return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
+      <div class="body"><div class="ph">${photos[p.id] ? `<img src="${esc(photos[p.id])}" alt="">` : `<span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span>`}</div>
+      <div class="info"><div class="en">${esc(p.name || '')}</div><div class="bn">${esc(c.designation || '')}</div>
+      <dl><dt>ID No.</dt><dd><b>${esc(c.staff_no || '')}</b></dd><dt>Role</dt><dd>${esc(tag.charAt(0) + tag.slice(1).toLowerCase())}</dd>${c.phone ? `<dt>Phone</dt><dd>${esc(c.phone)}</dd>` : ''}${c.blood_group ? `<dt>Blood</dt><dd>${esc(c.blood_group)}</dd>` : ''}<dt>Valid till</dt><dd>${fmtD(c.valid_until)}</dd></dl></div></div><div class="strip"></div></div>
+      <div class="card back"><div class="bbody"><div class="qr">${qrSvg(`${location.origin}${location.pathname}#/people`)}<small>${esc(c.staff_no || '')}</small></div>
+      <div class="btxt"><b style="font-family:'Noto Serif Bengali'">${esc(st.institute_bn)}</b><p>এই কার্ড প্রতিষ্ঠানের সম্পত্তি। কাজ ছেড়ে দিলে অফিসে ফেরত দিন। কার্ডটি পেলে নিচের নম্বরে জানান।</p>
+      <p>অফিস: <b>${esc(st.phone)}</b><br>WhatsApp: ${esc(st.whatsapp)}${st.address ? `<br>${esc(st.address)}` : ''}</p><div class="sig"><span></span>Director · ${esc(st.director_en)}</div></div></div>
+      <div class="bfoot">${esc(st.institute_ja)} · Japanese language · Study in Japan</div></div></div>`; };
+  w.document.open();
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Staff ID cards (${people.length})</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">
+  <style>${ID_CSS}</style></head><body><button class="print" onclick="window.print()">প্রিন্ট / Print</button>
+  <p class="help">প্রতি সারিতে বাঁ দিকে সামনের অংশ, ডান দিকে পেছনের অংশ। দাগ বরাবর কেটে মাঝখানে ভাঁজ করে ল্যামিনেট করুন।</p><div class="sheet">${people.map(card).join('')}</div></body></html>`);
+  w.document.close(); setTimeout(() => { try { w.focus(); } catch { /* fine */ } }, 300);
+}
+
+const ID_CSS = `@page{size:A4;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:'Hind Siliguri',sans-serif;color:#26231E;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sheet{display:flex;flex-direction:column;gap:2.5mm;align-items:center}
+  .pair{display:flex;gap:0;page-break-inside:avoid;break-inside:avoid}
+  .card{width:85.6mm;height:54mm;border:.2mm dashed #9B907C;position:relative;overflow:hidden;background:#FBF8F1}
+  .band{height:13mm;background:#1B2945;color:#fff;display:flex;align-items:center;gap:2mm;padding:0 2.5mm;border-bottom:.8mm solid #A3843A}
+  .km{width:9mm;height:9mm;border-radius:50%;background:#FBF8F1;border:.4mm solid #C9A95C;display:grid;place-items:center;flex:none}
+  .nm{display:flex;flex-direction:column;line-height:1.15}.nm b{font:800 8.6pt 'Shippori Mincho B1',serif}.nm span{font:700 6.6pt 'Shippori Mincho B1';color:#E2C987;letter-spacing:.6mm}
+  .tag{margin-left:auto;background:#C8372B;font:700 5.8pt sans-serif;letter-spacing:.3mm;padding:.8mm 1.6mm;border-radius:.8mm}
+  .body{display:flex;gap:2.8mm;padding:2.6mm 3mm 0}
+  .ph{width:20mm;height:25mm;border:.5mm solid #A3843A;background:#EFE6D3;display:grid;place-items:center;flex:none;overflow:hidden}
+  .ph img{width:100%;height:100%;object-fit:cover}.ph span{font:800 18pt 'Shippori Mincho B1';color:#A3843A}
+  .info{min-width:0;flex:1}.en{font:800 9.4pt 'Shippori Mincho B1',serif;color:#1B2945;line-height:1.15;text-transform:uppercase}.bn{font:700 8pt 'Noto Serif Bengali';margin-bottom:1mm}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:.3mm 2mm;margin:0;font-size:6.6pt;line-height:1.35}dt{color:#6E665A}dd{margin:0}
+  .strip{position:absolute;left:0;right:0;bottom:0;height:2.2mm;background:#C8372B}
+  .bbody{display:flex;gap:3mm;padding:3.5mm 3.2mm 0}
+  .qr{width:25mm;flex:none;text-align:center}.qr svg{width:25mm;height:25mm;display:block}.qr small{font-size:6pt;color:#6E665A}
+  .btxt{font-size:6.4pt;line-height:1.4;min-width:0}.btxt b{font-size:7.8pt;color:#1B2945}.btxt p{margin:.8mm 0}
+  .sig{margin-top:2.2mm;font-size:5.8pt;color:#6E665A}.sig span{display:block;width:24mm;border-top:.2mm solid #8A7F6C;margin-bottom:.4mm}
+  .bfoot{position:absolute;left:0;right:0;bottom:0;height:5mm;background:#1B2945;color:#E2C987;font:700 5.8pt 'Shippori Mincho B1';letter-spacing:.3mm;display:grid;place-items:center}
+  .help{font-size:12px;color:#6E665A;text-align:center;margin:6mm 0 3mm}
+  .print{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:8px 14px;border-radius:6px;font:inherit;cursor:pointer}@media print{.print,.help{display:none}}`;
 async function printIdCards(list) {
   list = list.filter(Boolean);
   if (!list.length) return toast('কার্ড প্রিন্ট করার মতো কোনো ছাত্র নেই', true);
@@ -2285,27 +2367,7 @@ async function printIdCards(list) {
   w.document.open();
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>ID cards (${list.length})</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">
-  <style>@page{size:A4;margin:8mm}*{box-sizing:border-box}body{margin:0;font-family:'Hind Siliguri',sans-serif;color:#26231E;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .sheet{display:flex;flex-direction:column;gap:2.5mm;align-items:center}
-  .pair{display:flex;gap:0;page-break-inside:avoid;break-inside:avoid}
-  .card{width:85.6mm;height:54mm;border:.2mm dashed #9B907C;position:relative;overflow:hidden;background:#FBF8F1}
-  .band{height:13mm;background:#1B2945;color:#fff;display:flex;align-items:center;gap:2mm;padding:0 2.5mm;border-bottom:.8mm solid #A3843A}
-  .km{width:9mm;height:9mm;border-radius:50%;background:#FBF8F1;border:.4mm solid #C9A95C;display:grid;place-items:center;flex:none}
-  .nm{display:flex;flex-direction:column;line-height:1.15}.nm b{font:800 8.6pt 'Shippori Mincho B1',serif}.nm span{font:700 6.6pt 'Shippori Mincho B1';color:#E2C987;letter-spacing:.6mm}
-  .tag{margin-left:auto;background:#C8372B;font:700 5.8pt sans-serif;letter-spacing:.3mm;padding:.8mm 1.6mm;border-radius:.8mm}
-  .body{display:flex;gap:2.8mm;padding:2.6mm 3mm 0}
-  .ph{width:20mm;height:25mm;border:.5mm solid #A3843A;background:#EFE6D3;display:grid;place-items:center;flex:none;overflow:hidden}
-  .ph img{width:100%;height:100%;object-fit:cover}.ph span{font:800 18pt 'Shippori Mincho B1';color:#A3843A}
-  .info{min-width:0;flex:1}.en{font:800 9.4pt 'Shippori Mincho B1',serif;color:#1B2945;line-height:1.15;text-transform:uppercase}.bn{font:700 8pt 'Noto Serif Bengali';margin-bottom:1mm}
-  dl{display:grid;grid-template-columns:auto 1fr;gap:.3mm 2mm;margin:0;font-size:6.6pt;line-height:1.35}dt{color:#6E665A}dd{margin:0}
-  .strip{position:absolute;left:0;right:0;bottom:0;height:2.2mm;background:#C8372B}
-  .bbody{display:flex;gap:3mm;padding:3.5mm 3.2mm 0}
-  .qr{width:25mm;flex:none;text-align:center}.qr svg{width:25mm;height:25mm;display:block}.qr small{font-size:6pt;color:#6E665A}
-  .btxt{font-size:6.4pt;line-height:1.4;min-width:0}.btxt b{font-size:7.8pt;color:#1B2945}.btxt p{margin:.8mm 0}
-  .sig{margin-top:2.2mm;font-size:5.8pt;color:#6E665A}.sig span{display:block;width:24mm;border-top:.2mm solid #8A7F6C;margin-bottom:.4mm}
-  .bfoot{position:absolute;left:0;right:0;bottom:0;height:5mm;background:#1B2945;color:#E2C987;font:700 5.8pt 'Shippori Mincho B1';letter-spacing:.3mm;display:grid;place-items:center}
-  .help{font-size:12px;color:#6E665A;text-align:center;margin:6mm 0 3mm}
-  .print{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:8px 14px;border-radius:6px;font:inherit;cursor:pointer}@media print{.print,.help{display:none}}</style></head>
+  <style>${ID_CSS}</style></head>
   <body><button class="print" onclick="window.print()">প্রিন্ট / Print</button>
   <p class="help">প্রতি সারিতে বাঁ দিকে সামনের অংশ, ডান দিকে পেছনের অংশ। দাগ বরাবর কেটে মাঝখানে ভাঁজ করে ল্যামিনেট করুন। প্রিন্টের সময় Scale "100%" / "Actual size" রাখুন।</p>
   <div class="sheet">${list.map(card).join('')}</div></body></html>`);
@@ -2543,7 +2605,7 @@ function viewRequests(q) {
 }
 function requestModal(x) {
   const s = byId(S.students, x.student_id) || {}; const due = s.id ? dueOf(s) : 0;
-  const printBtn = { hours: ['স্টাডি-আওয়ার সার্টিফিকেট প্রিন্ট', () => printCertificate(s)], transcript: ['ট্রান্সক্রিপ্ট প্রিন্ট', () => printTranscript(s)], idcard: ['আইডি কার্ড প্রিন্ট', () => printIdCards([s])] }[x.kind];
+  const printBtn = { hours: ['স্টাডি-আওয়ার সার্টিফিকেট প্রিন্ট', () => printCertificate(s)], transcript: ['ট্রান্সক্রিপ্ট প্রিন্ট', () => printTranscript(s)], idcard: isAdmin() ? ['আইডি কার্ড প্রিন্ট', () => printIdCards([s])] : null }[x.kind];
   openModal(`<h2>${esc(REQ_KIND[x.kind] || x.kind)}</h2>
     <p style="margin:0 0 6px"><a href="#/student/${esc(s.id || '')}" id="rqst"><b>${esc(studentName(s))}</b></a> <span class="small muted">${esc(s.admission_no || '')} · আবেদন ${fmtDT(x.created_at)}</span></p>
     ${x.purpose ? `<p class="small" style="margin:0 0 4px">কেন দরকার: <b>${esc(x.purpose)}</b></p>` : ''}${x.note ? `<div class="card" style="white-space:pre-line;background:var(--soft);margin-bottom:8px">${esc(x.note)}</div>` : ''}
@@ -3122,15 +3184,15 @@ async function viewPeople() {
   const count = (r) => people.filter(p => p.role === r).length;
   mount('#/people', `
   <div class="top"><div><h1>স্টাফ ও শিক্ষক</h1><p>কে পোর্টালে ঢুকতে পারবে আর কী দেখবে — এখান থেকেই যোগ করুন, ভূমিকা বদলান বা লগইন বন্ধ করুন।</p></div>
-    <div class="row"><button class="btn" id="padd">+ নতুন শিক্ষক / স্টাফ</button></div></div>
+    <div class="row"><button class="btn ghost" id="pcards">🪪 সবার আইডি কার্ড প্রিন্ট</button><button class="btn" id="padd">+ নতুন শিক্ষক / স্টাফ</button></div></div>
   <div class="grid g4" style="margin-bottom:16px">
     <div class="card stat"><div class="l">পরিচালক</div><div class="v">${count('admin')}</div></div>
     <div class="card stat"><div class="l">অফিস স্টাফ</div><div class="v">${count('staff')}</div></div>
     <div class="card stat"><div class="l">শিক্ষক</div><div class="v">${count('teacher')}</div></div>
     <div class="card stat"><div class="l">আমন্ত্রণ বাকি</div><div class="v">${open.length}</div><div class="s">এখনো অ্যাকাউন্ট খোলেননি</div></div>
   </div>
-  <div class="card"><h2>যাদের লগইন আছে</h2><div class="tw"><table class="stack"><tr><th>নাম</th><th>ইমেইল</th><th>ভূমিকা</th><th>শেষ লগইন</th><th></th></tr>
-    ${people.map(p => `<tr><td data-l="নাম"><b>${esc(p.name || '—')}</b>${p.id === me ? ' <span class="small muted">(আপনি)</span>' : ''}</td><td data-l="ইমেইল" style="overflow-wrap:anywhere">${esc(p.email || '—')}</td>
+  <div class="card"><h2>যাদের লগইন আছে</h2><div class="tw"><table class="stack"><tr><th>নাম</th><th>আইডি</th><th>ইমেইল</th><th>ভূমিকা</th><th>শেষ লগইন</th><th></th></tr>
+    ${people.map(p => `<tr><td data-l="নাম"><b>${esc(p.name || '—')}</b>${p.id === me ? ' <span class="small muted">(আপনি)</span>' : ''}</td><td data-l="আইডি"><button class="btn sm ghost" data-card="${esc(p.id)}">🪪 ${esc((cardOf(p) || {}).staff_no || 'কার্ড')}</button></td><td data-l="ইমেইল" style="overflow-wrap:anywhere">${esc(p.email || '—')}</td>
       <td data-l="ভূমিকা"><select data-role="${esc(p.id)}" ${p.id === me ? 'disabled title="নিজের ভূমিকা বদলানো যায় না"' : ''}>${Object.entries(ROLE_NAME).map(([k, v]) => `<option value="${k}" ${p.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select></td>
       <td data-l="শেষ লগইন">${p.last_sign_in_at ? fmtDT(p.last_sign_in_at) : '—'}</td>
       <td>${p.id === me ? '' : `<button class="btn sm ghost" data-rm="${esc(p.id)}" style="color:var(--red)">লগইন বন্ধ করুন</button>`}</td></tr>`).join('')}</table></div>
@@ -3146,6 +3208,8 @@ async function viewPeople() {
     <li>সে পোর্টাল খুলে "প্রথমবার? অ্যাকাউন্ট খুলুন" চাপবে, সেই ইমেইল আর নিজের পাসওয়ার্ড দেবে, কোড লিখবে — তারপরই ঢুকতে পারবে। কোড শুধু সেই ইমেইলেই কাজ করে, ১৪ দিন পর্যন্ত।</li>
     <li>কে কী দেখবে তা ঠিক হয় ভূমিকা দিয়ে: <b>শিক্ষক</b> — হাজিরা, পরীক্ষা, উপকরণ, মক টেস্ট; <b>অফিস স্টাফ</b> — ভর্তি, টাকা জমা, কাগজ, জাপান আবেদনও; <b>পরিচালক</b> — সব কিছু। পরিচালক যোগ করার আগে ভালো করে ভাবুন।</li></ol></div>`, () => {
     $('#padd').onclick = () => inviteModal();
+    $('#pcards').onclick = () => printStaffCards(people.map(p => byId(S.profiles, p.id) || p));
+    $$('[data-card]').forEach(b => b.onclick = () => staffCardModal(people.find(x => x.id === b.dataset.card), false));
     $$('[data-role]').forEach(sel => sel.onchange = async () => {
       const p = people.find(x => x.id === sel.dataset.role); const role = sel.value;
       if (role === 'admin' && !(await confirmBox(`${p.name}-কে পরিচালক করলে সে সব কিছু দেখতে ও বদলাতে পারবে — টাকা, বেতন, ব্যাকআপ, অন্যদের লগইন।`, 'হ্যাঁ, পরিচালক করুন'))) { sel.value = p.role; return; }
