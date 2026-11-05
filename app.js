@@ -251,7 +251,18 @@ const Remote = {
 const API = DEMO ? Local : Remote;
 
 const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications'].includes(t));
+// ---- keep every open screen up to date: coming back to the portal (or every few minutes) reloads the data,
+// so a change made on another phone or by another staff member shows without pressing refresh
+let _loadedAt = Date.now();
+async function softRefresh() {
+  if (DEMO || document.hidden || !S.profile || Date.now() - _loadedAt < 60000) return;
+  if (!$('#modal').hidden || /\/(new|edit)\b/.test(location.hash) || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) return;
+  const y = scrollY; _loadedAt = Date.now();
+  try { await loadAll(); render(); requestAnimationFrame(() => scrollTo(0, y)); } catch (e) { console.warn(e); }
+}
+document.addEventListener('visibilitychange', softRefresh); addEventListener('focus', softRefresh); setInterval(softRefresh, 180000);
 async function loadAll() {
+  _loadedAt = Date.now();
   const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(DEMO ? t : t === 'teachers' && !isAdmin() ? 'teacher_list' : t === 'students' && isTeacher() ? 'student_roster' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
   for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc', 'wa_parent']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];

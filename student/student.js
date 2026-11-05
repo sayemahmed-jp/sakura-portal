@@ -2024,7 +2024,15 @@ async function showReview(aid) {
 }
 
 let HOME_TAB = 'mat';
+// ---- coming back to the site after a while loads the newest notices, marks and fees by itself
+let _stLoaded = Date.now();
+function stSoftRefresh() {
+  if (document.hidden || Date.now() - _stLoaded < 120000 || !$('.bnav') || /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) return;
+  start();
+}
+document.addEventListener('visibilitychange', stSoftRefresh);
 async function start() {
+  _stLoaded = Date.now();
   $('#app').innerHTML = '<div class="boot">লোড হচ্ছে…</div>'; PREVIEW = null;
   try {
     const user = await API.session();
