@@ -3442,6 +3442,9 @@ async function installApp() {
   $('#ic').onclick = closeModal;
 }
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {   // a new version took over: load it once so the newest screens show
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!window.__swReloaded) { window.__swReloaded = true; location.reload(); } });
+}
 
 // ------------------------------------------------------------------ full backup (ZIP with data, spreadsheets and uploaded files)
 let _zipLib = null;

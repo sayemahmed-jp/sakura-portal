@@ -1136,6 +1136,9 @@ const standalone = () => matchMedia('(display-mode: standalone)').matches || nav
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _instEvt = e; const c = $('#instc'); if (c) c.hidden = false; });
 addEventListener('appinstalled', () => { _instEvt = null; const c = $('#instc'); if (c) c.remove(); toast('ইনস্টল হয়েছে — হোম স্ক্রিনে "সাকুরা ছাত্র" আইকন দেখুন'); });
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { scope: './' }).catch(() => {});
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {   // a new version took over: load it once so the newest screens show
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!window.__swReloaded) { window.__swReloaded = true; location.reload(); } });
+}
 const instHidden = () => { try { return Number(localStorage.getItem('sakura_inst_hide') || 0) > Date.now(); } catch { return false; } };
 function installCardHtml(d) {
   if (standalone() || instHidden() || d.preview) return '';
