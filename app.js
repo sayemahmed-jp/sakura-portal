@@ -81,7 +81,7 @@ const isAdmin = () => S.profile && S.profile.role === 'admin';
 const isTeacher = () => S.profile && S.profile.role === 'teacher';
 const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
-const TEACHER_ROUTES = ['', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
+const TEACHER_ROUTES = ['', 'scan', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
 const ADMIN_ROUTES = ['people', 'weekly', 'expenses', 'teachers', 'teacher', 'audit', 'settings'];
 const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধু পরিচালক দেখতে পারেন।</div>';
@@ -454,9 +454,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
@@ -465,7 +465,7 @@ function shell(active, inner) {
   const nav = NAV_GROUPS.map(([g, hs]) => { const items = hs.map(item).join(''); return items ? `<div class="grp">${g}</div>${items}` : ''; }).join('');
   const grp = NAV_GROUPS.find(([, hs]) => hs.includes(active)); const page = NAV.find(x => x[0] === active);
   const d = new Date(); const name = S.profile.name || S.user.email || '';
-  return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
+  return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b><a href="#/scan" class="mscan" aria-label="আইডি / QR দিয়ে খুঁজুন" title="আইডি / QR">📷</a>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side" aria-label="মেনু">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
@@ -518,6 +518,7 @@ function render() {
   if (p[0] === 'proofs') return viewProofs(q);
   if (p[0] === 'feedback') return viewFeedback(q);
   if (p[0] === 'docinbox') return viewDocInbox(q);
+  if (p[0] === 'scan') return viewScan(q);
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
@@ -712,11 +713,12 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
+  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button><button class="btn ghost" id="idc">আইডি কার্ড</button><button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
     if (tab === 'mock') bindGo();
+    const dos = $('#dos'); if (dos) dos.onclick = () => printDossier(s);
     if ($('#idc')) { $('#idc').onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
@@ -2170,9 +2172,10 @@ async function seedDemo() {
 }
 
 // ------------------------------------------------------------------ printing
-function printWindow(title, bodyHtml) {
-  const w = window.open('', '_blank');
+function printWindow(title, bodyHtml, win) {
+  const w = win || window.open('', '_blank');
   if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  if (win) { try { w.document.open(); } catch { /* fresh window */ } }
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">
   <style>@page{size:A4;margin:12mm}body{font-family:'Hind Siliguri',sans-serif;color:#26231E;margin:0}
@@ -2317,6 +2320,87 @@ function parentMsg(s, link) { return fillTpl(S.settings.wa_parent, { ...tplBase(
 
 
 
+
+// ------------------------------------------------------------------ find a student by ID number or by scanning the QR code on the ID card
+function findByCode(raw) {   // a scanned QR (portal profile link) or a typed admission number → the student
+  const t = String(raw || '').trim(); if (!t) return null;
+  const m = t.match(/#\/student\/([0-9a-z-]{8,})/i); if (m) return byId(S.students, m[1]) || null;
+  const k = t.toUpperCase().replace(/\s+/g, ''); return S.students.find(x => (x.admission_no || '').toUpperCase() === k) || null;
+}
+let _scanStop = null;
+function stopScan() { if (_scanStop) { try { _scanStop(); } catch { /* stopped */ } _scanStop = null; } }
+let _jsqr = null;
+function loadJsQr() { if (window.jsQR) return Promise.resolve(window.jsQR); if (_jsqr) return _jsqr;
+  _jsqr = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js'; sc.onload = () => res(window.jsQR); sc.onerror = () => { _jsqr = null; rej(new Error('QR পড়ার ফাইল লোড হয়নি')); }; document.head.appendChild(sc); }); return _jsqr; }
+function viewScan(q) {
+  stopScan(); const term = (q.get('q') || '').trim();
+  const hits = term ? S.students.filter(x => [x.admission_no, x.name_bn, x.name_en, x.phone, x.guardian_phone, x.passport_no, x.nid].some(v => String(v || '').toLowerCase().includes(term.toLowerCase()))).slice(0, 20) : [];
+  mount('#/scan', `
+  <div class="top"><div><h1>আইডি / QR দিয়ে খুঁজুন</h1><p>ছাত্রের আইডি কার্ড বা ছাত্রদের সাইটের "ডিজিটাল আইডি"-র QR কোড ক্যামেরায় ধরুন, অথবা আইডি নম্বর লিখুন — সাথে সাথে ছাত্রের পুরো তথ্য খুলবে। ফোনের সাধারণ ক্যামেরা দিয়ে QR স্ক্যান করলেও (লগইন থাকলে) সরাসরি এই পোর্টালে ছাত্রের পাতা খোলে।</p></div></div>
+  <div class="grid g2">
+    <div class="card"><h2>📷 QR স্ক্যান</h2><div id="scanbox" class="scanbox"><div class="empty" style="padding:30px 10px">ক্যামেরা বন্ধ</div></div>
+      <div class="row" style="margin-top:10px;gap:8px"><button class="btn" id="scango">📷 ক্যামেরা চালু করুন</button><button class="btn ghost" id="scanoff" hidden>বন্ধ</button></div><div class="small muted" id="scanmsg" style="margin-top:6px"></div></div>
+    <div class="card"><h2>⌨ আইডি নম্বর / নাম / ফোন</h2><form id="sf" class="row" style="gap:8px"><input name="q" value="${esc(term)}" placeholder="যেমন SJI-0012" autocomplete="off" style="flex:1;font-size:17px;letter-spacing:1px" autofocus><button class="btn">খুঁজুন</button></form>
+      ${term ? (hits.length ? `<div class="tw" style="margin-top:12px"><table class="stack"><tr><th>আইডি</th><th>নাম</th><th>লেভেল</th><th>অবস্থা</th></tr>${hits.map(x => `<tr class="click" data-go="${x.id}"><td data-l="আইডি"><b>${esc(x.admission_no)}</b></td><td data-l="নাম">${esc(studentName(x))}</td><td data-l="লেভেল">${esc(x.current_level)} · ${esc(BATCH[x.batch] || '')}</td><td data-l="অবস্থা">${badge(x.status, STATUS[x.status])}</td></tr>`).join('')}</table></div>` : '<div class="empty">কাউকে পাওয়া যায়নি</div>') : '<p class="small muted" style="margin:10px 0 0">আইডি হুবহু মিললে সরাসরি ছাত্রের পাতা খুলবে।</p>'}</div></div>`, () => {
+    $('#sf').onsubmit = (e) => { e.preventDefault(); const v = e.target.q.value.trim(); const one = findByCode(v); if (one) { location.hash = `#/student/${one.id}`; return; } location.hash = '#/scan?q=' + encodeURIComponent(v); };
+    $$('[data-go]').forEach(r => r.onclick = () => { location.hash = '#/student/' + r.dataset.go; });
+    const msg = (t) => { const m = $('#scanmsg'); if (m) m.textContent = t; };
+    $('#scanoff').onclick = () => { stopScan(); $('#scanbox').innerHTML = '<div class="empty" style="padding:30px 10px">ক্যামেরা বন্ধ</div>'; $('#scanoff').hidden = true; $('#scango').hidden = false; msg(''); };
+    $('#scango').onclick = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('এই ব্রাউজারে ক্যামেরা চালু করা যায় না — আইডি নম্বর লিখে খুঁজুন', true);
+      let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }); } catch { return toast('ক্যামেরার অনুমতি পাওয়া যায়নি', true); }
+      const box = $('#scanbox'); box.innerHTML = '<video playsinline muted autoplay></video><i class="scanframe"></i>'; const v = box.querySelector('video'); v.srcObject = stream;
+      $('#scango').hidden = true; $('#scanoff').hidden = false; msg('QR কোডটা ফ্রেমের ভেতরে ধরুন…');
+      let alive = true; _scanStop = () => { alive = false; stream.getTracks().forEach(t => t.stop()); };
+      const det = 'BarcodeDetector' in window ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null; const jsQR = det ? null : await loadJsQr().catch(() => null);
+      const c = document.createElement('canvas'); const g = c.getContext('2d', { willReadFrequently: true });
+      const tick = async () => { if (!alive || !document.body.contains(v)) { stopScan(); return; }
+        try { let text = null;
+          if (v.readyState >= 2) {
+            if (det) { const r = await det.detect(v); if (r.length) text = r[0].rawValue; }
+            else if (jsQR) { c.width = v.videoWidth; c.height = v.videoHeight; g.drawImage(v, 0, 0); const r = jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: 'dontInvert' }); if (r) text = r.data; } }
+          if (text) { const one = findByCode(text); if (one) { stopScan(); toast('পাওয়া গেছে: ' + studentName(one)); location.hash = `#/student/${one.id}`; return; } msg('এই QR কোনো ছাত্রের নয়: ' + text.slice(0, 60)); }
+        } catch (e) { console.warn(e); }
+        setTimeout(tick, 250); };
+      tick();
+    };
+  });
+}
+addEventListener('hashchange', () => { if (!location.hash.startsWith('#/scan')) stopScan(); });
+
+// ------------------------------------------------------------------ the student's complete file, to print or save as PDF
+async function printDossier(s) {
+  const st = S.settings; const a = attOf(s.id); const res = studentResults(s.id); const docs = new Map(S.documents.filter(d => d.student_id === s.id).map(d => [d.doc_type, d]));
+  const apps = S.applications.filter(x => x.student_id === s.id); const pays = S.payments.filter(p => p.student_id === s.id).sort((x, y) => String(x.paid_on).localeCompare(String(y.paid_on)));
+  const win = window.open('', '_blank'); if (!win) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  win.document.write('<p style="font-family:sans-serif;padding:20px">ফাইল তৈরি হচ্ছে…</p>'); toast('ফাইল তৈরি হচ্ছে…');
+  let photo = ''; const ph = docs.get('photo'); if (ph && ph.file_path && !/\.pdf$/i.test(ph.file_path)) { try { photo = await API.fileUrl(ph.file_path); } catch { /* no photo */ } }
+  let qr = ''; try { await loadQR(); qr = qrSvg(profileLink(s)); } catch { /* printed without the QR */ }
+  const row = (k, v) => `<tr><th>${k}</th><td>${v == null || v === '' ? '—' : v}</td></tr>`;
+  const sec = (t) => `<h3 style="font:700 15px 'Noto Serif Bengali';color:#1B2945;margin:18px 0 6px;border-bottom:2px solid #A3843A;padding-bottom:3px">${t}</h3>`;
+  const sch = (id) => byId(S.jp_schools, id) || {};
+  printWindow('Student file ' + s.admission_no, `${headHtml()}
+  <div style="padding:18px 22px">
+  <div style="display:flex;gap:16px;align-items:flex-start">
+    <div style="width:30mm;height:38mm;border:1px solid #D8CDB9;display:grid;place-items:center;overflow:hidden;flex:none;background:#F6F0E4">${photo ? `<img src="${esc(photo)}" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:11px;color:#8A8170">ছবি নেই</span>'}</div>
+    <div style="flex:1"><div style="font:800 22px 'Noto Serif Bengali'">${esc(s.name_bn || '')}</div><div style="font-size:16px;font-weight:600">${esc(s.name_en || '')}</div>
+      <div style="margin-top:6px;font-size:13.5px">আইডি: <b style="font-size:16px;letter-spacing:1px">${esc(s.admission_no)}</b> · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')} · ${esc(STATUS[s.status] || '')}</div>
+      <div style="font-size:12px;color:#6E665A;margin-top:4px">ছাত্রের সম্পূর্ণ ফাইল · তৈরি ${fmtD(todayISO())}</div></div>
+    ${qr ? `<div style="width:26mm;text-align:center;flex:none"><div style="width:26mm;height:26mm">${qr}</div><div style="font-size:9px;color:#6E665A;margin-top:2px">স্ক্যান করলে পোর্টালে<br>সর্বশেষ তথ্য</div></div>` : ''}
+  </div>
+  ${sec('ব্যক্তিগত তথ্য')}<table>${row('জন্ম তারিখ', fmtD(s.dob))}${row('লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender])}${row('NID / জন্ম নিবন্ধন', esc(s.nid))}${row('পাসপোর্ট নম্বর', esc(s.passport_no))}${row('শিক্ষাগত যোগ্যতা', esc(s.education))}</table>
+  ${sec('যোগাযোগ ও অভিভাবক')}<table>${row('মোবাইল', esc(s.phone))}${row('ইমেইল', esc(s.email))}${row('বর্তমান ঠিকানা', esc(s.address_present))}${row('স্থায়ী ঠিকানা', esc(s.address_permanent))}${row('অভিভাবক', esc([s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')))}${row('অভিভাবকের মোবাইল', esc(s.guardian_phone))}</table>
+  ${sec('কোর্স')}<table>${row('ভর্তির তারিখ', fmtD(s.admission_date))}${row('প্যাকেজ', esc(s.package))}${row('ক্লাস শুরু', fmtD(s.start_date))}${row('উপস্থিতি', a.total ? `${a.came}/${a.total} ক্লাস (${a.pct}%) · মোট ${a.hours} ঘণ্টা` : '—')}</table>
+  ${isTeacher() ? '' : `${sec('ফি')}<table>${row('কোর্স ফি (ছাড়ের পর)', tk(netFee(s)))}${row('পরিশোধ', tk(paidOf(s.id)))}${row('বাকি', `<b>${tk(dueOf(s))}</b>`)}${num(s.processing_fee) ? row('জাপান প্রসেসিং ফি', `${tk(s.processing_fee)} · বাকি ${tk(procDueOf(s))}`) : ''}</table>
+  ${pays.length ? `<table style="margin-top:6px;font-size:12px"><tr><th style="width:auto">তারিখ</th><th style="width:auto">রশিদ</th><th style="width:auto">খাত</th><th style="width:auto;text-align:right">টাকা</th></tr>${pays.map(p => `<tr><td>${fmtD(p.paid_on)}</td><td>${esc(p.receipt_no)}</td><td>${esc(PURPOSE[p.purpose] || p.purpose || '')}</td><td style="text-align:right">${tk(p.amount)}</td></tr>`).join('')}</table>` : ''}`}
+  ${res.length ? `${sec('পরীক্ষার ফলাফল')}<table style="font-size:12.5px"><tr><th style="width:auto">তারিখ</th><th style="width:auto">পরীক্ষা</th><th style="width:auto;text-align:right">নম্বর</th></tr>${res.map(({ r, ex }) => `<tr><td>${fmtD(ex.exam_date)}</td><td>${esc(ex.title)} (${esc(ex.level)})</td><td style="text-align:right">${r.absent ? 'অনুপস্থিত' : `${num(r.marks)}/${num(ex.max_marks)}`}</td></tr>`).join('')}</table>` : ''}
+  ${sec('জাপান')}<table>${row('ধাপ', esc((JSTAGES.find(x => x[0] === (s.japan_stage || 'none')) || [])[1]))}${row('লক্ষ্য স্কুল', esc(s.target_school))}${row('সেশন', esc(s.intake))}</table>
+  ${apps.length ? `<table style="margin-top:6px;font-size:12.5px"><tr><th style="width:auto">স্কুল</th><th style="width:auto">সেশন</th><th style="width:auto">অবস্থা</th></tr>${apps.map(x => `<tr><td>${esc(sch(x.school_id).name_ja || sch(x.school_id).name_en || '')}</td><td>${esc(x.intake || '')}</td><td>${esc(APP_ST[x.status] || x.status || '')}</td></tr>`).join('')}</table>` : ''}
+  ${isTeacher() ? '' : `${sec('কাগজপত্র')}<table style="font-size:12.5px"><tr><th style="width:auto">কাগজ</th><th style="width:auto">অবস্থা</th><th style="width:auto">তারিখ</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || {}; return `<tr><td>${esc(l)}</td><td>${d.status === 'verified' ? '✓ যাচাই হয়েছে' : d.status === 'received' ? 'জমা হয়েছে' : '— জমা হয়নি'}${d.file_path ? ' · ফাইল আছে' : ''}</td><td>${d.expires_on ? 'মেয়াদ ' + fmtD(d.expires_on) : d.issued_on ? fmtD(d.issued_on) : ''}</td></tr>`; }).join('')}</table>`}
+  ${s.notes && !isTeacher() ? `${sec('নোট')}<p style="font-size:13px;white-space:pre-line">${esc(s.notes)}</p>` : ''}
+  <p style="font-size:10.5px;color:#8A8170;margin-top:18px;border-top:1px solid #D8CDB9;padding-top:6px">এই ফাইলের সব তথ্য ${esc(st.institute_bn || '')}-এর পোর্টালে সুরক্ষিত আছে। কাগজ হারিয়ে গেলে পোর্টাল থেকে আবার প্রিন্ট করা যাবে। এটা গোপনীয় — অনুমতি ছাড়া কাউকে দেবেন না।</p>
+  </div>`, win);
+}
 
 // ------------------------------------------------------------------ papers students scanned on the student site (v38)
 function viewDocInbox(q) {

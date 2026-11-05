@@ -1317,6 +1317,25 @@ async function renderDocs(d, user) {
   };
 }
 
+// ------------------------------------------------------------------ digital ID card (ডিজিটাল আইডি): the office scans its QR to open this student's file
+let _qrg = null;
+function loadQrGen() { if (window.qrcode) return Promise.resolve(window.qrcode); if (_qrg) return _qrg;
+  _qrg = new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; sc.onload = () => res(window.qrcode); sc.onerror = () => { _qrg = null; rej(new Error('QR লোড হয়নি — ইন্টারনেট দেখুন')); }; document.head.appendChild(sc); }); return _qrg; }
+async function renderMyId(d, user) {
+  scrollTo(0, 0); const s = d.student || {}; const I = d.institute || {};
+  $('#app').innerHTML = `<div class="st"><div class="row" style="justify-content:space-between;margin:0 0 12px"><b style="font:800 20px 'Noto Serif Bengali';color:var(--navy)">🪪 আমার ডিজিটাল আইডি</b><button class="btn sm ghost" id="idback">‹ ফিরে যান</button></div>
+    <div class="idc"><div class="idh"><span class="kamon">${KAMON}</span><div><b>${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}</b><small>さくら日本語学院 · STUDENT ID</small></div></div>
+      <div class="idb"><div class="idp" id="idphoto"><span>ছবি</span></div><div class="idi"><b class="nm">${esc(s.name_bn || s.name_en || '')}</b><span>${esc(s.name_en || '')}</span>
+        <div class="idno">${esc(s.admission_no || '')}</div><span>${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</span></div></div>
+      <div class="idq" id="idqr"><div class="small muted">QR তৈরি হচ্ছে…</div></div></div>
+    <div class="card acct small" style="line-height:1.7;margin-top:14px">অফিসে এই QR দেখালে স্টাফরা স্ক্যান করে সাথে সাথে আপনার সব তথ্য দেখতে পারবেন। আইডি কার্ড হারিয়ে গেলেও আপনার তথ্য অফিসের সিস্টেমে সুরক্ষিত থাকে — নতুন কার্ড অফিস থেকে প্রিন্ট করে নিতে পারবেন।<br><span class="muted">QR থেকে শুধু অফিসের লগইন করা স্টাফরাই তথ্য দেখতে পারেন, অন্য কেউ না।</span></div></div>`;
+  $('#idback').onclick = () => renderHome(d, user);
+  try { const sid = await API.myStudentId(); await loadQrGen(); const link = new URL('../', location.href).href + '#/student/' + sid; const q = window.qrcode(0, 'M'); q.addData(link); q.make();
+    const box = $('#idqr'); if (box) box.innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }) + `<small>${esc(s.admission_no || '')}</small>`; }
+  catch (e) { const box = $('#idqr'); if (box) box.innerHTML = `<div class="small" style="color:var(--red)">${esc(errMsg(e))}</div>`; }
+  try { const ph = (d.docs || []).find(x => x.doc_type === 'photo' && x.file_path && !/\.pdf$/i.test(x.file_path)); if (ph) { const u = await API.docFileUrl(ph.file_path); const b = $('#idphoto'); if (b && u) b.innerHTML = `<img src="${esc(u)}" alt="">`; } } catch { /* no photo */ }
+}
+
 // ------------------------------------------------------------------ Japan life guide (জাপান লাইফ গাইড)
 let JG_OPEN = 'before';
 const jgKey = (d) => 'sakura_jg_' + ((d.student || {}).admission_no || 'p');
@@ -1759,7 +1778,7 @@ function renderHome(d, user) {
   else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${docsRowHtml(d)}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'স্কুল, ধাপ আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
   else if (NAVSEC === 'me') { const bd = d.preview ? null : badgeList(d); const ib = inboxCount(d);
     body = `<h1 class="sech">👤 আমি</h1><div class="card acct"><b style="font-size:16px">${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</div></div>
-      <div class="mlist2">${d.preview ? '' : row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
+      <div class="mlist2">${d.preview ? '' : row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে') + row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
       ${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center;margin-top:6px">লগআউট</button>`; }
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
     return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;
@@ -1767,6 +1786,7 @@ function renderHome(d, user) {
   $$('[data-sec]').forEach(b => b.onclick = () => { NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
   const jp = $('#jpgo'); if (jp) jp.onclick = () => { ME_TAB = 'jp'; renderMe(d, user); };
   const ibg = $('#ibgo'); if (ibg) ibg.onclick = () => renderInbox(d, user);
+  const idg = $('#idgo'); if (idg) idg.onclick = () => renderMyId(d, user);
   const dcg = $('#dcgo'); if (dcg) dcg.onclick = () => { DU = null; renderDocs(d, user); };
   const lo = $('#lo'); if (lo) lo.onclick = async () => { await API.signOut(); renderAuth(); };
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });
