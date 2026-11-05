@@ -418,6 +418,9 @@ async function afterLogin(user) {
     render();
   } catch (e) { $('#app').innerHTML = `<div class="login"><div class="card"><h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">আবার চেষ্টা</button></div></div>`; }
 }
+// language switch: the portal is written in Bengali; i18n.js translates it when English is picked
+function langBtnHtml() { const en = window.SK_LANG === 'en'; return `<button type="button" data-noi18n class="langbtn" data-lang="${en ? 'bn' : 'en'}">🌐 ${en ? 'বাংলা' : 'English'}</button>`; }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lang]'); if (b && window.setLang) { e.preventDefault(); window.setLang(b.dataset.lang); } });
 function renderLogin() {
   $('#app').innerHTML = `<div class="login"><form class="card" id="lf" autocomplete="on">
     <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
@@ -429,6 +432,7 @@ function renderLogin() {
       <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লগইন</button>
       <p class="small" style="margin:14px 0 0"><a href="#" id="toforgot">পাসওয়ার্ড ভুলে গেছেন?</a></p>
       <p class="small" style="margin:6px 0 0">প্রথমবার? <a href="#" id="tosignup">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
+    <div style="margin-top:14px">${langBtnHtml()}</div>
   </form></div>`;
   const ts = $('#tosignup'); if (ts) ts.onclick = (e) => { e.preventDefault(); renderSignup(); };
   const tf = $('#toforgot'); if (tf) tf.onclick = (e) => { e.preventDefault(); renderForgot(); };
@@ -482,7 +486,7 @@ function shell(active, inner) {
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
     <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
-      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button></div></div>
+      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${langBtnHtml()}</div></div>
   </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
