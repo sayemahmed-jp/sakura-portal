@@ -2132,7 +2132,11 @@ function viewSettings() {
       e.preventDefault(); const d = formData(e.target);
       const data = { ...S.settings, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', ref_reward: (d.ref_reward || '').trim(), pay_bkash: (d.pay_bkash || '').trim(), pay_nagad: (d.pay_nagad || '').trim(), pay_bank: (d.pay_bank || '').trim(), time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
       if (!data.class_days.length) return toast('অন্তত একটা ক্লাসের দিন বাছুন', true);
-      try { await API.saveSettings(data); S.settings = data; toast('সংরক্ষণ হয়েছে'); } catch (err) { toast(errMsg(err), true); }
+      try { await API.saveSettings(data); S.settings = data;
+        const nm = (data.director_en || '').trim();
+        if (isDirector() && nm && nm !== S.profile.name && !DEMO) { const { error } = await sb.from('profiles').update({ name: nm }).eq('id', S.profile.id); if (!error) { S.profile.name = nm; S.profiles = (S.profiles || []).map(x => x.id === S.profile.id ? { ...x, name: nm } : x); } }
+        else if (isDirector() && nm && DEMO) S.profile.name = nm;
+        toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); }
     };
     if (DEMO) {
       $('#seed').onclick = async () => { await seedDemo(); await loadAll(); toast('ডেমো তথ্য যোগ হয়েছে'); location.hash = '#/'; };
@@ -2298,6 +2302,7 @@ function staffCardModal(p, own) {
       <label class="btn sm ghost" style="margin-top:8px;cursor:pointer">📷 ছবি ${c.photo_path ? 'বদলান' : 'দিন'}<input type="file" id="scfile" accept="image/*" hidden></label></div></div>
     <div class="small muted" style="margin:0 0 4px">কার্ড দেখতে এমন হবে (ওপরে সামনের দিক, নিচে পেছনের দিক):</div><div id="scprev" class="cardprev"><div class="small muted" style="padding:20px">কার্ড তৈরি হচ্ছে…</div></div>
     <form id="scf" class="form">
+      <label class="f full">নাম (কার্ডে যেমন দেখাবে)<input name="pname" value="${esc(p.name || '')}" maxlength="60" ${adm ? '' : 'readonly'} required></label>
       <label class="f">পদবি<input name="designation" value="${esc(c.designation)}" ${ro()} placeholder="যেমন: সিনিয়র শিক্ষক"></label>
       <label class="f">মোবাইল<input name="phone" value="${esc(c.phone)}" inputmode="tel"></label>
       <label class="f">রক্তের গ্রুপ<select name="blood_group">${BLOOD.map(b => `<option ${c.blood_group === b ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
@@ -2314,7 +2319,11 @@ function staffCardModal(p, own) {
   $('#scfile').onchange = async (e) => { let f = e.target.files[0]; if (!f) return; if (f.size > 3 * 1048576) return toast('ছবি ৩ MB-এর ছোট দিন', true);
     try { const path = `${p.id}/${Date.now()}.${(f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')}`; await API.uploadTo('staffphoto', path, f); await saveCard(p.id, { photo_path: path }); toast('ছবি যোগ হয়েছে'); const u = await API.fileUrlFrom('staffphoto', path).catch(() => ''); const f2 = $('#scf'); const keep = f2 ? formData(f2) : null; staffCardModal(p, own); if (keep) { const g = $('#scf'); Object.entries(keep).forEach(([k, v]) => { if (g[k] && !g[k].readOnly) g[k].value = v; }); } } catch (err) { toast(errMsg(err), true); } };
   $('#scf').onsubmit = async (e) => { e.preventDefault(); const d = formData(e.target); const patch = adm ? { designation: d.designation.trim(), phone: d.phone.trim(), blood_group: d.blood_group, joined_on: d.joined_on || null, valid_until: d.valid_until || null } : { phone: d.phone.trim(), blood_group: d.blood_group };
-    try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে — কার্ডে দেখুন'); staffCardModal(p, own); } catch (err) { toast(errMsg(err), true); } };
+    try { await saveCard(p.id, patch);
+      const nm = (d.pname || '').trim();
+      if (adm && nm && nm !== p.name) { if (!DEMO) { const { error } = await sb.from('profiles').update({ name: nm }).eq('id', p.id); if (error) throw error; }
+        p.name = nm; S.profiles = (S.profiles || []).map(x => x.id === p.id ? { ...x, name: nm } : x); if (S.profile.id === p.id) S.profile.name = nm; }
+      toast('সংরক্ষণ হয়েছে — কার্ডে দেখুন'); staffCardModal(p, own); } catch (err) { toast(errMsg(err), true); } };
 }
 function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) || {}; const tag = /ব্যবস্থাপনা|managing|\bMD\b/i.test(c.designation || '') ? 'MANAGING DIRECTOR' : (ROLE_EN[p.role] || 'STAFF');
     return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' || p.role === 'deputy' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
