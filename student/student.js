@@ -358,10 +358,13 @@ const API = {
 // ------------------------------------------------------------------ screens
 const shellCard = (inner) => `<div class="login"><div class="card" style="max-width:420px"><div class="kamon" style="width:56px;height:56px">${KAMON}</div>${inner}</div></div>`;
 
+// ---- language: বাংলা / English (the switch itself lives in i18n.js)
+function langSwitchHtml() { const en = window.SK_LANG === 'en'; return `<div class="langsw" data-noi18n><button type="button" data-lang="bn" class="${en ? '' : 'on'}">বাংলা</button><button type="button" data-lang="en" class="${en ? 'on' : ''}">English</button></div>`; }
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b && window.setLang && b.dataset.lang !== window.SK_LANG) window.setLang(b.dataset.lang); });
 function renderAuth(mode = 'in', note = '') {
   document.title = 'ছাত্রদের সাইট · সাকুরা';
   $('#app').innerHTML = shellCard(`
-    <h1>ছাত্রদের সাইট</h1><p class="muted" style="margin:0 0 14px">সাকুরা জাপানিজ ইনস্টিটিউটের ভর্তি হওয়া ছাত্র-ছাত্রীদের পড়ার নোট, শিট আর অডিও</p>
+    ${langSwitchHtml()}<h1>ছাত্রদের সাইট</h1><p class="muted" style="margin:0 0 14px">সাকুরা জাপানিজ ইনস্টিটিউটের ভর্তি হওয়া ছাত্র-ছাত্রীদের পড়ার নোট, শিট আর অডিও</p>
     ${DEMO ? '<div class="demo-bar">ডেমো মোড: যেকোনো ইমেইল দিয়ে ঢুকে দেখুন। পোর্টালের ডেমো তথ্য ব্যবহার হবে।</div>' : ''}
     <div class="authtabs"><button data-m="in" class="${mode === 'in' ? 'on' : ''}">লগইন</button><button data-m="up" class="${mode === 'up' ? 'on' : ''}">নতুন অ্যাকাউন্ট</button></div>
     <form id="af" autocomplete="on">
@@ -638,7 +641,7 @@ function attendanceHtml(rows, inner) {
   const cells = [...Array(first).fill('<span></span>'), ...Array.from({ length: days }, (_, i) => { const r = byDay[i + 1]; return `<span class="cal ${r ? 'c-' + ATT_ST[r.status][1] : ''}" title="${r ? esc(ATT_ST[r.status][0]) : ''}">${BN_NUM(i + 1)}</span>`; })];
   const month = `<div class="card attm"><div class="row" style="justify-content:space-between;align-items:center"><button class="btn sm ghost" data-attm="${months[mi - 1] || ''}" ${mi > 0 ? '' : 'disabled'}>‹</button><b>${BN_MONTH[m - 1]} ${BN_NUM(y)}</b><button class="btn sm ghost" data-attm="${months[mi + 1] || ''}" ${mi < months.length - 1 ? '' : 'disabled'}>›</button></div>
     <div class="small muted" style="text-align:center;margin:4px 0 8px">এই মাসে ${BN_NUM(mrows.length)}টি ক্লাসের মধ্যে ${BN_NUM(mc)}টিতে এসেছেন</div>
-    <div class="calg">${['র', 'সো', 'ম', 'বু', 'বৃ', 'শু', 'শ'].map(w => `<span class="wd">${w}</span>`).join('')}${cells.join('')}</div>
+    <div class="calg">${(window.SK_LANG === 'en' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] : ['র', 'সো', 'ম', 'বু', 'বৃ', 'শু', 'শ']).map(w => `<span class="wd">${w}</span>`).join('')}${cells.join('')}</div>
     <div class="legend">${Object.values(ATT_ST).map(([l, c]) => `<span><i class="c-${c}"></i>${l}</span>`).join('')}</div>
     ${mrows.length ? `<div style="margin-top:10px">${mrows.map(r => `<div class="attr"><span class="dot2 c-${ATT_ST[r.status][1]}"></span><span style="flex:none;width:70px">${fmtD(r.date).slice(0, 5)}</span><span style="flex:1;min-width:0">${esc(r.topic || r.level + ' ক্লাস')}</span><span class="small muted">${esc(ATT_ST[r.status][0])}</span></div>`).join('')}</div>` : ''}</div>`;
   if (inner) return month;
@@ -1810,7 +1813,7 @@ function renderHome(d, user) {
   else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${docsRowHtml(d)}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'স্কুল, ধাপ আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
   else if (NAVSEC === 'me') { const bd = d.preview ? null : badgeList(d); const ib = inboxCount(d);
     body = `<h1 class="sech">👤 আমি</h1><div class="card acct"><b style="font-size:16px">${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</div></div>
-      <div class="mlist2">${d.preview ? '' : row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে') + row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
+      <div class="mlist2">${d.preview ? '' : '<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>' + langSwitchHtml() + '</div>' + row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে') + row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
       ${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center;margin-top:6px">লগআউট</button>`; }
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
     return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;

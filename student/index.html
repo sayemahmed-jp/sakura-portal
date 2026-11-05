@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="../icons/icon-192.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="i18n.js?v=3"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="সাকুরা ছাত্র">
 <title>ছাত্রদের সাইট · সাকুরা জাপানিজ ইনস্টিটিউট</title>
@@ -264,6 +265,11 @@
   .quick button:active .qi{transform:scale(.94)}.quick .qi i{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:99px;background:var(--red);color:#fff;font-size:11px;font-style:normal;font-weight:700;display:grid;place-items:center;padding:0 4px;border:2px solid var(--bg,#F5F0E6)}
   .instc{padding:10px 12px}
   @media (prefers-reduced-motion:reduce){.ring .rf{transition:none}}
+  html[lang=en] .kcell small{display:none}
+  .langsw{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:#fff;gap:2px;float:right;margin:-4px 0 6px 8px}
+  .langsw button{border:0;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--muted);padding:5px 12px;border-radius:999px;cursor:pointer}
+  .langsw button.on{background:var(--navy);color:#fff}
+  .langrow{display:flex;align-items:center;gap:12px;padding:10px 14px;margin:0}.langrow .ri{font-size:24px;width:34px;text-align:center}.langrow .langsw{float:none;margin:0}
   .sech{font:800 21px 'Noto Serif Bengali',serif;color:var(--navy);margin:2px 0 12px}
   .mlist2{display:grid;gap:8px;margin:0 0 14px}
   .mrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);cursor:pointer;font:inherit;color:var(--ink);text-align:left;box-shadow:0 1px 2px rgba(27,41,69,.05)}
@@ -322,6 +328,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=47"></script>
+<script src="student.js?v=49"></script>
 </body>
 </html>
