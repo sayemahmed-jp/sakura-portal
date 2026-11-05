@@ -286,3 +286,6 @@ details summary{cursor:pointer}
 .mscan{margin-left:8px;font-size:20px;text-decoration:none;padding:2px 6px}
 
 .cardprev{background:#F3EEDF;border-radius:12px;margin-bottom:12px;overflow:hidden}
+
+.dobx{display:flex;gap:6px;width:100%}.dobx select{flex:1;min-width:0}.dobx select:nth-child(2){flex:1.6}
+td .dobx select{padding:4px 2px;font-size:13px}

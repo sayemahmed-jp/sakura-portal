@@ -3447,6 +3447,27 @@ async function installApp() {
   openModal(`<h2>ফোনে অ্যাপের মতো রাখুন</h2>${ios ? `<p><b>iPhone (Safari):</b></p><ol><li>নিচের <b>Share</b> বোতাম (□↑) চাপুন</li><li><b>Add to Home Screen</b> চাপুন</li><li>ডানে উপরে <b>Add</b> চাপুন</li></ol>` : `<p><b>Android (Chrome):</b></p><ol><li>ডানে উপরে <b>⋮</b> চাপুন</li><li><b>Install app</b> বা <b>Add to Home screen</b> চাপুন</li><li><b>Install</b> চাপুন</li></ol><p><b>কম্পিউটার (Chrome/Edge):</b> ঠিকানার ঘরের ডান পাশে ইনস্টল আইকন (⊕) চাপুন।</p>`}<p class="small muted">এরপর হোম স্ক্রিনে "সাকুরা" আইকন থাকবে, চাপলেই পোর্টাল পুরো স্ক্রিনে খুলবে। লগইন একবার করলেই হবে।</p><div class="row" style="justify-content:flex-end"><button class="btn" id="ic">ঠিক আছে</button></div>`);
   $('#ic').onclick = closeModal;
 }
+// ---- birth dates: day / month / year lists instead of the calendar, so the year is quick to choose
+const BN_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+function enhanceDob(inp) {
+  if (inp.dataset.dobx) return; inp.dataset.dobx = '1'; inp.style.display = 'none';
+  const y0 = new Date().getFullYear(); const [vy, vm, vd] = (inp.value || '').split('-');
+  const w = document.createElement('span'); w.className = 'dobx';
+  w.innerHTML = `<select aria-label="দিন"><option value="">দিন</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}">${i + 1}</option>`).join('')}</select>`
+    + `<select aria-label="মাস"><option value="">মাস</option>${BN_MONTHS.map((m, i) => `<option value="${String(i + 1).padStart(2, '0')}">${m}</option>`).join('')}</select>`
+    + `<select aria-label="বছর"><option value="">বছর</option>${Array.from({ length: 81 }, (_, i) => y0 - 3 - i).map(y => `<option>${y}</option>`).join('')}</select>`;
+  const [sd, sm, sy] = w.querySelectorAll('select');
+  if (vy) { if (![...sy.options].some(o => o.value === vy)) sy.add(new Option(vy, vy), 1); sy.value = vy; sm.value = vm || ''; sd.value = (vd || '').slice(0, 2); }
+  if (inp.disabled || inp.readOnly) [sd, sm, sy].forEach(x => { x.disabled = true; });
+  const sync = () => { let v = '';
+    if (sd.value && sm.value && sy.value) { const last = new Date(Number(sy.value), Number(sm.value), 0).getDate(); if (Number(sd.value) > last) sd.value = String(last).padStart(2, '0'); v = `${sy.value}-${sm.value}-${sd.value}`; }
+    if (inp.value !== v) { inp.value = v; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); } };
+  [sd, sm, sy].forEach(x => x.addEventListener('change', sync));
+  inp.after(w);
+}
+const DOB_SEL = 'input[type=date][name=dob], input[type=date][data-k=dob], input[type=date][data-sp=dob]';
+new MutationObserver(() => document.querySelectorAll(DOB_SEL).forEach(enhanceDob)).observe(document.documentElement, { childList: true, subtree: true });
+
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {   // a new version took over: load it once so the newest screens show
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (!window.__swReloaded) { window.__swReloaded = true; location.reload(); } });
