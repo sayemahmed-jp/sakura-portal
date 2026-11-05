@@ -713,7 +713,7 @@ async function viewStudent(id, tab) {
   if (tab === 'hist') body = '<div id="histbox"><div class="empty">লোড হচ্ছে…</div></div>';
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
-  <div class="top"><div class="phead"><div class="avatar" id="av">${esc(initials(s))}</div><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
+  <div class="top"><div class="phead"><label class="avatar avup" id="avl" title="${isTeacher() ? '' : 'ছবি দিন / বদলান'}"><span id="av">${esc(initials(s))}</span>${isTeacher() ? '' : '<i class="avcam">📷</i><input type="file" id="avfile" accept="image/*" hidden>'}</label><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
   <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><a class="btn ghost" href="#/student/${s.id}/edit">সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
@@ -723,6 +723,19 @@ async function viewStudent(id, tab) {
     if ($('#plink')) { const ic = $('#idc'); if (ic) ic.onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
+    const avf = $('#avfile'); if (avf) avf.onchange = async (e) => {   // the student's photo: made small and square-ish, saved as the "পাসপোর্ট সাইজ ছবি" paper
+      const f = e.target.files[0]; if (!f) return; if (!/^image\//.test(f.type)) return toast('ছবির ফাইল দিন', true);
+      toast('ছবি আপলোড হচ্ছে…');
+      try {
+        const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(f)); const k = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+        const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+        const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', .86));
+        const path = await API.upload(`${s.id}/photo-${Date.now()}.jpg`, new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+        const ex = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo');
+        const row = ex ? await API.update('documents', ex.id, { file_path: path, status: 'verified', feedback: '', updated_at: new Date().toISOString() }) : await API.insert('documents', { student_id: s.id, doc_type: 'photo', status: 'verified', file_path: path });
+        putLocal('documents', row); toast('ছবি যোগ হয়েছে ✓'); render();
+      } catch (err) { toast(errMsg(err), true); }
+    };
     const del = $('#del'); if (del) del.onclick = async () => {
       if (S.payments.some(p => p.student_id === s.id)) return toast('এই ছাত্রের টাকা জমার রেকর্ড আছে, তাই মোছা যাবে না। অবস্থা "বাদ দিয়েছে" করে দিন।', true);
       if (!(await confirmBox(`${studentName(s)}-এর সব তথ্য, হাজিরা ও কাগজপত্র মুছে যাবে।`))) return;
