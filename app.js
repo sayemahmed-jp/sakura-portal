@@ -76,10 +76,11 @@ const S = {
   students: [], payments: [], sessions: [], attendance: [], documents: [], profiles: [],
   loaded: false
 };
-const isAdmin = () => S.profile && S.profile.role === 'admin';
+const isAdmin = () => S.profile && (S.profile.role === 'admin' || S.profile.role === 'deputy');   // director or deputy: all of the institute's data
+const isDirector = () => S.profile && S.profile.role === 'admin';   // only the director manages people and their ID cards
 // pages only the director (admin) may open — the database enforces the same rules (migration v13)
 const isTeacher = () => S.profile && S.profile.role === 'teacher';
-const ROLE_NAME = { admin: 'পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
+const ROLE_NAME = { admin: 'পরিচালক', deputy: 'উপ-পরিচালক', staff: 'অফিস স্টাফ', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
 const TEACHER_ROUTES = ['', 'scan', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
@@ -457,7 +458,7 @@ const ICON = {
 const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
 const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
-const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
+const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : h === '#/people' ? isDirector() : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
   const al = isTeacher() ? [] : computeAlerts(); const red = al.filter(a => a.level === 'red').length;
@@ -2275,22 +2276,22 @@ function qrSvg(text) { const q = window.qrcode(0, 'M'); q.addData(text); q.make(
 function cardValidTill(s) { const from = s.start_date || s.admission_date || todayISO(); return addMonthsISO(from, num(S.settings.id_valid_months) || 12); }
 
 // ------------------------------------------------------------------ staff and teacher ID cards (v39): the director sees all, everyone else only their own
-const ROLE_EN = { admin: 'DIRECTOR', staff: 'OFFICE STAFF', teacher: 'TEACHER' };
+const ROLE_EN = { admin: 'DIRECTOR', deputy: 'DEPUTY DIRECTOR', staff: 'OFFICE STAFF', teacher: 'TEACHER' };
 const BLOOD = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 function cardOf(p) {   // the person's card; in the demo it is made on the spot, like the database trigger does
   if (!p) return null; let c = (S.staff_cards || []).find(x => x.profile_id === p.id); if (c || !DEMO) return c || null;
-  const pre = 'SJI-' + ({ admin: 'D', teacher: 'T' }[p.role] || 'S') + '-'; const n = (S.staff_cards || []).filter(x => (x.staff_no || '').startsWith(pre)).length + 1;
-  c = { id: p.id, profile_id: p.id, staff_no: pre + String(n).padStart(3, '0'), designation: { admin: 'পরিচালক', teacher: 'শিক্ষক' }[p.role] || 'অফিস স্টাফ', phone: '', blood_group: '', photo_path: '', joined_on: todayISO(), valid_until: addMonthsISO(todayISO(), 24) };
+  const pre = 'SJI-' + ({ admin: 'D', deputy: 'D', teacher: 'T' }[p.role] || 'S') + '-'; const n = (S.staff_cards || []).filter(x => (x.staff_no || '').startsWith(pre)).length + 1;
+  c = { id: p.id, profile_id: p.id, staff_no: pre + String(n).padStart(3, '0'), designation: ROLE_NAME[p.role] || 'অফিস স্টাফ', phone: '', blood_group: '', photo_path: '', joined_on: todayISO(), valid_until: addMonthsISO(todayISO(), 24) };
   S.staff_cards = [...(S.staff_cards || []), c]; return c;
 }
 async function saveCard(pid, patch) {
   if (DEMO) { S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? { ...x, ...patch } : x); return; }
-  if (isAdmin()) { const { data, error } = await sb.from('staff_cards').update({ ...patch, updated_at: new Date().toISOString() }).eq('profile_id', pid).select().single(); if (error) throw error; S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? data : x); }
+  if (isDirector()) { const { data, error } = await sb.from('staff_cards').update({ ...patch, updated_at: new Date().toISOString() }).eq('profile_id', pid).select().single(); if (error) throw error; S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? data : x); }
   else { const { error } = await sb.rpc('my_staff_card_update', { p_phone: patch.phone ?? null, p_blood: patch.blood_group ?? null, p_photo: patch.photo_path || '' }); if (error) throw error; S.staff_cards = S.staff_cards.map(x => x.profile_id === pid ? { ...x, ...patch } : x); }
 }
 function staffCardModal(p, own) {
   if (!p) return; const c = cardOf(p); if (!c) return toast('কার্ড এখনো তৈরি হয়নি — পরিচালককে v39 আপডেট চালাতে বলুন', true);
-  const adm = isAdmin(); const ro = (k) => adm ? '' : 'readonly';
+  const adm = isDirector(); const ro = (k) => adm ? '' : 'readonly';
   openModal(`<h2>🪪 ${own ? 'আমার আইডি কার্ড' : esc(p.name || '') + '-এর আইডি কার্ড'}</h2>
     <div class="row" style="gap:14px;align-items:flex-start;margin-bottom:10px"><div id="scph" style="width:84px;height:104px;border:2px solid #A3843A;border-radius:8px;background:#EFE6D3;display:grid;place-items:center;overflow:hidden;flex:none"><span style="font:800 26px 'Shippori Mincho B1';color:#A3843A">${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span></div>
       <div><div style="font-size:12px;color:var(--muted)">আইডি নম্বর</div><div style="font:800 22px ui-monospace,monospace;letter-spacing:1px;color:var(--red)">${esc(c.staff_no || '—')}</div><div class="small muted">নিজে থেকে তৈরি · ${esc(ROLE_NAME[p.role] || '')}</div>
@@ -2316,7 +2317,7 @@ function staffCardModal(p, own) {
     try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে — কার্ডে দেখুন'); staffCardModal(p, own); } catch (err) { toast(errMsg(err), true); } };
 }
 function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) || {}; const tag = /ব্যবস্থাপনা|managing|\bMD\b/i.test(c.designation || '') ? 'MANAGING DIRECTOR' : (ROLE_EN[p.role] || 'STAFF');
-    return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
+    return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' || p.role === 'deputy' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
       <div class="body"><div class="ph">${photo ? `<img src="${esc(photo)}" alt="">` : `<span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span>`}</div>
       <div class="info"><div class="en">${esc(p.name || '')}</div><div class="bn">${esc(c.designation || '')}</div>
       <dl><dt>ID No.</dt><dd><b>${esc(c.staff_no || '')}</b></dd><dt>Role</dt><dd>${esc(tag.charAt(0) + tag.slice(1).toLowerCase())}</dd>${c.phone ? `<dt>Phone</dt><dd>${esc(c.phone)}</dd>` : ''}${c.blood_group ? `<dt>Blood</dt><dd>${esc(c.blood_group)}</dd>` : ''}<dt>Valid till</dt><dd>${fmtD(c.valid_until)}</dd></dl></div></div><div class="strip"></div></div>
@@ -2325,7 +2326,7 @@ function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) ||
       <p>অফিস: <b>${esc(st.phone)}</b><br>WhatsApp: ${esc(st.whatsapp)}${st.address ? `<br>${esc(st.address)}` : ''}</p><div class="sig"><span></span>Director · ${esc(st.director_en)}</div></div></div>
       <div class="bfoot">${esc(st.institute_ja)} · Japanese language · Study in Japan</div></div></div>`; }
 async function printStaffCards(people) {
-  people = people.filter(Boolean).filter(p => isAdmin() || p.id === S.profile.id); if (!people.length) return toast('প্রিন্ট করার মতো কার্ড নেই', true);
+  people = people.filter(Boolean).filter(p => isDirector() || p.id === S.profile.id); if (!people.length) return toast('প্রিন্ট করার মতো কার্ড নেই', true);
   const w = window.open('', '_blank'); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
   w.document.write('<p style="font-family:sans-serif;padding:20px">কার্ড তৈরি হচ্ছে…</p>');
   try { await loadQR(); } catch (e) { w.close(); return toast(errMsg(e), true); }
@@ -3192,7 +3193,7 @@ const portalUrl = () => location.origin + location.pathname;
 function newInviteCode() { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const b = new Uint8Array(8); crypto.getRandomValues(b); return [...b].map(x => A[x % A.length]).join(''); }
 const inviteMsg = (inv) => `আসসালামু আলাইকুম ${inv.name}। ${S.settings.institute_bn}-এর পোর্টালে আপনাকে ${ROLE_NAME[inv.role]} হিসেবে যোগ করা হয়েছে।\n\n১. এই লিংক খুলুন: ${portalUrl()}\n২. "প্রথমবার? অ্যাকাউন্ট খুলুন" চাপুন\n৩. ইমেইল: ${inv.email}\n৪. নিজের একটা পাসওয়ার্ড দিন (অন্তত ৮ অক্ষর)\n৫. আমন্ত্রণ কোড: ${inv.code}\n\nকোডটি ${fmtD((inv.expires_at || '').slice(0, 10))} পর্যন্ত কাজ করবে। পাসওয়ার্ড কাউকে বলবেন না।`;
 async function viewPeople() {
-  if (!isAdmin()) return mount('#/people', ADMIN_ONLY_MSG);
+  if (!isDirector()) return mount('#/people', ADMIN_ONLY_MSG);
   mount('#/people', '<div class="empty">লোড হচ্ছে…</div>');
   let people;
   try { if (DEMO) people = S.profiles.map(p => ({ ...p, email: p.id === 'demo' ? 'demo' : (p.email || '') })); else { const { data, error } = await sb.rpc('admin_people'); if (error) throw error; people = data || []; } }
@@ -3205,7 +3206,7 @@ async function viewPeople() {
   <div class="top"><div><h1>স্টাফ ও শিক্ষক</h1><p>কে পোর্টালে ঢুকতে পারবে আর কী দেখবে — এখান থেকেই যোগ করুন, ভূমিকা বদলান বা লগইন বন্ধ করুন।</p></div>
     <div class="row"><button class="btn ghost" id="pcards">🪪 সবার আইডি কার্ড প্রিন্ট</button><button class="btn" id="padd">+ নতুন শিক্ষক / স্টাফ</button></div></div>
   <div class="grid g4" style="margin-bottom:16px">
-    <div class="card stat"><div class="l">পরিচালক</div><div class="v">${count('admin')}</div></div>
+    <div class="card stat"><div class="l">পরিচালক / উপ-পরিচালক</div><div class="v">${count('admin') + count('deputy')}</div></div>
     <div class="card stat"><div class="l">অফিস স্টাফ</div><div class="v">${count('staff')}</div></div>
     <div class="card stat"><div class="l">শিক্ষক</div><div class="v">${count('teacher')}</div></div>
     <div class="card stat"><div class="l">আমন্ত্রণ বাকি</div><div class="v">${open.length}</div><div class="s">এখনো অ্যাকাউন্ট খোলেননি</div></div>
@@ -3251,7 +3252,7 @@ function inviteModal() {
   <form id="ivf" class="form">
     <label class="f full">নাম<input name="name" required maxlength="60" placeholder="যেমন: রহিমা আক্তার"></label>
     <label class="f full">ইমেইল (যেটা দিয়ে লগইন করবে)<input name="email" type="email" required maxlength="120" autocomplete="off"></label>
-    <label class="f full">ভূমিকা<select name="role"><option value="teacher">শিক্ষক — হাজিরা, পরীক্ষা, উপকরণ, মক টেস্ট</option><option value="staff">অফিস স্টাফ — ভর্তি, টাকা জমা, কাগজ, জাপান আবেদনও</option><option value="admin">পরিচালক — সব কিছু</option></select></label>
+    <label class="f full">ভূমিকা<select name="role"><option value="teacher">শিক্ষক — হাজিরা, পরীক্ষা, উপকরণ, মক টেস্ট</option><option value="staff">অফিস স্টাফ — ভর্তি, টাকা জমা, কাগজ, জাপান আবেদনও</option><option value="deputy">উপ-পরিচালক — সব তথ্য ও কাজ, শুধু স্টাফ যোগ / ভূমিকা বদলানো বাদে</option><option value="admin">পরিচালক — সব কিছু</option></select></label>
     <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="ivc">বাতিল</button><button class="btn" type="submit">কোড তৈরি করুন</button></div>
   </form>`);
   const f = $('#ivf'); $('#ivc').onclick = closeModal;

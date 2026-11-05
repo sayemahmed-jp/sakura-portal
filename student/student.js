@@ -261,7 +261,7 @@ const Preview = {
     const role = prof ? prof.role : '';
     PREVIEW = { attempts: {}, n: 0 };
     return { linked: true, preview: true, institute: d.institute, levels: ['N5', 'N4', 'N3'], counts, materials, mocks, history: [], fee: {},
-      student: { name_bn: prof ? prof.name : (user.email || ''), admission_no: role === 'admin' ? 'পরিচালক · প্রিভিউ' : role === 'teacher' ? 'শিক্ষক · প্রিভিউ' : 'স্টাফ · প্রিভিউ' } };
+      student: { name_bn: prof ? prof.name : (user.email || ''), admission_no: role === 'admin' ? 'পরিচালক · প্রিভিউ' : role === 'deputy' ? 'উপ-পরিচালক · প্রিভিউ' : role === 'teacher' ? 'শিক্ষক · প্রিভিউ' : 'স্টাফ · প্রিভিউ' } };
   },
   async start(id) {
     const [{ data: t, error: e1 }, { data: qs, error: e2 }] = await Promise.all([
