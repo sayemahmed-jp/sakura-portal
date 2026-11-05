@@ -2282,6 +2282,7 @@ function staffCardModal(p, own) {
     <div class="row" style="gap:14px;align-items:flex-start;margin-bottom:10px"><div id="scph" style="width:84px;height:104px;border:2px solid #A3843A;border-radius:8px;background:#EFE6D3;display:grid;place-items:center;overflow:hidden;flex:none"><span style="font:800 26px 'Shippori Mincho B1';color:#A3843A">${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span></div>
       <div><div style="font-size:12px;color:var(--muted)">আইডি নম্বর</div><div style="font:800 22px ui-monospace,monospace;letter-spacing:1px;color:var(--red)">${esc(c.staff_no || '—')}</div><div class="small muted">নিজে থেকে তৈরি · ${esc(ROLE_NAME[p.role] || '')}</div>
       <label class="btn sm ghost" style="margin-top:8px;cursor:pointer">📷 ছবি ${c.photo_path ? 'বদলান' : 'দিন'}<input type="file" id="scfile" accept="image/*" hidden></label></div></div>
+    <div class="small muted" style="margin:0 0 4px">কার্ড দেখতে এমন হবে (ওপরে সামনের দিক, নিচে পেছনের দিক):</div><div id="scprev" class="cardprev"><div class="small muted" style="padding:20px">কার্ড তৈরি হচ্ছে…</div></div>
     <form id="scf" class="form">
       <label class="f">পদবি<input name="designation" value="${esc(c.designation)}" ${ro()} placeholder="যেমন: সিনিয়র শিক্ষক"></label>
       <label class="f">মোবাইল<input name="phone" value="${esc(c.phone)}" inputmode="tel"></label>
@@ -2292,11 +2293,24 @@ function staffCardModal(p, own) {
       <div class="full row" style="justify-content:flex-end"><button type="button" class="btn ghost" id="scc">বন্ধ</button><button type="button" class="btn ghost" id="scp">🖨 প্রিন্ট</button><button class="btn">সংরক্ষণ</button></div></form>`);
   if (c.photo_path) API.fileUrlFrom('staffphoto', c.photo_path).then(u => { const b = $('#scph'); if (b) b.innerHTML = `<img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => {});
   $('#scc').onclick = closeModal; $('#scp').onclick = () => printStaffCards([p]);
+  (async () => { try { await loadQR(); const ph = c.photo_path ? await API.fileUrlFrom('staffphoto', c.photo_path).catch(() => '') : ''; const box = $('#scprev'); if (!box) return;
+    const fr = document.createElement('iframe'); fr.title = 'কার্ডের নমুনা'; fr.style.cssText = 'width:100%;height:440px;border:0;display:block';
+    fr.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@700;800&display=swap"><style>${ID_CSS} body{background:transparent} .pair{flex-direction:column;gap:3mm;align-items:center} .card{border-style:solid;border-color:#D8CDB9;border-radius:2mm;box-shadow:0 4px 14px rgba(27,41,69,.18)} .print,.help{display:none}</style></head><body><div class="sheet" style="padding:6px 0">${staffCardHtml(p, ph)}</div></body></html>`;
+    box.innerHTML = ''; box.appendChild(fr); } catch (e) { const box = $('#scprev'); if (box) box.innerHTML = `<div class="small" style="color:var(--red)">${esc(errMsg(e))}</div>`; } })();
   $('#scfile').onchange = async (e) => { let f = e.target.files[0]; if (!f) return; if (f.size > 3 * 1048576) return toast('ছবি ৩ MB-এর ছোট দিন', true);
-    try { const path = `${p.id}/${Date.now()}.${(f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')}`; await API.uploadTo('staffphoto', path, f); await saveCard(p.id, { photo_path: path }); toast('ছবি যোগ হয়েছে'); const u = await API.fileUrlFrom('staffphoto', path).catch(() => ''); const bx = $('#scph'); if (bx && u) bx.innerHTML = `<img src="${esc(u)}" style="width:100%;height:100%;object-fit:cover">`; } catch (err) { toast(errMsg(err), true); } };
+    try { const path = `${p.id}/${Date.now()}.${(f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')}`; await API.uploadTo('staffphoto', path, f); await saveCard(p.id, { photo_path: path }); toast('ছবি যোগ হয়েছে'); const u = await API.fileUrlFrom('staffphoto', path).catch(() => ''); const f2 = $('#scf'); const keep = f2 ? formData(f2) : null; staffCardModal(p, own); if (keep) { const g = $('#scf'); Object.entries(keep).forEach(([k, v]) => { if (g[k] && !g[k].readOnly) g[k].value = v; }); } } catch (err) { toast(errMsg(err), true); } };
   $('#scf').onsubmit = async (e) => { e.preventDefault(); const d = formData(e.target); const patch = adm ? { designation: d.designation.trim(), phone: d.phone.trim(), blood_group: d.blood_group, joined_on: d.joined_on || null, valid_until: d.valid_until || null } : { phone: d.phone.trim(), blood_group: d.blood_group };
-    try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে'); closeModal(); } catch (err) { toast(errMsg(err), true); } };
+    try { await saveCard(p.id, patch); toast('সংরক্ষণ হয়েছে — কার্ডে দেখুন'); staffCardModal(p, own); } catch (err) { toast(errMsg(err), true); } };
 }
+function staffCardHtml(p, photo) { const st = S.settings; const c = cardOf(p) || {}; const tag = ROLE_EN[p.role] || 'STAFF';
+    return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
+      <div class="body"><div class="ph">${photo ? `<img src="${esc(photo)}" alt="">` : `<span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span>`}</div>
+      <div class="info"><div class="en">${esc(p.name || '')}</div><div class="bn">${esc(c.designation || '')}</div>
+      <dl><dt>ID No.</dt><dd><b>${esc(c.staff_no || '')}</b></dd><dt>Role</dt><dd>${esc(tag.charAt(0) + tag.slice(1).toLowerCase())}</dd>${c.phone ? `<dt>Phone</dt><dd>${esc(c.phone)}</dd>` : ''}${c.blood_group ? `<dt>Blood</dt><dd>${esc(c.blood_group)}</dd>` : ''}<dt>Valid till</dt><dd>${fmtD(c.valid_until)}</dd></dl></div></div><div class="strip"></div></div>
+      <div class="card back"><div class="bbody"><div class="qr">${qrSvg(`${location.origin}${location.pathname}#/people`)}<small>${esc(c.staff_no || '')}</small></div>
+      <div class="btxt"><b style="font-family:'Noto Serif Bengali'">${esc(st.institute_bn)}</b><p>এই কার্ড প্রতিষ্ঠানের সম্পত্তি। কাজ ছেড়ে দিলে অফিসে ফেরত দিন। কার্ডটি পেলে নিচের নম্বরে জানান।</p>
+      <p>অফিস: <b>${esc(st.phone)}</b><br>WhatsApp: ${esc(st.whatsapp)}${st.address ? `<br>${esc(st.address)}` : ''}</p><div class="sig"><span></span>Director · ${esc(st.director_en)}</div></div></div>
+      <div class="bfoot">${esc(st.institute_ja)} · Japanese language · Study in Japan</div></div></div>`; }
 async function printStaffCards(people) {
   people = people.filter(Boolean).filter(p => isAdmin() || p.id === S.profile.id); if (!people.length) return toast('প্রিন্ট করার মতো কার্ড নেই', true);
   const w = window.open('', '_blank'); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
@@ -2304,15 +2318,7 @@ async function printStaffCards(people) {
   try { await loadQR(); } catch (e) { w.close(); return toast(errMsg(e), true); }
   const st = S.settings; const photos = {};
   await Promise.all(people.map(async p => { const c = cardOf(p); if (c && c.photo_path) try { photos[p.id] = await API.fileUrlFrom('staffphoto', c.photo_path); } catch { /* no photo */ } }));
-  const card = (p) => { const c = cardOf(p) || {}; const tag = ROLE_EN[p.role] || 'STAFF';
-    return `<div class="pair"><div class="card front"><div class="band" style="${p.role === 'teacher' ? 'background:#2E5D3C' : p.role === 'admin' ? 'background:#5B1F1A' : ''}"><span class="km">${KAMON}</span><div class="nm"><b>${esc(st.institute_en)}</b><span>${esc(st.institute_ja)}</span></div><span class="tag">${tag} ID</span></div>
-      <div class="body"><div class="ph">${photos[p.id] ? `<img src="${esc(photos[p.id])}" alt="">` : `<span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span>`}</div>
-      <div class="info"><div class="en">${esc(p.name || '')}</div><div class="bn">${esc(c.designation || '')}</div>
-      <dl><dt>ID No.</dt><dd><b>${esc(c.staff_no || '')}</b></dd><dt>Role</dt><dd>${esc(tag.charAt(0) + tag.slice(1).toLowerCase())}</dd>${c.phone ? `<dt>Phone</dt><dd>${esc(c.phone)}</dd>` : ''}${c.blood_group ? `<dt>Blood</dt><dd>${esc(c.blood_group)}</dd>` : ''}<dt>Valid till</dt><dd>${fmtD(c.valid_until)}</dd></dl></div></div><div class="strip"></div></div>
-      <div class="card back"><div class="bbody"><div class="qr">${qrSvg(`${location.origin}${location.pathname}#/people`)}<small>${esc(c.staff_no || '')}</small></div>
-      <div class="btxt"><b style="font-family:'Noto Serif Bengali'">${esc(st.institute_bn)}</b><p>এই কার্ড প্রতিষ্ঠানের সম্পত্তি। কাজ ছেড়ে দিলে অফিসে ফেরত দিন। কার্ডটি পেলে নিচের নম্বরে জানান।</p>
-      <p>অফিস: <b>${esc(st.phone)}</b><br>WhatsApp: ${esc(st.whatsapp)}${st.address ? `<br>${esc(st.address)}` : ''}</p><div class="sig"><span></span>Director · ${esc(st.director_en)}</div></div></div>
-      <div class="bfoot">${esc(st.institute_ja)} · Japanese language · Study in Japan</div></div></div>`; };
+  const card = (p) => staffCardHtml(p, photos[p.id]);
   w.document.open();
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Staff ID cards (${people.length})</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">

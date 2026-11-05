@@ -284,3 +284,5 @@ details summary{cursor:pointer}
 .scanbox .scanframe{position:absolute;inset:18% 22%;border:3px solid #E2C987;border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
 .scanbox .empty{color:#bbb}
 .mscan{margin-left:8px;font-size:20px;text-decoration:none;padding:2px 6px}
+
+.cardprev{background:#F3EEDF;border-radius:12px;margin-bottom:12px;overflow:hidden}
