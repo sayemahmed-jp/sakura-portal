@@ -11,95 +11,150 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@700;800&display=swap">
 <style>
-:root{--navy:#1B2945;--navy2:#26365A;--gold:#A3843A;--gold2:#C9A95C;--red:#C8372B;--green:#1FA855;--ink:#26231E;--muted:#6E665A;--paper:#FBF8F1;--soft:#F3ECDD;--line:#E3D8C3;--r:14px}
+:root{--navy:#1B2945;--navy2:#26365A;--gold:#A3843A;--gold2:#C9A95C;--red:#C8372B;--green:#1FA855;--ink:#1E1B17;--muted:#6E665A;--paper:#F6F3EC;--soft:#EFE9DC;--line:#E0D6C2;--night:#120A12;--sakura:#F2B8C0;--r:18px}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;font-family:'Hind Siliguri',sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;font-size:16px}
-a{color:inherit}.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+body{margin:0;font-family:'Hind Siliguri',sans-serif;color:var(--ink);background:var(--paper);line-height:1.65;font-size:16px}
+a{color:inherit}.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 .kamon{width:44px;height:44px;border-radius:50%;background:var(--paper);border:2px solid var(--gold2);display:grid;place-items:center;flex:none}
-header.nav{position:sticky;top:0;z-index:20;background:rgba(27,41,69,.97);color:#fff;border-bottom:3px solid var(--gold)}
-header.nav .wrap{display:flex;align-items:center;gap:12px;height:64px}
+/* header: sits on the hero, turns solid on scroll */
+header.nav{position:fixed;inset:0 0 auto;z-index:40;color:#fff;transition:background .35s,box-shadow .35s}
+header.nav.solid{background:rgba(18,10,18,.92);backdrop-filter:blur(10px);box-shadow:0 1px 0 rgba(255,255,255,.08)}
+header.nav .wrap{display:flex;align-items:center;gap:12px;height:72px}
 .brand b{display:block;font:800 16px 'Shippori Mincho B1',serif;line-height:1.1}.brand small{color:#E2C987;font-size:12px}
-header.nav nav{margin-left:auto;display:flex;gap:4px}header.nav nav a{text-decoration:none;padding:8px 10px;border-radius:8px;font-weight:600;font-size:14.5px}header.nav nav a:hover{background:rgba(255,255,255,.08)}
-.btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;border:2px solid var(--navy);background:var(--navy);color:#fff;padding:11px 20px;border-radius:10px;font:700 16px 'Hind Siliguri';text-decoration:none;cursor:pointer}
-.btn.red{background:var(--red);border-color:var(--red)}.btn.wa{background:var(--green);border-color:var(--green)}.btn.ghost{background:transparent;color:inherit;border-color:currentColor}
-.hero{background:radial-gradient(1200px 500px at 85% -10%,#2E4373 0,transparent 60%),var(--navy);color:#fff;padding:56px 0 64px;position:relative;overflow:hidden}
-.hero .wrap{display:grid;grid-template-columns:1.25fr .75fr;gap:30px;align-items:center}
-.hero .ja{font:800 15px 'Shippori Mincho B1';color:#E2C987;letter-spacing:4px}
-.hero h1{font:800 clamp(30px,5vw,48px)/1.2 'Noto Serif Bengali';margin:8px 0 12px}.hero h1 em{font-style:normal;color:#F2B8B0}
-.hero p{font-size:18px;color:#E9E4DA;margin:0 0 22px;max-width:560px}
-.hero .cta{display:flex;gap:10px;flex-wrap:wrap}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}.chips span{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);padding:5px 12px;border-radius:20px;font-size:14px}
-.seal{justify-self:center;width:min(300px,70vw);aspect-ratio:1;border-radius:50%;background:var(--paper);border:6px solid var(--gold2);box-shadow:0 0 0 10px rgba(201,169,92,.18);display:grid;place-items:center}
-section{padding:56px 0}section.alt{background:var(--soft)}
-h2{font:800 clamp(24px,3.4vw,32px) 'Noto Serif Bengali';color:var(--navy);margin:0 0 6px}.lead{color:var(--muted);margin:0 0 26px;font-size:17px}
-.grid{display:grid;gap:16px}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
-.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px}
-.card h3{margin:0 0 6px;font:700 19px 'Noto Serif Bengali';color:var(--navy)}.card p{margin:0;color:var(--muted)}
-.ic{width:42px;height:42px;border-radius:10px;background:var(--navy);color:#E2C987;display:grid;place-items:center;font:800 18px 'Shippori Mincho B1';margin-bottom:10px}
-.course{position:relative;border-top:5px solid var(--navy)}.course.hl{border-top-color:var(--red)}
-.course .lv{font:800 30px 'Shippori Mincho B1';color:var(--navy)}.course .fee{font:800 26px 'Noto Serif Bengali';color:var(--red);margin:6px 0 2px}
-.course ul{margin:12px 0 0;padding-left:18px;color:var(--ink)}.course li{margin:3px 0}
-.tag{position:absolute;top:14px;right:14px;background:var(--red);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px}
-.steps{counter-reset:s;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.steps div{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 12px;text-align:center;font-weight:600}
-.steps div::before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;margin:0 auto 6px;border-radius:50%;background:var(--red);color:#fff;font-weight:800}
-.steps small{display:block;font-weight:400;color:var(--muted);font-size:13px}
-form .f{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:15px}
-input,select,textarea{font:inherit;font-weight:400;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;background:#fff;width:100%}
+header.nav nav{margin-left:auto;display:flex;align-items:center;gap:6px}
+header.nav nav a{text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:600;font-size:14.5px}
+header.nav nav a.hm:hover{background:rgba(255,255,255,.1)}
+.pill{background:#fff;color:var(--night)!important;padding:9px 18px!important}.pill:hover{background:var(--sakura)}
+.menub{display:none;background:none;border:0;color:#fff;font:600 15px 'Hind Siliguri';cursor:pointer;padding:8px}
+.drawer{position:fixed;inset:0;z-index:50;background:var(--night);color:#fff;padding:90px 28px 28px;display:flex;flex-direction:column;gap:6px;transform:translateY(-100%);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
+.drawer.open{transform:none}.drawer a{font:800 30px 'Noto Serif Bengali';text-decoration:none;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+.drawer .x{position:absolute;top:22px;right:20px;background:none;border:0;color:#fff;font:600 15px 'Hind Siliguri';cursor:pointer}
+.btn{display:inline-flex;align-items:center;gap:10px;justify-content:center;border:1.5px solid var(--navy);background:var(--navy);color:#fff;padding:13px 24px;border-radius:999px;font:700 16px 'Hind Siliguri';text-decoration:none;cursor:pointer;transition:transform .2s,background .2s}
+.btn:hover{transform:translateY(-2px)}
+.btn.red{background:var(--red);border-color:var(--red)}.btn.wa{background:var(--green);border-color:var(--green)}.btn.light{background:#fff;color:var(--night);border-color:#fff}.btn.ghost{background:transparent;color:inherit;border-color:currentColor}
+/* hero: night with a sakura glow and falling petals */
+.hero{min-height:100svh;background:radial-gradient(900px 600px at 78% 30%,rgba(200,55,90,.38),transparent 65%),radial-gradient(700px 500px at 10% 90%,rgba(38,54,90,.7),transparent 70%),var(--night);color:#F5EEE9;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:120px 0 40px}
+.hero .wrap{position:relative;z-index:2;width:100%}
+.hero .ja{font:800 14px 'Shippori Mincho B1';color:#E2C987;letter-spacing:5px}
+.hero h1{font:800 clamp(40px,8vw,88px)/1.08 'Noto Serif Bengali';margin:14px 0 18px;letter-spacing:-.5px}.hero h1 em{font-style:normal;color:var(--sakura)}
+.hero p{font-size:clamp(17px,2vw,20px);color:#E6DCD8;margin:0 0 28px;max-width:560px}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}.chips span{border:1px solid rgba(255,255,255,.22);padding:5px 14px;border-radius:999px;font-size:14px;color:#E6DCD8}
+.scrollcue{display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:16px;border-top:1px solid rgba(255,255,255,.14);font-size:14px;color:#CFC3BF;text-decoration:none}
+.seal{position:absolute;z-index:1;right:max(-60px,calc(50% - 620px));top:16%;width:min(420px,46vw);aspect-ratio:1;border-radius:50%;background:var(--paper);border:6px solid var(--gold2);box-shadow:0 0 0 14px rgba(201,169,92,.12),0 0 120px 30px rgba(242,184,192,.25);display:grid;place-items:center;opacity:.95}
+.petals{position:absolute;inset:0;z-index:1;pointer-events:none}
+.petals i{position:absolute;top:-30px;width:12px;height:9px;background:var(--sakura);border-radius:12px 1px 12px 1px;opacity:.75;animation:fall linear infinite}
+@keyframes fall{to{transform:translate(-120px,110vh) rotate(540deg)}}
+/* sections */
+section{padding:96px 0}section.alt{background:var(--soft)}section.dark{background:var(--night);color:#F5EEE9}
+.eyebrow{font-size:14px;font-weight:600;color:var(--muted);margin:0 0 10px}.eyebrow b{color:var(--red);margin-right:8px}
+section.dark .eyebrow{color:#CFC3BF}section.dark .eyebrow b{color:var(--sakura)}
+h2{font:800 clamp(30px,5vw,54px)/1.15 'Noto Serif Bengali';color:var(--navy);margin:0 0 12px;letter-spacing:-.3px}section.dark h2{color:#fff}
+.lead{color:var(--muted);margin:0 0 40px;font-size:18px;max-width:640px}section.dark .lead{color:#CFC3BF}
+.grid{display:grid;gap:18px}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.card h3{margin:0 0 6px;font:700 20px 'Noto Serif Bengali';color:var(--navy)}.card p{margin:0;color:var(--muted)}
+.why .card{background:transparent;border:0;border-top:1px solid var(--line);border-radius:0;padding:22px 0 0}
+.ic{font:800 34px 'Shippori Mincho B1';color:var(--red);margin-bottom:8px;line-height:1}
+/* courses: a row you can swipe on the phone */
+.courses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.course{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px;transition:transform .25s,box-shadow .25s}
+.course:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(30,27,23,.08)}
+.course.hl{background:var(--night);color:#F5EEE9;border-color:var(--night)}.course.hl .muted,.course.hl ul{color:#CFC3BF}
+.course .lv{font:800 32px 'Shippori Mincho B1';color:var(--navy)}.course.hl .lv{color:#fff}
+.course .fee{font:800 28px 'Noto Serif Bengali';color:var(--red);margin:14px 0 0}.course.hl .fee{color:var(--sakura)}
+.course ul{margin:14px 0 0;padding-left:18px;color:var(--ink);font-size:15px}.course li{margin:3px 0}
+.tag{position:absolute;top:18px;right:18px;background:var(--sakura);color:var(--night);font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px}
+/* steps: numbered rows with thin lines */
+.steps{list-style:none;margin:0;padding:0;counter-reset:s;border-top:1px solid rgba(255,255,255,.14)}
+.steps li{counter-increment:s;display:grid;grid-template-columns:64px 1fr 1.2fr;gap:16px;align-items:baseline;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.14)}
+.steps li::before{content:'০' counter(s,bengali);font:700 15px 'Hind Siliguri';color:var(--sakura)}
+.steps b{font:700 clamp(20px,2.6vw,26px) 'Noto Serif Bengali';color:#fff}.steps span{color:#CFC3BF}
+/* questions */
+.faq details{border-bottom:1px solid var(--line);padding:4px 0}.faq details:first-child{border-top:1px solid var(--line)}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:16px;padding:18px 0;font:700 18px 'Noto Serif Bengali';color:var(--navy)}
+.faq summary::-webkit-details-marker{display:none}.faq summary::after{content:'+';font:400 26px/1 'Hind Siliguri';transition:transform .3s}
+.faq details[open] summary::after{transform:rotate(45deg)}.faq details p{margin:0 0 18px;color:var(--muted);max-width:720px}
+form .f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:15px}
+input,select,textarea{font:inherit;font-weight:400;padding:13px 16px;border:1.5px solid var(--line);border-radius:12px;background:#fff;width:100%}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy)}
-.formcard{max-width:640px;margin:0 auto}.formcard .grid{gap:14px}
-.ok{background:#E3F1E8;border:1px solid #9FD0B1;color:#1E5E39;border-radius:12px;padding:18px;text-align:center}
+.formcard{max-width:680px;margin:0 auto;padding:30px}.formcard .grid{gap:14px}
+.ok{background:#E3F1E8;border:1px solid #9FD0B1;color:#1E5E39;border-radius:14px;padding:20px;text-align:center}
 .err{color:var(--red);font-size:14px;min-height:20px}
-footer{background:var(--navy);color:#D9D3C7;padding:34px 0 90px;font-size:15px}footer a{color:#fff}
-.float-wa{position:fixed;right:16px;bottom:16px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.25);border-radius:40px;padding:12px 18px}
+footer{background:var(--night);color:#CFC3BF;padding:60px 0 100px;font-size:15px}footer a{color:#fff}
+footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;margin-bottom:14px}
+.float-wa{position:fixed;right:16px;bottom:16px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:12px 18px}
 .muted{color:var(--muted)}.small{font-size:13.5px}
-@media (max-width:860px){.hero .wrap,.g2{grid-template-columns:1fr}.seal{display:none}.g3,.g4{grid-template-columns:1fr 1fr}.steps{grid-template-columns:repeat(3,1fr)}header.nav nav a.hm{display:none}}
-@media (max-width:520px){.g3,.g4{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}section{padding:42px 0}.hero{padding:40px 0 48px}header.nav nav{display:none}}
+/* gentle fade-in while scrolling */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}.petals{display:none}html{scroll-behavior:auto}}
+@media (max-width:980px){.courses{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -20px;padding:4px 20px 18px;scrollbar-width:none}.courses::-webkit-scrollbar{display:none}.course{flex:0 0 78%;max-width:320px;scroll-snap-align:start}}
+@media (max-width:860px){.g2{grid-template-columns:1fr}.g3,.g4{grid-template-columns:1fr 1fr}.seal{width:300px;right:-90px;top:12%;opacity:.35}header.nav nav a.hm{display:none}.steps li{grid-template-columns:48px 1fr}.steps span{grid-column:2}}
+@media (max-width:560px){.g3,.g4{grid-template-columns:1fr}section{padding:68px 0}header.nav nav{display:none}.menub{display:block;margin-left:auto}.brand small{display:none}}
 </style>
 </head>
 <body>
-<header class="nav"><div class="wrap"><span class="kamon" id="k1"></span><div class="brand"><b>Sakura Japanese Institute</b><small>সাকুরা জাপানিজ ইনস্টিটিউট · さくら日本語学院</small></div>
-<nav><a class="hm" href="#courses">কোর্স ও ফি</a><a class="hm" href="#japan">জাপানে পড়া</a><a href="#apply">ভর্তির আবেদন</a></nav></div></header>
+<header class="nav" id="hdr"><div class="wrap"><span class="kamon" id="k1"></span><div class="brand"><b>Sakura Japanese Institute</b><small>সাকুরা জাপানিজ ইনস্টিটিউট · さくら日本語学院</small></div>
+<nav><a class="hm" href="#courses">কোর্স ও ফি</a><a class="hm" href="#japan">জাপানে পড়া</a><a class="hm" href="#faq">প্রশ্ন</a><a class="pill" href="#apply">ভর্তির আবেদন ↗</a></nav><button class="menub" id="mopen" aria-label="মেনু খুলুন">মেনু +</button></div></header>
+<div class="drawer" id="drawer"><button class="x" id="mclose">বন্ধ ✕</button><a href="#courses">কোর্স ও ফি</a><a href="#japan">জাপানে পড়া</a><a href="#faq">প্রশ্ন ও উত্তর</a><a href="#apply">ভর্তির আবেদন</a><a href="#contact">যোগাযোগ</a></div>
 
-<div class="hero"><div class="wrap"><div>
+<div class="hero"><div class="petals" id="petals" aria-hidden="true"></div><div class="seal" id="k2"></div><div class="wrap">
   <div class="ja">さくら日本語学院 · নারায়ণগঞ্জ</div>
-  <h1>জাপানি ভাষা শিখুন,<br><em>জাপানে পড়তে যান</em></h1>
+  <h1>জাপানি শিখুন।<br><em>জাপানে পড়ুন।</em></h1>
   <p>JLPT N5 থেকে N3 পর্যন্ত জাপানি ভাষার কোর্স, আর জাপানের ভাষা স্কুলে ভর্তি থেকে ভিসা পর্যন্ত পুরো প্রক্রিয়ায় সহায়তা — এক জায়গায়।</p>
-  <div class="cta"><a class="btn red" href="#apply">ভর্তির জন্য আবেদন করুন</a><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener">WhatsApp-এ কথা বলুন</a></div>
+  <div class="cta"><a class="btn light" href="#apply">ভর্তির জন্য আবেদন ↗</a><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener">WhatsApp-এ কথা বলুন</a></div>
   <div class="chips"><span>প্রথম ৩টি ক্লাস ফ্রি</span><span>সব বই কোর্স ফি-র মধ্যে</span><span>সকাল ও সন্ধ্যা ব্যাচ</span></div>
-</div><div class="seal" id="k2"></div></div></div>
+  <a class="scrollcue" href="#why"><span>নিচে দেখুন</span><span>↓</span></a>
+</div></div>
 
-<section><div class="wrap">
-  <h2>কেন সাকুরা</h2><p class="lead">জাপানে পড়তে যাওয়ার প্রস্তুতি শুরু হয় ভালো জাপানি ভাষা দিয়ে।</p>
+<section id="why" class="why"><div class="wrap">
+  <p class="eyebrow rv"><b>০১</b>কেন সাকুরা</p>
+  <h2 class="rv">ভালো জাপানি দিয়েই<br>জাপানের পথ শুরু।</h2><p class="lead rv">জাপানে পড়তে যাওয়ার প্রস্তুতি শুরু হয় ভালো জাপানি ভাষা দিয়ে।</p>
   <div class="grid g4">
-    <div class="card"><div class="ic">無</div><h3>প্রথম ৩টি ক্লাস ফ্রি</h3><p>ক্লাস করে দেখুন, ভালো লাগলে তবেই ভর্তি।</p></div>
-    <div class="card"><div class="ic">本</div><h3>বই ফি-র মধ্যে</h3><p>みんなの日本語 সহ সব বই কোর্স ফি-র মধ্যেই, আলাদা খরচ নেই।</p></div>
-    <div class="card"><div class="ic">日</div><h3>জাপানের সাথে সরাসরি যোগাযোগ</h3><p>ডিরেক্টর জাপানের কোবে শহরে থাকেন — জাপানের পড়াশোনা আর জীবনযাত্রা সম্পর্কে নিজে জানেন।</p></div>
-    <div class="card"><div class="ic">証</div><h3>হাজিরা আর ঘণ্টার সার্টিফিকেট</h3><p>জাপানের আবেদনের জন্য দরকারি পড়ার ঘণ্টা আর রেজাল্টের সার্টিফিকেট আমরাই দিই।</p></div>
+    <div class="card rv"><div class="ic">無</div><h3>প্রথম ৩টি ক্লাস ফ্রি</h3><p>ক্লাস করে দেখুন, ভালো লাগলে তবেই ভর্তি।</p></div>
+    <div class="card rv"><div class="ic">本</div><h3>বই ফি-র মধ্যে</h3><p>みんなの日本語 সহ সব বই কোর্স ফি-র মধ্যেই, আলাদা খরচ নেই।</p></div>
+    <div class="card rv"><div class="ic">日</div><h3>জাপানের সাথে সরাসরি যোগাযোগ</h3><p>ডিরেক্টর জাপানের কোবে শহরে থাকেন — জাপানের পড়াশোনা আর জীবনযাত্রা সম্পর্কে নিজে জানেন।</p></div>
+    <div class="card rv"><div class="ic">証</div><h3>হাজিরা আর ঘণ্টার সার্টিফিকেট</h3><p>জাপানের আবেদনের জন্য দরকারি পড়ার ঘণ্টা আর রেজাল্টের সার্টিফিকেট আমরাই দিই।</p></div>
   </div>
 </div></section>
 
 <section class="alt" id="courses"><div class="wrap">
-  <h2>কোর্স ও ফি</h2><p class="lead">প্রতিদিন <span id="hpc">২</span> ঘণ্টা ক্লাস · সকাল ১০–১২টা অথবা সন্ধ্যা ৬–৮টা</p>
-  <div class="grid g3" id="courseGrid"></div>
-  <p class="small muted" style="margin-top:14px">একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। কিস্তিতে দেওয়া যায় — বিস্তারিত জানতে যোগাযোগ করুন।</p>
+  <p class="eyebrow rv"><b>০২</b>কোর্স ও ফি</p>
+  <h2 class="rv">আপনার লেভেল বেছে নিন।</h2><p class="lead rv">প্রতিদিন <span id="hpc">২</span> ঘণ্টা ক্লাস · সকাল ১০–১২টা অথবা সন্ধ্যা ৬–৮টা</p>
+  <div class="courses rv" id="courseGrid"></div>
+  <p class="small muted" style="margin-top:16px">একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। কিস্তিতে দেওয়া যায় — বিস্তারিত জানতে যোগাযোগ করুন।</p>
 </div></section>
 
-<section id="japan"><div class="wrap">
-  <h2>জাপানে পড়তে যাওয়া</h2><p class="lead">জাপানের ভাষা স্কুলে ভর্তি থেকে বিমানে ওঠা পর্যন্ত প্রতিটি ধাপে আমরা পাশে আছি।</p>
-  <div class="steps">
-    <div>কাগজ জোগাড়<small>সনদ, পাসপোর্ট, স্পনসরের কাগজ</small></div>
-    <div>স্কুল বাছাই<small>আপনার জন্য উপযুক্ত স্কুল</small></div>
-    <div>আবেদন জমা<small>ফর্ম পূরণ ও অনুবাদ</small></div>
-    <div>ইন্টারভিউ<small>প্রস্তুতিসহ</small></div>
-    <div>COE ও ভিসা<small>ইমিগ্রেশনের অনুমতি</small></div>
-    <div>জাপানে যাত্রা<small>যাওয়ার আগের প্রস্তুতি</small></div>
+<section class="dark" id="japan"><div class="wrap">
+  <p class="eyebrow rv"><b>০৩</b>জাপানে পড়তে যাওয়া</p>
+  <h2 class="rv">ভর্তি থেকে<br>বিমানে ওঠা পর্যন্ত।</h2><p class="lead rv">জাপানের ভাষা স্কুলে ভর্তি থেকে বিমানে ওঠা পর্যন্ত প্রতিটি ধাপে আমরা পাশে আছি।</p>
+  <ol class="steps">
+    <li class="rv"><b>কাগজ জোগাড়</b><span>সনদ, পাসপোর্ট, স্পনসরের কাগজ</span></li>
+    <li class="rv"><b>স্কুল বাছাই</b><span>আপনার জন্য উপযুক্ত স্কুল</span></li>
+    <li class="rv"><b>আবেদন জমা</b><span>ফর্ম পূরণ ও অনুবাদ</span></li>
+    <li class="rv"><b>ইন্টারভিউ</b><span>প্রস্তুতিসহ</span></li>
+    <li class="rv"><b>COE ও ভিসা</b><span>ইমিগ্রেশনের অনুমতি</span></li>
+    <li class="rv"><b>জাপানে যাত্রা</b><span>যাওয়ার আগের প্রস্তুতি</span></li>
+  </ol>
+  <p class="small" style="margin-top:22px;color:#CFC3BF;max-width:760px">জাপানের ভাষা স্কুলের ভর্তি সাধারণত বছরে কয়েকবার হয় (জানুয়ারি, এপ্রিল, জুলাই, অক্টোবর)। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে — অফিসে এসে বা WhatsApp-এ জেনে নিন।</p>
+</div></section>
+
+<section id="faq" class="faq"><div class="wrap">
+  <p class="eyebrow rv"><b>০৪</b>প্রশ্ন ও উত্তর</p>
+  <h2 class="rv">যা সবাই জানতে চান।</h2><p class="lead rv">আরও কিছু জানার থাকলে WhatsApp-এ জিজ্ঞেস করুন।</p>
+  <div class="rv">
+    <details><summary>একদম শুরু থেকে শিখতে পারব?</summary><p>হ্যাঁ। N5 কোর্স হিরাগানা-কাতাকানা দিয়ে একদম শুরু থেকে শুরু হয়। আগে জাপানি জানা লাগে না।</p></details>
+    <details><summary>ভর্তির আগে ক্লাস করে দেখা যায়?</summary><p>হ্যাঁ, প্রথম ৩টি ক্লাস ফ্রি। ভালো লাগলে তবেই ভর্তি হবেন।</p></details>
+    <details><summary>বইয়ের জন্য আলাদা টাকা লাগবে?</summary><p>না। みんなの日本語 সহ সব বই কোর্স ফি-র মধ্যেই।</p></details>
+    <details><summary>ফি কি কিস্তিতে দেওয়া যায়?</summary><p>হ্যাঁ, কিস্তিতে দেওয়া যায়। কত কিস্তিতে, সেটা অফিসে বা WhatsApp-এ জেনে নিন।</p></details>
+    <details><summary>ক্লাস কখন হয়?</summary><p>প্রতিদিন দুটো ব্যাচ — সকাল ১০টা থেকে ১২টা, আর সন্ধ্যা ৬টা থেকে ৮টা। যেটা সুবিধা, সেটা বেছে নিন।</p></details>
+    <details><summary>জাপানে কবে যেতে পারব?</summary><p>জাপানের ভাষা স্কুলে সাধারণত জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবরে ভর্তি হয়। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে।</p></details>
   </div>
-  <p class="small muted" style="margin-top:14px">জাপানের ভাষা স্কুলের ভর্তি সাধারণত বছরে কয়েকবার হয় (জানুয়ারি, এপ্রিল, জুলাই, অক্টোবর)। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে — অফিসে এসে বা WhatsApp-এ জেনে নিন।</p>
 </div></section>
 
 <section class="alt" id="apply"><div class="wrap">
-  <h2 style="text-align:center">ভর্তির জন্য আবেদন</h2><p class="lead" style="text-align:center">ফর্মটা পূরণ করুন, আমরা ১–২ দিনের মধ্যে ফোন বা WhatsApp-এ যোগাযোগ করব।</p>
+  <p class="eyebrow rv" style="text-align:center"><b>০৫</b>ভর্তির আবেদন</p>
+  <h2 class="rv" style="text-align:center">শুরু করুন আজই।</h2><p class="lead" style="text-align:center">ফর্মটা পূরণ করুন, আমরা ১–২ দিনের মধ্যে ফোন বা WhatsApp-এ যোগাযোগ করব।</p>
   <div class="card formcard"><form id="af" novalidate><div class="grid g2">
     <label class="f">আপনার নাম *<input name="name" required maxlength="80" autocomplete="name"></label>
     <label class="f">মোবাইল / WhatsApp নম্বর *<input name="phone" type="tel" required inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label>
@@ -119,7 +174,7 @@ footer{background:var(--navy);color:#D9D3C7;padding:34px 0 90px;font-size:15px}f
   <div class="card"><h3>ক্লাসের সময়</h3><p>সকাল ব্যাচ: ১০টা – ১২টা<br>সন্ধ্যা ব্যাচ: ৬টা – ৮টা</p><h3 style="margin-top:14px">ডিরেক্টর</h3><p id="dir">SAYEM AHMED · サエム・アハメド (Kobe, Japan)</p></div>
 </div></div></section>
 
-<footer><div class="wrap"><b style="font:800 17px 'Shippori Mincho B1';color:#fff">さくら日本語学院</b> · Sakura Japanese Institute · নারায়ণগঞ্জ<br><span class="small">© <span id="yr"></span> সাকুরা জাপানিজ ইনস্টিটিউট</span></div></footer>
+<footer><div class="wrap"><div class="big">さくら日本語学院</div>Sakura Japanese Institute · নারায়ণগঞ্জ<br><span class="small">© <span id="yr"></span> সাকুরা জাপানিজ ইনস্টিটিউট</span></div></footer>
 <a class="btn wa float-wa" id="wa4" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">💬 WhatsApp</a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -157,9 +212,16 @@ footer{background:var(--navy);color:#D9D3C7;padding:34px 0 90px;font-size:15px}f
       ['N5+N4', 'দুই লেভেলের প্যাকেজ', ['জাপানের ভাষা স্কুলে আবেদনের প্রস্তুতির জন্য', 'আলাদা নেওয়ার চেয়ে কম খরচ'], true],
       ['N5+N4+N3', 'তিন লেভেলের প্যাকেজ', ['শুরু থেকে N3 পর্যন্ত', 'আলাদা নেওয়ার চেয়ে অনেক কম খরচ'], false]
     ];
-    $('#courseGrid').innerHTML = C.map(([lv, sub, pts, hl]) => `<div class="card course ${hl ? 'hl' : ''}">${hl ? '<span class="tag">সাশ্রয়ী</span>' : ''}<div class="lv">${esc(lv)}</div><div class="muted">${esc(sub)}</div><div class="fee">${tk(F[lv])}</div><div class="small muted">পুরো কোর্স</div><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+    $('#courseGrid').innerHTML = C.map(([lv, sub, pts, hl]) => `<div class="card course ${hl ? 'hl' : ''}">${hl ? '<span class="tag">সাশ্রয়ী</span>' : ''}<div class="lv">${esc(lv)}</div><div class="muted">${esc(sub)}</div><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul><div style="margin-top:auto"><div class="fee">${tk(F[lv])}</div><div class="small muted">পুরো কোর্স</div></div></div>`).join('');
   }
   paint(DEF);
+
+  // header turns solid after the hero; phone menu; falling petals; fade-in on scroll
+  const hdr = $('#hdr'); const onS = () => hdr.classList.toggle('solid', scrollY > 40); addEventListener('scroll', onS, { passive: true }); onS();
+  const dr = $('#drawer'); $('#mopen').onclick = () => dr.classList.add('open'); $('#mclose').onclick = () => dr.classList.remove('open'); dr.querySelectorAll('a').forEach(a => a.onclick = () => dr.classList.remove('open'));
+  $('#petals').innerHTML = Array.from({ length: 16 }, (_, i) => `<i style="left:${(i * 6.7 + 3) % 100}%;animation-duration:${9 + (i * 7) % 9}s;animation-delay:-${(i * 13) % 17}s;transform:scale(${.6 + (i % 4) * .2})"></i>`).join('');
+  const rv = document.querySelectorAll('.rv');
+  if ('IntersectionObserver' in window) { const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' }); rv.forEach(el => io.observe(el)); } else rv.forEach(el => el.classList.add('in'));
   if (sb) sb.rpc('public_info').then(({ data }) => { if (data) paint({ ...DEF, ...Object.fromEntries(Object.entries(data).filter(([, v]) => v != null && v !== '')) }); }).catch(() => {});
 
   $('#af').onsubmit = async (e) => {
