@@ -11,20 +11,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@700;800&display=swap">
 <style>
-:root{--navy:#1B2945;--navy2:#26365A;--gold:#A3843A;--gold2:#C9A95C;--red:#C8372B;--green:#1FA855;--ink:#1E1B17;--muted:#6E665A;--paper:#F6F3EC;--soft:#EFE9DC;--line:#E0D6C2;--night:#120A12;--sakura:#F2B8C0;--r:18px}
+:root{--navy:#1B2945;--navy2:#26365A;--gold:#A3843A;--gold2:#C9A95C;--red:#C8372B;--green:#1FA855;--ink:#26231E;--muted:#6E665A;--paper:#FBF8F1;--soft:#F3ECDD;--line:#E3D8C3;--night:#1B2945;--sakura:#F2B8B0;--r:18px}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
 body{margin:0;font-family:'Hind Siliguri',sans-serif;color:var(--ink);background:var(--paper);line-height:1.65;font-size:16px}
 a{color:inherit}.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
 .kamon{width:44px;height:44px;border-radius:50%;background:var(--paper);border:2px solid var(--gold2);display:grid;place-items:center;flex:none}
 /* header: sits on the hero, turns solid on scroll */
 header.nav{position:fixed;inset:0 0 auto;z-index:40;color:#fff;transition:background .35s,box-shadow .35s}
-header.nav.solid{background:rgba(18,10,18,.92);backdrop-filter:blur(10px);box-shadow:0 1px 0 rgba(255,255,255,.08)}
+header.nav.solid{background:rgba(27,41,69,.97);backdrop-filter:blur(10px);box-shadow:inset 0 -3px 0 var(--gold)}
 header.nav .wrap{display:flex;align-items:center;gap:12px;height:72px}
 .brand b{display:block;font:800 16px 'Shippori Mincho B1',serif;line-height:1.1}.brand small{color:#E2C987;font-size:12px}
 header.nav nav{margin-left:auto;display:flex;align-items:center;gap:6px}
 header.nav nav a{text-decoration:none;padding:8px 12px;border-radius:999px;font-weight:600;font-size:14.5px}
 header.nav nav a.hm:hover{background:rgba(255,255,255,.1)}
-.pill{background:#fff;color:var(--night)!important;padding:9px 18px!important}.pill:hover{background:var(--sakura)}
+.pill{background:var(--red);color:#fff!important;padding:9px 18px!important}.pill:hover{background:#B02E23}
 .menub{display:none;background:none;border:0;color:#fff;font:600 15px 'Hind Siliguri';cursor:pointer;padding:8px}
 .drawer{position:fixed;inset:0;z-index:50;background:var(--night);color:#fff;padding:90px 28px 28px;display:flex;flex-direction:column;gap:6px;transform:translateY(-100%);transition:transform .45s cubic-bezier(.2,.7,.2,1)}
 .drawer.open{transform:none}.drawer a{font:800 30px 'Noto Serif Bengali';text-decoration:none;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)}
@@ -33,15 +33,15 @@ header.nav nav a.hm:hover{background:rgba(255,255,255,.1)}
 .btn:hover{transform:translateY(-2px)}
 .btn.red{background:var(--red);border-color:var(--red)}.btn.wa{background:var(--green);border-color:var(--green)}.btn.light{background:#fff;color:var(--night);border-color:#fff}.btn.ghost{background:transparent;color:inherit;border-color:currentColor}
 /* hero: night with a sakura glow and falling petals */
-.hero{min-height:100svh;background:radial-gradient(900px 600px at 78% 30%,rgba(200,55,90,.38),transparent 65%),radial-gradient(700px 500px at 10% 90%,rgba(38,54,90,.7),transparent 70%),var(--night);color:#F5EEE9;position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:120px 0 40px}
+.hero{min-height:100svh;background:radial-gradient(1200px 600px at 85% -10%,#2E4373 0,transparent 60%),var(--navy);color:#fff;border-bottom:3px solid var(--gold);position:relative;overflow:hidden;display:flex;align-items:flex-end;padding:120px 0 40px}
 .hero .wrap{position:relative;z-index:2;width:100%}
 .hero .ja{font:800 14px 'Shippori Mincho B1';color:#E2C987;letter-spacing:5px}
 .hero h1{font:800 clamp(40px,8vw,88px)/1.08 'Noto Serif Bengali';margin:14px 0 18px;letter-spacing:-.5px}.hero h1 em{font-style:normal;color:var(--sakura)}
-.hero p{font-size:clamp(17px,2vw,20px);color:#E6DCD8;margin:0 0 28px;max-width:560px}
+.hero p{font-size:clamp(17px,2vw,20px);color:#E9E4DA;margin:0 0 28px;max-width:560px}
 .hero .cta{display:flex;gap:12px;flex-wrap:wrap}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:26px}.chips span{border:1px solid rgba(255,255,255,.22);padding:5px 14px;border-radius:999px;font-size:14px;color:#E6DCD8}
 .scrollcue{display:flex;justify-content:space-between;align-items:center;margin-top:48px;padding-top:16px;border-top:1px solid rgba(255,255,255,.14);font-size:14px;color:#CFC3BF;text-decoration:none}
-.seal{position:absolute;z-index:1;right:max(-60px,calc(50% - 620px));top:16%;width:min(420px,46vw);aspect-ratio:1;border-radius:50%;background:var(--paper);border:6px solid var(--gold2);box-shadow:0 0 0 14px rgba(201,169,92,.12),0 0 120px 30px rgba(242,184,192,.25);display:grid;place-items:center;opacity:.95}
+.seal{position:absolute;z-index:1;right:max(-60px,calc(50% - 620px));top:16%;width:min(420px,46vw);aspect-ratio:1;border-radius:50%;background:var(--paper);border:6px solid var(--gold2);box-shadow:0 0 0 14px rgba(201,169,92,.18);display:grid;place-items:center;opacity:.95}
 .petals{position:absolute;inset:0;z-index:1;pointer-events:none}
 .petals i{position:absolute;top:-30px;width:12px;height:9px;background:var(--sakura);border-radius:12px 1px 12px 1px;opacity:.75;animation:fall linear infinite}
 @keyframes fall{to{transform:translate(-120px,110vh) rotate(540deg)}}
@@ -58,13 +58,13 @@ h2{font:800 clamp(30px,5vw,54px)/1.15 'Noto Serif Bengali';color:var(--navy);mar
 .ic{font:800 34px 'Shippori Mincho B1';color:var(--red);margin-bottom:8px;line-height:1}
 /* courses: a row you can swipe on the phone */
 .courses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.course{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px;transition:transform .25s,box-shadow .25s}
+.course{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-top:5px solid var(--navy);border-radius:var(--r);padding:24px;transition:transform .25s,box-shadow .25s}
 .course:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(30,27,23,.08)}
-.course.hl{background:var(--night);color:#F5EEE9;border-color:var(--night)}.course.hl .muted,.course.hl ul{color:#CFC3BF}
-.course .lv{font:800 32px 'Shippori Mincho B1';color:var(--navy)}.course.hl .lv{color:#fff}
-.course .fee{font:800 28px 'Noto Serif Bengali';color:var(--red);margin:14px 0 0}.course.hl .fee{color:var(--sakura)}
+.course.hl{border-top:5px solid var(--red)}
+.course .lv{font:800 32px 'Shippori Mincho B1';color:var(--navy)}
+.course .fee{font:800 28px 'Noto Serif Bengali';color:var(--red);margin:14px 0 0}
 .course ul{margin:14px 0 0;padding-left:18px;color:var(--ink);font-size:15px}.course li{margin:3px 0}
-.tag{position:absolute;top:18px;right:18px;background:var(--sakura);color:var(--night);font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px}
+.tag{position:absolute;top:18px;right:18px;background:var(--red);color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px}
 /* steps: numbered rows with thin lines */
 .steps{list-style:none;margin:0;padding:0;counter-reset:s;border-top:1px solid rgba(255,255,255,.14)}
 .steps li{counter-increment:s;display:grid;grid-template-columns:64px 1fr 1.2fr;gap:16px;align-items:baseline;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.14)}
@@ -85,7 +85,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy)}
 .formcard{max-width:680px;margin:0 auto;padding:30px}.formcard .grid{gap:14px}
 .ok{background:#E3F1E8;border:1px solid #9FD0B1;color:#1E5E39;border-radius:14px;padding:20px;text-align:center}
 .err{color:var(--red);font-size:14px;min-height:20px}
-footer{background:var(--night);color:#CFC3BF;padding:60px 0 100px;font-size:15px}footer a{color:#fff}
+footer{background:var(--navy);color:#D9D3C7;border-top:3px solid var(--gold);padding:60px 0 100px;font-size:15px}footer a{color:#fff}
 footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;margin-bottom:14px}
 .float-wa{position:fixed;right:16px;bottom:16px;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:12px 18px}
 .muted{color:var(--muted)}.small{font-size:13.5px}
@@ -106,7 +106,7 @@ footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;ma
   <div class="ja">さくら日本語学院 · নারায়ণগঞ্জ</div>
   <h1>জাপানি শিখুন।<br><em>জাপানে পড়ুন।</em></h1>
   <p>JLPT N5 থেকে N3 পর্যন্ত জাপানি ভাষার কোর্স, আর জাপানের ভাষা স্কুলে ভর্তি থেকে ভিসা পর্যন্ত পুরো প্রক্রিয়ায় সহায়তা — এক জায়গায়।</p>
-  <div class="cta"><a class="btn light" href="#apply">ভর্তির জন্য আবেদন ↗</a><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener">WhatsApp-এ কথা বলুন</a></div>
+  <div class="cta"><a class="btn red" href="#apply">ভর্তির জন্য আবেদন ↗</a><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener">WhatsApp-এ কথা বলুন</a></div>
   <div class="chips"><span>প্রথম ৩টি ক্লাস ফ্রি</span><span>সব বই কোর্স ফি-র মধ্যে</span><span>সকাল ও সন্ধ্যা ব্যাচ</span></div>
   <a class="scrollcue" href="#why"><span>নিচে দেখুন</span><span>↓</span></a>
 </div></div>
