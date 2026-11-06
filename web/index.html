@@ -70,6 +70,10 @@ h2{font:800 clamp(30px,5vw,54px)/1.15 'Noto Serif Bengali';color:var(--navy);mar
 .steps li{counter-increment:s;display:grid;grid-template-columns:64px 1fr 1.2fr;gap:16px;align-items:baseline;padding:22px 0;border-bottom:1px solid rgba(255,255,255,.14)}
 .steps li::before{content:'০' counter(s,bengali);font:700 15px 'Hind Siliguri';color:var(--sakura)}
 .steps b{font:700 clamp(20px,2.6vw,26px) 'Noto Serif Bengali';color:#fff}.steps span{color:#CFC3BF}
+section.light{background:#fff}
+section.light .steps{border-top-color:var(--line)}section.light .steps li{border-bottom-color:var(--line)}
+section.light .steps li::before{color:var(--red)}section.light .steps b{color:var(--navy)}section.light .steps span{color:var(--muted)}
+section.light .steps li{transition:background .25s}section.light .steps li:hover{background:var(--paper)}
 /* questions */
 .faq details{border-bottom:1px solid var(--line);padding:4px 0}.faq details:first-child{border-top:1px solid var(--line)}
 .faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:16px;padding:18px 0;font:700 18px 'Noto Serif Bengali';color:var(--navy)}
@@ -125,7 +129,7 @@ footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;ma
   <p class="small muted" style="margin-top:16px">একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। কিস্তিতে দেওয়া যায় — বিস্তারিত জানতে যোগাযোগ করুন।</p>
 </div></section>
 
-<section class="dark" id="japan"><div class="wrap">
+<section class="light" id="japan"><div class="wrap">
   <p class="eyebrow rv"><b>০৩</b>জাপানে পড়তে যাওয়া</p>
   <h2 class="rv">ভর্তি থেকে<br>বিমানে ওঠা পর্যন্ত।</h2><p class="lead rv">জাপানের ভাষা স্কুলে ভর্তি থেকে বিমানে ওঠা পর্যন্ত প্রতিটি ধাপে আমরা পাশে আছি।</p>
   <ol class="steps">
@@ -136,7 +140,7 @@ footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;ma
     <li class="rv"><b>COE ও ভিসা</b><span>ইমিগ্রেশনের অনুমতি</span></li>
     <li class="rv"><b>জাপানে যাত্রা</b><span>যাওয়ার আগের প্রস্তুতি</span></li>
   </ol>
-  <p class="small" style="margin-top:22px;color:#CFC3BF;max-width:760px">জাপানের ভাষা স্কুলের ভর্তি সাধারণত বছরে কয়েকবার হয় (জানুয়ারি, এপ্রিল, জুলাই, অক্টোবর)। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে — অফিসে এসে বা WhatsApp-এ জেনে নিন।</p>
+  <p class="small muted" style="margin-top:22px;max-width:760px">জাপানের ভাষা স্কুলের ভর্তি সাধারণত বছরে কয়েকবার হয় (জানুয়ারি, এপ্রিল, জুলাই, অক্টোবর)। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে — অফিসে এসে বা WhatsApp-এ জেনে নিন।</p>
 </div></section>
 
 <section id="faq" class="faq"><div class="wrap">
