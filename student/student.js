@@ -1709,7 +1709,7 @@ function fcCardHtml(d) {
     <button class="btn" id="fcback" style="width:100%;justify-content:center;margin-top:14px">ঠিক আছে</button></div>`;
   const left = FC.q.length - FC.i;
   return `<div class="card fc"><div class="row" style="justify-content:space-between"><span class="small muted">${FC_LV} · ${FC_DECK === 'kanji' ? 'কানজি' : 'শব্দ'} · বাকি ${BN_NUM(left)}</span><button class="linkbtn" id="fcstop">থামুন</button></div>
-    <div class="fccard ${FC.flip ? 'flip' : ''}" id="fcflip" role="button" tabindex="0">
+    <div class="fccard ${FC.flip ? 'flip' : FC.i ? 'fcin' : ''}" id="fcflip" role="button" tabindex="0">
       <div class="fcfront ${FC_DECK === 'kanji' ? 'k' : ''}">${esc(c.front)}</div>
       ${FC.flip ? `<div class="fcback"><div class="jp" style="font-size:19px">${esc(c.word)} <span class="rd">${esc(c.reading)}</span> <button type="button" class="say" data-sayj="${esc(c.reading)}" aria-label="শুনুন">🔊</button></div><div style="font-size:17px;font-weight:600;margin-top:4px">${esc(c.meaning)}</div>${c.sentence ? `<div class="jp small muted" style="margin-top:6px;font-size:14.5px">${esc(c.sentence)}</div>` : ''}</div>` : '<div class="small muted" style="margin-top:14px">মনে মনে উচ্চারণ আর অর্থ ভাবুন, তারপর চাপুন</div>'}
     </div>
@@ -2023,6 +2023,14 @@ function attemptCounts(r) {
 }
 const minsBetween = (a, b) => { const m = Math.max(0, Math.round((Date.parse(b) - Date.parse(a)) / 60000)); return m < 1 ? '১ মিনিটের কম' : m + ' মিনিট'; };
 
+// a short burst of paper pieces when a student passes a test they just took
+function confetti() {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const C = ['#C8372B', '#C9A24B', '#1B2945', '#1FA855', '#F2B8B0'];
+  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  box.innerHTML = Array.from({ length: 36 }, (_, i) => `<i style="left:${(i * 2.9 + 1) % 100}%;background:${C[i % 5]};--dx:${((i * 37) % 120) - 60}px;--r:${(i * 97) % 720}deg;animation-delay:${(i % 9) * 0.06}s"></i>`).join('');
+  document.body.appendChild(box); setTimeout(() => box.remove(), 3400);
+}
 function renderResult(r) {
   EXAM = null; window.onbeforeunload = null;
   if (r.submitted_at && Date.now() - Date.parse(r.submitted_at) < 10 * 60000) API.checkin('mock').catch(() => {});
@@ -2037,9 +2045,10 @@ function renderResult(r) {
       ${q.section === 'listening' && q.script ? `<details class="small" style="margin-top:6px"><summary>শোনার লেখা দেখুন</summary><div style="white-space:pre-line;margin-top:4px">${esc(q.script)}</div><button type="button" class="btn sm ghost" data-say="${esc(q.id)}" style="margin-top:6px">🔊 আবার শুনুন</button></details>` : ''}
       ${q.explanation ? `<div class="small expl">💡 ${esc(q.explanation)}</div>` : ''}</div>`;
   }
+  if (r.passed && r.submitted_at && Date.now() - Date.parse(r.submitted_at) < 10 * 60000) setTimeout(confetti, 250);
   $('#app').innerHTML = `<div class="st">
     <div class="card ${r.passed ? 'open' : 'lock'}" style="text-align:center;padding:20px"><div class="small muted">${esc(r.test.title)}</div>
-      <div style="font:800 40px 'Noto Serif Bengali';color:${r.passed ? 'var(--green)' : 'var(--red)'};margin:6px 0">${r.score}/${r.total}</div>
+      <div class="${r.passed ? 'passpop' : ''}" style="font:800 40px 'Noto Serif Bengali';color:${r.passed ? 'var(--green)' : 'var(--red)'};margin:6px 0">${r.score}/${r.total}</div>
       <div><b>${p}%</b> · ${r.passed ? '🎉 পাস' : `পাস করতে ${r.test.pass_pct}% লাগে — আবার চেষ্টা করুন`}</div>
       <div class="cnt"><span class="c-ok">✓ সঠিক <b>${cn.score}</b></span><span class="c-bad">✗ ভুল <b>${cn.wrong}</b></span><span class="c-bl">— উত্তর দেননি <b>${cn.blank}</b></span></div>
       <div class="small muted" style="margin-top:6px">${r.end_reason ? esc(END_REASON[r.end_reason] || '') + ' · ' : ''}${r.started_at && r.submitted_at ? 'সময় লেগেছে ' + minsBetween(r.started_at, r.submitted_at) : ''}</div></div>

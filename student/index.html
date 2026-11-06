@@ -317,6 +317,29 @@
   .spheard{margin-top:10px;border-radius:9px;padding:9px 12px;text-align:center;font-size:14.5px;line-height:1.7;width:100%}.spheard.ok{background:#E6F4EC}.spheard.no{background:#FFF3DA}
   .lefttag{display:inline-block;font-size:11.5px;background:#FBEAE6;color:var(--red);border-radius:99px;padding:0 8px;font-weight:600}
   .ovl .card p{white-space:pre-line;text-align:left}
+  /* soft depth (v50): lifted cards, buttons that press in, a 3D flip for flashcards, a small celebration on a pass */
+  .st .card{box-shadow:0 1px 2px rgba(27,41,69,.06),0 8px 20px -12px rgba(27,41,69,.28)}
+  .st .btn{box-shadow:0 3px 0 rgba(15,22,40,.28);transition:transform .08s,box-shadow .08s,background .15s}
+  .st .btn.ghost{box-shadow:0 3px 0 var(--line)}
+  .st .btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(15,22,40,.28)}.st .btn.ghost:active{box-shadow:0 1px 0 var(--line)}
+  .st .btn:disabled{box-shadow:none;transform:none}
+  .mrow,.mtile{transition:transform .1s,box-shadow .1s}
+  .mrow{box-shadow:0 2px 0 var(--line),0 6px 14px -10px rgba(27,41,69,.25)}.mtile{box-shadow:0 3px 0 var(--line),0 6px 14px -10px rgba(27,41,69,.25)}
+  .mrow:active,.mtile:active{transform:translateY(2px);box-shadow:0 0 0 var(--line)}
+  .quick .qi{box-shadow:0 3px 0 var(--line),0 8px 16px -10px rgba(27,41,69,.3);transition:transform .1s,box-shadow .1s}
+  .quick button:active .qi{transform:translateY(3px) scale(.97);box-shadow:0 0 0 var(--line)}
+  .tjob{transition:background .12s,transform .1s}.tjob:active{transform:scale(.98);background:rgba(255,255,255,.06)}
+  .bnav button{transition:transform .1s}.bnav button:active{transform:scale(.92)}
+  .fccard{box-shadow:0 4px 0 var(--line),0 14px 28px -16px rgba(27,41,69,.35);transform-origin:50% 50%;backface-visibility:hidden}
+  .fccard.flip{animation:fcflip .5s cubic-bezier(.2,.75,.25,1)}.fccard.fcin{animation:fcin .35s ease-out}
+  @keyframes fcflip{0%{transform:perspective(900px) rotateY(-100deg);opacity:.4}100%{transform:perspective(900px) rotateY(0);opacity:1}}
+  @keyframes fcin{0%{transform:perspective(900px) translateX(40px) rotateY(18deg);opacity:0}100%{transform:none;opacity:1}}
+  .ring{filter:drop-shadow(0 4px 8px rgba(0,0,0,.18))}
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}
+  .confetti i{position:absolute;top:-16px;width:9px;height:14px;border-radius:2px;animation:cf 2.6s cubic-bezier(.25,.6,.4,1) forwards}
+  @keyframes cf{0%{transform:translateY(0) rotate(0)}100%{transform:translate(var(--dx),105vh) rotate(var(--r));opacity:.9}}
+  .passpop{animation:pop .6s cubic-bezier(.2,1.4,.4,1)}@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+  @media (prefers-reduced-motion:reduce){.fccard.flip,.fccard.fcin,.passpop{animation:none}.confetti{display:none}.st .btn:active,.mrow:active,.mtile:active,.quick button:active .qi,.bnav button:active{transform:none}}
 </style>
 </head>
 <body>
@@ -328,6 +351,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=49"></script>
+<script src="student.js?v=50"></script>
 </body>
 </html>
