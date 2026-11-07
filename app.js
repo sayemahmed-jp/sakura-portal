@@ -506,7 +506,7 @@ function shell(active, inner) {
   const d = new Date(); const name = S.profile.name || S.user.email || '';
   return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b><a href="#/scan" class="mscan" aria-label="আইডি / QR দিয়ে খুঁজুন" title="আইডি / QR">📷</a>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side" aria-label="মেনু">
-    <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
+    <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div><button type="button" class="railb" id="railb" title="মেনু ছোট / বড় করুন" aria-label="মেনু ছোট / বড় করুন"><span></span></button></div>
     <nav class="nav">${nav}</nav>
     <div class="who" id="who">
       <div class="wmenu" id="wmenu" hidden>
@@ -529,8 +529,26 @@ function groupForm(f) {
   [...f.children].forEach(k => { if (k.tagName === 'H3') { k.classList.add('sgh'); out.appendChild(k); sec = document.createElement('div'); sec.className = 'sgroup form'; out.appendChild(sec); } else if (sec && !k.matches('.full.row')) sec.appendChild(k); else out.appendChild(k); });
   f.appendChild(out); f.classList.add('sform');
 }
+let PILL_PREV = null, LAST_PAGE = '';
+// the black pill in the top menu slides from the last page's tab to this one; the page itself fades in from a blur
+function slidePill(active) {
+  const nav = $('.topnav'); if (!nav) return; const pill = document.createElement('span'); pill.className = 'tpill'; pill.setAttribute('aria-hidden', 'true'); nav.prepend(pill);
+  const on = $('.topnav a.on'); const to = on ? { l: on.offsetLeft, w: on.offsetWidth } : null; const from = PILL_PREV;
+  const put = (r, o) => { pill.style.left = r.l + 'px'; pill.style.width = r.w + 'px'; pill.style.opacity = o; };
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (from && !still) { put(from, from.o); pill.getBoundingClientRect(); pill.classList.add('go'); if (on && (from.l !== to.l || !from.o)) { on.classList.add('wait'); setTimeout(() => on.classList.remove('wait'), 260); } if (to) put(to, 1); else pill.style.opacity = 0; }
+  else if (to) put(to, 1); else pill.style.opacity = 0;
+  PILL_PREV = to ? { ...to, o: 1 } : from ? { ...from, o: 0 } : null;
+  if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+function railToggle() { const r = !document.documentElement.classList.contains('rail'); document.documentElement.classList.toggle('rail', r); try { localStorage.setItem('sakura_rail', r ? '1' : ''); } catch (_) {} }
+try { if (localStorage.getItem('sakura_rail')) document.documentElement.classList.add('rail'); } catch (_) {}
 function mount(active, inner, after) {
   $('#app').innerHTML = shell(active, inner);
+  const page = location.hash.split('?')[0]; const main = $('.main');
+  if (page !== LAST_PAGE && main && !matchMedia('(prefers-reduced-motion: reduce)').matches) { main.classList.add('enter'); setTimeout(() => main.classList.remove('enter'), 1100); }
+  LAST_PAGE = page; slidePill(active);
+  const rb = $('#railb'); if (rb) rb.onclick = railToggle;
   if (active === '#/settings') groupForm($('#stf'));
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
@@ -589,6 +607,61 @@ function render() {
 window.addEventListener('hashchange', render);
 
 // ------------------------------------------------------------------ dashboard
+// ------------------------------------------------------------------ home "hero": greeting, the next class with a countdown, and what needs me
+const BATCH_START = { morning: [10, 0, 12], evening: [18, 0, 20] }; // start hour, minute, end hour
+function greetText() { const h = new Date().getHours(); return h < 5 ? 'শুভ রাত্রি' : h < 12 ? 'শুভ সকাল' : h < 16 ? 'শুভ দুপুর' : h < 18 ? 'শুভ বিকেল' : h < 21 ? 'শুভ সন্ধ্যা' : 'শুভ রাত্রি'; }
+function upcomingClasses(n = 5) {
+  const out = []; const now = new Date(); const groups = activeGroups();
+  for (let i = 0; i < 21 && out.length < n; i++) {
+    const d = isoAdd(todayISO(), i); if (dayInfo(d).off) continue;
+    for (const b of ['morning', 'evening']) {
+      if (dayInfo(d, b).off) continue; const gs = groups.filter(g => g.batch === b && groupStarted(g, d)); if (!gs.length) continue;
+      const [h, mi, eh] = BATCH_START[b]; const st = new Date(d + 'T00:00:00'); st.setHours(h, mi, 0, 0); const en = new Date(st); en.setHours(eh);
+      if (en <= now) continue;
+      const plans = (S.class_plans || []).filter(p => p.class_date === d && (p.batch === 'all' || p.batch === b));
+      out.push({ d, b, st, en, levels: gs.map(g => g.level), n: gs.reduce((a, g) => a + g.n, 0), live: st <= now, plan: plans[0] || null });
+      if (out.length >= n) break;
+    }
+  }
+  return out;
+}
+function untilText(t) { const m = Math.max(0, Math.round((t - new Date()) / 60000)); const d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60), mm = m % 60; if (window.SK_LANG === 'en') return d ? `${d}d ${h}h` : h ? `${h}h ${mm}m` : `${mm} min`; return d ? `${d} দিন ${h} ঘণ্টা` : h ? `${h} ঘণ্টা ${mm} মিনিট` : `${mm} মিনিট`; }
+function upNextCard() {
+  const list = upcomingClasses(5); const nx = list[0];
+  const dayLbl = (c) => c.d === todayISO() ? 'আজ' : c.d === isoAdd(todayISO(), 1) ? 'আগামীকাল' : `${WDAY[dow(c.d)]}বার, ${fmtD(c.d)}`;
+  const big = nx ? `<a class="unx" href="#/attendance?d=${nx.d}&l=${esc(nx.levels[0])}&b=${nx.b}"><div class="unx-art" aria-hidden="true"><span>${esc(nx.levels.join(' · '))}</span></div>
+    <div class="unx-tx"><div class="unx-tag"><i>${esc(BATCH[nx.b])}</i><b class="${nx.live ? 'live' : ''}">${nx.live ? 'ক্লাস চলছে' : 'নির্ধারিত'}</b></div>
+      <small>${nx.live ? 'শেষ হবে' : 'শুরু হবে'}</small><div class="unx-t" data-until="${(nx.live ? nx.en : nx.st).getTime()}">${untilText(nx.live ? nx.en : nx.st)}</div>
+      <div class="unx-s">🕘 ${dayLbl(nx)} · ${nx.n} জন ছাত্র</div>${nx.plan && nx.plan.topic ? `<p>${esc(nx.plan.topic)}</p>` : ''}<span class="unx-go" aria-hidden="true">↗</span></div></a>`
+    : `<div class="empty" style="padding:28px">সামনের তিন সপ্তাহে কোনো ক্লাস নেই</div>`;
+  const rest = list.slice(1, 5).map(c => `<a class="unl" href="#/calendar?m=${c.d.slice(0, 7)}"><span class="unl-i">${esc(c.levels[0])}</span><span class="unl-t"><b>${esc(c.levels.join(', '))} · ${esc(BATCH[c.b])}</b><small>${dayLbl(c)}</small></span><span class="unl-s">● নির্ধারিত</span></a>`).join('');
+  return `<div class="card hx"><div class="hxh"><h2>পরের ক্লাস</h2><a class="small" href="#/calendar">ক্যালেন্ডার ↗</a></div>${big}${rest ? `<div class="hxsub">সামনে</div><div class="unls">${rest}</div>` : ''}</div>`;
+}
+function needsYouItems() {
+  const it = []; const today = todayISO(); const nm = (sid) => studentName(byId(S.students, sid) || {});
+  if (!isTeacher()) {
+    (S.pay_proofs || []).filter(x => x.status === 'pending').forEach(x => it.push({ ic: '💳', t: `${nm(x.student_id)} ${tk(x.amount)} পাঠিয়েছে`, s: `${METHOD[x.method] || x.method || ''} · TrxID ${x.trx_id || '—'} · যাচাই বাকি`, act: { pp: x.id, l: 'যাচাই করুন' }, go: '#/proofs' }));
+    (S.doc_requests || []).filter(x => x.status === 'pending').forEach(x => it.push({ ic: '📜', t: `${nm(x.student_id)}: সার্টিফিকেটের আবেদন`, s: 'তৈরি করে দিতে হবে', go: '#/requests' }));
+    const fresh = S.documents.filter(d => d.student_upload_at && d.status === 'received'); const per = new Set(fresh.map(d => d.student_id));
+    per.forEach(sid => it.push({ ic: '📎', t: `${nm(sid)} কাগজ পাঠিয়েছে`, s: `${fresh.filter(d => d.student_id === sid).length}টি ফাইল দেখা বাকি`, go: '#/docinbox' }));
+    S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).slice(0, 3).forEach(l => it.push({ ic: '📞', t: `${l.name}: ফলো-আপ`, s: l.next_follow_up < today ? `${fmtD(l.next_follow_up)} থেকে বাকি` : 'আজ ফোন করার দিন', go: '#/leads' }));
+  }
+  (S.student_questions || []).filter(x => x.status === 'open').forEach(x => it.push({ ic: '💬', t: `${nm(x.student_id)} প্রশ্ন করেছে`, s: String(x.question || x.body || '').slice(0, 70), go: '#/questions' }));
+  const miss = missingAttendance(); if (miss.length) it.push({ ic: '✅', t: `${miss.length}টি ক্লাসের হাজিরা বাকি`, s: miss.slice(0, 2).map(x => `${fmtD(x.date)} ${x.level}`).join(' · '), go: `#/attendance?d=${miss[0].date}&l=${miss[0].level}&b=${miss[0].batch}`, warn: true });
+  return it;
+}
+function needsYouCard() {
+  const it = needsYouItems(); const show = it.slice(0, 5);
+  return `<div class="card hx"><div class="hxh"><h2>আপনার কাজ বাকি</h2>${it.length ? `<span class="hxn">${it.length}</span>` : ''}</div>
+    ${show.length ? `<div class="nys">${show.map(x => `<div class="ny ${x.warn ? 'warn' : ''}"><span class="ny-i" aria-hidden="true">${x.ic}</span><div class="ny-t"><b>${esc(x.t)}</b><small>${esc(x.s)}</small><div class="ny-b">${x.act ? `<button class="btn sm ok" data-npp="${x.act.pp}">✓ ${x.act.l}</button>` : `<a class="btn sm ok" href="${x.go}">খুলুন →</a>`}<a class="ny-r" href="${x.go}">দেখুন</a></div></div></div>`).join('')}</div>${it.length > 5 ? `<a class="nymore" href="#/alerts">⌄ আরও ${it.length - 5}টি</a>` : ''}`
+      : `<div class="empty" style="padding:28px">সব কাজ শেষ — কিছু বাকি নেই 🎉</div>`}</div>`;
+}
+let HX_TIMER = 0;
+function bindHero() {
+  clearInterval(HX_TIMER); $$('[data-npp]').forEach(b => b.onclick = () => proofModal(byId(S.pay_proofs, b.dataset.npp)));
+  HX_TIMER = setInterval(() => { const el = $('[data-until]'); if (!el) return clearInterval(HX_TIMER); el.textContent = untilText(new Date(+el.dataset.until)); }, 30000);
+}
+const heroTitle = () => { const nm = (S.profile.name || '').trim().split(/\s+/); const first = nm.length > 1 && /^(md\.?|mohammad|muhammad|মো\.?|মোঃ)$/i.test(nm[0]) ? nm[1] : nm[0] || ''; return `<h1 class="greet">${greetText()},<br><span>${esc(first)}</span></h1>`; };
 function viewDashboard() {
   if (isTeacher()) return viewTeacherHome();
   const smap = sessionMap(); const today = todayISO(); const m = monthISO();
@@ -618,12 +691,13 @@ function viewDashboard() {
   const collectPct = paidCur + totalDue ? Math.round(paidCur * 100 / (paidCur + totalDue)) : 0;
   const collectBar = `<div class="kbar" title="চলমান ছাত্রদের ফি-র কত অংশ আদায় হয়েছে"><span style="width:${collectPct}%"></span></div><div class="s" style="margin-top:4px">ফি আদায় ${collectPct}%</div>`;
   mount('#/', `
-  <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
+  <div class="top"><div>${heroTitle()}<p>আজ ${fmtD(today)} · ড্যাশবোর্ড</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a>${isAdmin() ? '<a class="btn ghost" href="#/weekly">সাপ্তাহিক সারাংশ</a>' : ''}</div></div>
   ${(() => { const al = computeAlerts(); const red = al.filter(a => a.level === 'red'); if (!al.length) return ''; return `<a class="alertbar ${red.length ? 'red' : ''}" href="#/alerts"><b>${red.length ? red.length + 'টি জরুরি সতর্কতা' : al.length + 'টি সতর্কতা'}</b><span>${esc(al.slice(0, 2).map(a => { const t = studentName(byId(S.students, a.sid)) + ': ' + a.what + ' — ' + a.issue; return t.length > 110 ? t.slice(0, 108) + '…' : t; }).join(' · '))}${al.length > 2 ? ` · আরও ${al.length - 2}টি` : ''}</span><span class="go">দেখুন →</span></a>`; })()}
   ${isAdmin() && (!S.settings.last_backup_at || daysBetween(S.settings.last_backup_at.slice(0, 10), today) >= 7) ? `<a class="alertbar" href="#/reports" style="margin-bottom:16px"><b>${S.settings.last_backup_at ? daysBetween(S.settings.last_backup_at.slice(0, 10), today) + ' দিন ব্যাকআপ নেওয়া হয়নি' : 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি'}</b><span>রিপোর্ট পাতা থেকে "পুরো ব্যাকআপ নিন" চেপে ZIP ফাইলটা ল্যাপটপ বা Google Drive-এ রাখুন।</span><span class="go">ব্যাকআপ নিন →</span></a>` : ''}
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''} — ছুটি থাকলে ক্যালেন্ডারে ছুটি দিন</span><span class="go">হাজিরা নিন →</span></a>` : ''}
+  <div class="grid g2 hero">${upNextCard()}${needsYouCard()}</div>
   <div class="grid g4 kpis">
     ${kpi('users', 'চলমান ছাত্র-ছাত্রী', current.length, `মোট ভর্তি ${S.students.length} জন · এ মাসে নতুন ${admits[5]}`, '', spark(admits, 'var(--navy)'), delta(admits[5], admits[4]))}
     ${isAdmin() ? kpi('money', 'এ মাসের আয়', tk(monthIncome), `খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b>`, 'green', spark(inc6, 'var(--green)'), delta(inc6[5], inc6[4])) : (() => { const tp = S.payments.filter(x => x.paid_on === today); return kpi('money', 'আজকের জমা', tk(tp.reduce((a, x) => a + num(x.amount), 0)), `${tp.length}টি রশিদ`, 'green', '', ''); })()}
@@ -642,7 +716,7 @@ function viewDashboard() {
     <div class="card"><h2>আজকের ফলো-আপ</h2>${follow.length ? `<div class="tw"><table><tr><th>নাম</th><th>অবস্থা</th><th>তারিখ</th><th></th></tr>${follow.slice(0, 8).map(l => `<tr class="click" data-go="#/leads"><td>${esc(l.name)}<div class="small muted">${esc(l.phone)}</div></td><td>${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td>${l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : 'আজ'}</td><td class="num">${waBtn(l.phone, leadMsg(l), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">আজ কাউকে ফোন করার নেই</div>'}</div>
     <div class="card"><h2>জাপান আবেদন: সামনের তারিখ</h2>${jpSoon.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>স্কুল</th><th>তারিখ</th></tr>${jpSoon.slice(0, 8).map(a => `<tr class="click" data-go="#/student/${a.student_id}?t=japan"><td>${esc(studentName(byId(S.students, a.student_id)))}</td><td>${esc(schoolName(byId(S.jp_schools, a.school_id)))}</td><td>${nextCell(a)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনের ৩ সপ্তাহে কোনো তারিখ নেই</div>'}</div>
     ${isAdmin() ? expCard : ''}
-  </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); addStaffWallet(); });
+  </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); addStaffWallet(); bindHero(); });
 }
 // ------------------------------------------------------------------ dashboard charts (plain SVG, no library)
 const BN_MON_SHORT = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রি', 'মে', 'জুন', 'জুলা', 'আগ', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
@@ -679,7 +753,7 @@ function lineChart(rows) {
   const grid = [0, 50, 80, 100].map(v => `<line x1="${P}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}" class="gl ${v === 80 ? 'g80' : ''}"/><text x="${P - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}%</text>`).join('');
   const dots = rows.map((r, i) => `<g><title>${fmtD(r.d)}: ${r.pct}%</title><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4" class="${r.pct < 80 ? 'dl' : 'dg'}"/></g>`).join('');
   const lab = rows.map((r, i) => i % Math.ceil(rows.length / 6) === 0 || i === rows.length - 1 ? `<text x="${pts[i][0]}" y="${H - 8}" text-anchor="middle" class="ax">${r.d.slice(8)}/${r.d.slice(5, 7)}</text>` : '').join('');
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="শেষ কয়েক দিনের উপস্থিতির হার">${grid}<path d="${d} L${pts[pts.length - 1][0]} ${H - 26} L${pts[0][0]} ${H - 26}Z" class="la"/><path d="${d}" class="ln"/>${dots}${lab}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="শেষ কয়েক দিনের উপস্থিতির হার">${grid}<path d="${d} L${pts[pts.length - 1][0]} ${H - 26} L${pts[0][0]} ${H - 26}Z" class="la"/><path d="${d}" class="ln" pathLength="1"/>${dots}${lab}</svg>`;
 }
 // ---- my staff ID card on the home page, like a card in a wallet app: tap to turn it over to the QR
 function addStaffWallet() {
@@ -693,7 +767,7 @@ function addStaffWallet() {
       <div class="wbot"><span class="wno">${esc(c.staff_no || '')}</span><span class="whint">QR দেখতে চাপুন ↻</span></div></div>
     <div class="wf wback"><div class="wstrip"></div><div class="wqr" id="wqr"><small>QR তৈরি হচ্ছে…</small></div><div class="wbk"><b>${esc(c.staff_no || '')}</b><small>${esc(st.institute_bn || '')}${st.phone ? ' · ' + esc(st.phone) : ''}</small><small>মেয়াদ: ${fmtD(c.valid_until)}</small><span class="whint">আবার উল্টাতে চাপুন ↻</span></div></div>
   </div></div>`;
-  top.after(el);
+  const row = document.createElement('div'); row.className = 'toprow'; top.before(row); row.append(top, el);
   const card = $('#wcard'); let qr = false;
   const flip = async () => { card.classList.toggle('flip'); if (qr || !card.classList.contains('flip')) return; qr = true; try { await loadQR(); $('#wqr').innerHTML = qrSvg(`${location.origin}${location.pathname}#/people`); } catch (e) { $('#wqr').innerHTML = '<small>QR তৈরি করা যায়নি</small>'; qr = false; } };
   card.onclick = flip; card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
@@ -3308,10 +3382,11 @@ function viewTeacherHome() {
   const exams = S.exams.filter(e => e.exam_date >= today).sort((a, b) => a.exam_date.localeCompare(b.exam_date));
   const mocks = (S.mock_attempts || []).filter(a => a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).slice(0, 8);
   mount('#/', `
-  <div class="top"><div><h1>শিক্ষকের পাতা</h1><p>আজ ${fmtD(today)} · ${esc(S.profile.name || '')}</p></div>
+  <div class="top"><div>${heroTitle()}<p>আজ ${fmtD(today)} · শিক্ষকের পাতা</p></div>
     <div class="row no-print"><a class="btn" href="#/attendance">আজকের হাজিরা</a><a class="btn ghost" href="#/exams">পরীক্ষা ও নম্বর</a><a class="btn ghost" href="#/mocks">মক টেস্ট</a><a class="btn ghost" href="#/materials">পড়ার উপকরণ</a></div></div>
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''}</span></a>` : ''}
+  <div class="grid g2 hero">${upNextCard()}${needsYouCard()}</div>
   <div class="grid g4">
     <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div></div>
     <div class="card stat"><div class="l">আজকের উপস্থিতি</div><div class="v">${todayRecs.length ? todayCame + ' / ' + todayRecs.length : '—'}</div><div class="s">${todaySessions.length ? todaySessions.length + 'টি ক্লাস' : 'আজ হাজিরা নেওয়া হয়নি'}</div></div>
@@ -3323,7 +3398,7 @@ function viewTeacherHome() {
     <div class="card"><h2>সামনের পরীক্ষা</h2>${exams.length ? `<div class="tw"><table>${exams.slice(0, 8).map(e => `<tr class="click" data-go="#/exam/${e.id}"><td>${fmtD(e.exam_date)}</td><td>${esc(e.title)}</td><td>${esc(e.level)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনে কোনো পরীক্ষা নেই</div>'}</div>
     <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table>${low.slice(0, 10).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}</td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সবার উপস্থিতি ভালো</div>'}</div>
     <div class="card"><h2>সাম্প্রতিক অনলাইন মক টেস্ট</h2>${mocks.length ? `<div class="tw"><table>${mocks.map(a => { const t = byId(S.mock_tests || [], a.test_id); const s = byId(S.students, a.student_id); const p = num(a.total) ? Math.round(num(a.score) * 100 / num(a.total)) : 0; return `<tr class="click" data-go="#/mock/${a.test_id}?t=res"><td>${esc(s ? studentName(s) : '—')}</td><td>${esc(t ? t.title : '')}</td><td class="num"><b style="color:${t && p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(a.score)}/${num(a.total)}</b></td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কেউ অনলাইনে মক টেস্ট দেয়নি</div>'}</div>
-  </div>`, () => { bindGo(); addStaffWallet(); });
+  </div>`, () => { bindGo(); addStaffWallet(); bindHero(); });
 }
 
 // ------------------------------------------------------------------ people: the director adds and removes logins (v17 database)

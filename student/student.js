@@ -1797,6 +1797,20 @@ function matRow(m) {
 }
 
 let NAVSEC = 'home';
+// the menu's black pill slides from the last tab to the new one, and the page fades in out of a blur
+let ST_PILL = null, ST_LASTSEC = '';
+function stPill() {
+  const nav = $('.bnav'); if (!nav) return; const pill = document.createElement('span'); pill.className = 'bpill'; pill.setAttribute('aria-hidden', 'true'); nav.prepend(pill);
+  const on = $('.bnav button.on'); if (!on) { pill.style.opacity = 0; return; }
+  const r = { l: on.offsetLeft, t: on.offsetTop, w: on.offsetWidth, h: on.offsetHeight };
+  const put = (x) => { pill.style.left = x.l + 'px'; pill.style.top = x.t + 'px'; pill.style.width = x.w + 'px'; pill.style.height = x.h + 'px'; };
+  const moved = ST_PILL && (ST_PILL.l !== r.l || ST_PILL.t !== r.t) && ST_PILL.w;
+  if (moved && !matchMedia('(prefers-reduced-motion: reduce)').matches) { put(ST_PILL); pill.getBoundingClientRect(); pill.classList.add('go'); on.classList.add('wait'); setTimeout(() => on.classList.remove('wait'), 280); }
+  put(r); ST_PILL = r;
+  const fix = () => { if (!on.isConnected) return; const x = { l: on.offsetLeft, t: on.offsetTop, w: on.offsetWidth, h: on.offsetHeight }; put(x); ST_PILL = x; };
+  requestAnimationFrame(() => requestAnimationFrame(fix)); setTimeout(fix, 400);
+  if (window.ResizeObserver) new ResizeObserver(fix).observe(nav);
+}
 // ---- home: a greeting, today's three jobs in one place, and the four things students open most
 
 // ---- the student's ID card at the top of home, like a card in a wallet app: front = card, tap = QR on the back
@@ -1954,6 +1968,7 @@ function renderHome(d, user) {
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
     return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;
   $('#app').innerHTML = `<div class="st app2 ${d.blocked ? '' : 'hasnav'}">${head}<div class="shell2">${nav}<main class="smain">${body}${foot}</main></div></div>`;
+  stPill(); const sm = $('.smain'); if (sm && ST_LASTSEC && ST_LASTSEC !== NAVSEC && !matchMedia('(prefers-reduced-motion: reduce)').matches) { sm.classList.add('enter'); setTimeout(() => sm.classList.remove('enter'), 1000); } ST_LASTSEC = NAVSEC;
   $$('[data-sec]').forEach(b => b.onclick = () => { NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
   const jp = $('#jpgo'); if (jp) jp.onclick = () => { ME_TAB = 'jp'; renderMe(d, user); };
   const ibg = $('#ibgo'); if (ibg) ibg.onclick = () => renderInbox(d, user);

@@ -555,3 +555,155 @@ html[data-theme=dark] .sgroup input:focus,html[data-theme=dark] .sgroup select:f
 .hideans .mqo li.ok{background:none!important;border-color:var(--line)!important;color:inherit!important}
 .hideans .mqo li.ok .ab{background:var(--soft)!important;color:var(--ink)!important;border-color:var(--line)!important}
 .hideans .mqo .tick,.hideans .mqa{display:none!important}
+
+/* =====================================================================
+   v57 — "mint" light look (day): soft mint/cream backdrop, white cards, black sliding pill,
+   floating dark side panel that can shrink to an icon rail. Dark mode keeps the navy/orange look.
+   ===================================================================== */
+html:not([data-theme=dark]){
+  --bg:#EEF4F0;--card:#FFFFFF;--soft:#F1F6F3;--head:#F3F7F4;--line:#DFE7E2;--line2:#EAF0EC;
+  --ink:#15181B;--ink2:#383F45;--muted:#66707A;
+  --navy:#16191D;--navy2:#2C3238;--navy3:#0E1013;
+  --gold:#B07D0C;--gold2:#E9B63E;--gold3:#F6D27A;
+  --green:#1E8A57;--green-bg:#E2F4EA;
+  --r:16px;--r-sm:10px;
+  --shadow:0 1px 2px rgba(20,40,30,.04),0 8px 28px -14px rgba(20,50,35,.22);
+  --ring:0 0 0 3px rgba(233,182,62,.45);
+  --pill:#16191D;
+}
+html[data-theme=dark]{--pill:#2E4577}
+html:not([data-theme=dark]) body{background:
+  radial-gradient(900px 520px at -5% -10%,#CDEEDD 0%,rgba(205,238,221,0) 62%),
+  radial-gradient(800px 600px at 105% 110%,#FBEFD6 0%,rgba(251,239,214,0) 60%),
+  radial-gradient(700px 400px at 70% -10%,#E3F1F6 0%,rgba(227,241,246,0) 60%),
+  linear-gradient(135deg,#E9F4EE,#F6F3EA) fixed;background-attachment:fixed}
+/* cards & buttons */
+html:not([data-theme=dark]) .card{border-color:rgba(255,255,255,.9);box-shadow:var(--shadow)}
+html:not([data-theme=dark]) .btn{border-radius:999px;box-shadow:none}
+html:not([data-theme=dark]) .btn.ghost{border-color:var(--line);background:rgba(255,255,255,.85);color:var(--ink)}
+html:not([data-theme=dark]) .btn.ghost:hover{background:#fff;border-color:#C9D6CE}
+html:not([data-theme=dark]) .btn.gold{background:#E9B63E;border-color:#E9B63E;color:#16191D}
+html:not([data-theme=dark]) .btn.gold:hover{background:#DDA62A;border-color:#DDA62A}
+html:not([data-theme=dark]) .btn.sm{border-radius:999px}
+html:not([data-theme=dark]) .tw table th{background:var(--head)}
+/* floating dark side panel */
+html:not([data-theme=dark]) .shell{grid-template-columns:272px minmax(0,1fr)}
+html:not([data-theme=dark]) .side{margin:12px 0 12px 12px;top:12px;height:calc(100vh - 24px);border-radius:24px;background:#16191D;border:none;box-shadow:0 24px 50px -24px rgba(10,30,20,.55);overflow:hidden}
+html:not([data-theme=dark]) .side::after{opacity:.25}
+html:not([data-theme=dark]) .brand,html:not([data-theme=dark]) .who{border-color:rgba(255,255,255,.08)}
+html:not([data-theme=dark]) .nav a.on{background:rgba(233,182,62,.16)}
+html:not([data-theme=dark]) .nav a.on::before{background:#E9B63E}
+html:not([data-theme=dark]) .ng summary svg{color:#F6D27A}
+html:not([data-theme=dark]) .ng summary.here svg{color:#16191D;background:#E9B63E;border-radius:50%;padding:4px;width:26px;height:26px;margin:-4px}
+html:not([data-theme=dark]) .whob{border-color:rgba(255,255,255,.1)}
+html:not([data-theme=dark]) .who .rl,html:not([data-theme=dark]) .whob .rl{color:#16191D}
+/* top menu: frosted capsule with the black pill */
+html:not([data-theme=dark]) .topnav{margin:-8px 0 18px;padding:5px;top:10px;width:max-content;max-width:100%;border-radius:999px;background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 30px -18px rgba(20,50,35,.4);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3)}
+.topnav{position:sticky}
+.topnav .tpill{position:absolute;top:5px;bottom:5px;left:0;width:0;border-radius:999px;background:var(--pill);z-index:0;pointer-events:none;box-shadow:0 6px 16px -8px rgba(0,0,0,.5)}
+.topnav .tpill.go{transition:left .5s cubic-bezier(.65,0,.35,1),width .5s cubic-bezier(.65,0,.35,1),opacity .3s}
+.topnav a{position:relative;z-index:1}
+.topnav a.on,html[data-theme=dark] .topnav a.on{background:transparent;color:#fff;transition:color .25s .18s}
+html:not([data-theme=dark]) .topnav a.on svg{color:#F6D27A}
+html:not([data-theme=dark]) .topnav a:not(.on):hover{background:rgba(22,25,29,.06);color:var(--ink)}
+html[data-theme=dark] .topnav{position:sticky}
+@media (max-width:860px){html:not([data-theme=dark]) .topnav{margin:-6px 0 12px;top:62px}}
+/* phone: side panel slides in as before */
+@media (max-width:860px){html:not([data-theme=dark]) .shell{grid-template-columns:1fr}html:not([data-theme=dark]) .side{margin:0;top:0;height:100vh;border-radius:0 24px 24px 0}html:not([data-theme=dark]) .mtop{background:rgba(255,255,255,.7);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:var(--ink);border-bottom:1px solid rgba(255,255,255,.9)}}
+/* shrink the side menu to an icon rail; it opens over the page while the mouse is on it */
+.railb{all:unset;margin-left:auto;flex:none;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;cursor:pointer;background:rgba(255,255,255,.06)}
+.railb:hover{background:rgba(255,255,255,.14)}.railb:focus-visible{box-shadow:var(--ring)}
+.railb span{width:7px;height:7px;border-left:2px solid #E9E4D8;border-bottom:2px solid #E9E4D8;transform:translateX(1px) rotate(45deg);transition:transform .25s}
+.rail .railb span{transform:translateX(-1px) rotate(-135deg)}
+@media (min-width:861px){
+  html.rail .shell{grid-template-columns:96px minmax(0,1fr)}
+  html.rail .side{width:84px;z-index:30;transition:width .28s cubic-bezier(.4,0,.2,1)}
+  html.rail .side:hover,html.rail .side:focus-within{width:260px}
+  html.rail .side:not(:hover):not(:focus-within) .brand>div,html.rail .side:not(:hover):not(:focus-within) .ng summary>span,html.rail .side:not(:hover):not(:focus-within) .whob .wt,html.rail .side:not(:hover):not(:focus-within) .whob .wchev{display:none}
+  html.rail .side:not(:hover):not(:focus-within) .ng .ngi{display:none}
+  html.rail .side:not(:hover):not(:focus-within) .ng summary{justify-content:center;padding:11px 0}
+  html.rail .side:not(:hover):not(:focus-within) .brand{flex-direction:column;padding:16px 0 12px}
+  html.rail .side:not(:hover):not(:focus-within) .whob{justify-content:center;padding:8px 0;background:none;border-color:transparent}
+  html.rail .side .nav,html.rail .side .brand,html.rail .side .who{min-width:0}
+  html.rail .side .ng summary,html.rail .side .nav a{white-space:nowrap}
+}
+/* page enter: everything fades up out of a soft blur, one block after another */
+@keyframes pgIn{from{opacity:0;filter:blur(10px);transform:translateY(10px)}to{opacity:1;filter:blur(0);transform:none}}
+.main.enter>:not(.topnav):not(.demo-bar):not(.crumb){animation:pgIn .55s cubic-bezier(.2,.7,.2,1) backwards}
+.main.enter>:nth-child(4){animation-delay:.05s}.main.enter>:nth-child(5){animation-delay:.1s}.main.enter>:nth-child(6){animation-delay:.15s}.main.enter>:nth-child(7){animation-delay:.2s}.main.enter>:nth-child(8){animation-delay:.25s}.main.enter>:nth-child(n+9){animation-delay:.3s}
+.main.enter .grid>.card{animation:pgIn .6s cubic-bezier(.2,.7,.2,1) backwards}
+.main.enter .grid>.card:nth-child(2){animation-delay:.08s}.main.enter .grid>.card:nth-child(3){animation-delay:.14s}.main.enter .grid>.card:nth-child(4){animation-delay:.2s}.main.enter .grid>.card:nth-child(n+5){animation-delay:.26s}
+/* charts draw themselves */
+@keyframes drawLn{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes growB{from{transform:scaleY(0)}to{transform:none}}
+.chart .ln{stroke-dasharray:1;animation:drawLn 1.3s cubic-bezier(.4,0,.2,1) .2s backwards}
+.chart rect.bi,.chart rect.be{transform-box:fill-box;transform-origin:50% 100%;animation:growB .8s cubic-bezier(.2,.7,.2,1) .15s backwards}
+.chart g:nth-of-type(2) rect{animation-delay:.2s}.chart g:nth-of-type(3) rect{animation-delay:.26s}.chart g:nth-of-type(4) rect{animation-delay:.32s}.chart g:nth-of-type(5) rect{animation-delay:.38s}.chart g:nth-of-type(6) rect{animation-delay:.44s}
+@media (prefers-reduced-motion:reduce){.main.enter *,.chart *{animation:none!important}.topnav .tpill.go{transition:none}}
+/* home hero: greeting, next class, what needs me */
+h1.greet{font-size:32px;line-height:1.12;margin:0 0 4px;letter-spacing:-.01em}
+h1.greet span{color:var(--ink)}
+.hero{margin:0 0 16px;align-items:start}
+.hx{padding:16px 16px 14px}
+.hxh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.hxh h2{margin:0;font-size:15.5px}
+.hxh a{text-decoration:none;color:var(--muted)}
+.hxn{min-width:22px;height:22px;border-radius:99px;background:#E5484D;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 6px}
+.unx{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;background:#16191D;color:#F3F1EC!important;border-radius:18px;padding:12px;text-decoration:none;position:relative;overflow:hidden;box-shadow:0 18px 34px -20px rgba(0,0,0,.6);transition:transform .2s}
+.unx:hover{transform:translateY(-2px)}
+.unx-art{border-radius:13px;min-height:138px;display:grid;place-items:center;text-align:center;padding:8px;background:radial-gradient(circle at 28% 22%,rgba(246,210,122,.85),rgba(246,210,122,0) 52%),radial-gradient(circle at 80% 90%,rgba(80,190,140,.55),rgba(80,190,140,0) 55%),linear-gradient(160deg,#2C5E4A,#122019)}
+.unx-art span{font:800 26px/1.1 var(--f-body);color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.35);word-break:break-word}
+.unx-tx{display:flex;flex-direction:column;min-width:0;padding:2px 34px 2px 0}
+.unx-tag{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.unx-tag i{font-style:normal;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.1);border-radius:99px;padding:2px 9px}
+.unx-tag b{margin-left:auto;font-size:11px;background:#E9B63E;color:#16191D;border-radius:99px;padding:2px 9px}
+.unx-tag b.live{background:#3DD68C}
+.unx small{color:#A8B0B7;font-size:12px}
+.unx-t{font:700 30px/1.15 var(--f-body);letter-spacing:-.01em;margin:2px 0 6px;color:#fff}
+.unx-s{font-size:12.5px;color:#C9CED3}
+.unx p{margin:6px 0 0;font-size:13px;color:#DADDE0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.unx-go{position:absolute;right:12px;bottom:12px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);font-size:14px}
+.hxsub{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:14px 2px 6px}
+.unls{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.unl{display:flex;align-items:center;gap:10px;padding:7px;border-radius:12px;text-decoration:none;color:var(--ink)!important;min-width:0;transition:background .15s}
+.unl:hover{background:var(--soft)}
+.unl-i{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:12px;background:var(--soft);border:1px solid var(--line)}
+.unl-t{display:flex;flex-direction:column;min-width:0}.unl-t b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.unl-t small{font-size:12px;color:var(--muted)}
+.unl-s{margin-left:auto;font-size:11px;color:var(--green);white-space:nowrap;font-weight:600}
+.nys{display:flex;flex-direction:column;gap:8px}
+.ny{display:flex;gap:12px;padding:10px;border-radius:14px;border:1px solid var(--line2);background:var(--card);transition:border-color .15s}
+.ny:hover{border-color:var(--line)}
+.ny-i{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px;background:var(--soft)}
+.ny.warn .ny-i{background:var(--red-bg)}
+.ny-t{min-width:0;flex:1}.ny-t b{display:block;font-size:13.5px;line-height:1.35}.ny-t small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ny-b{display:flex;align-items:center;gap:12px;margin-top:8px}
+.btn.ok{background:var(--green);border-color:var(--green);color:#fff!important;text-decoration:none}.btn.ok:hover{background:#17744A;border-color:#17744A}
+.ny-r{font-size:12.5px;color:var(--muted)!important;text-decoration:none;font-weight:600}.ny-r:hover{color:var(--ink)!important}
+.nymore{display:block;text-align:center;font-size:12.5px;color:var(--muted)!important;text-decoration:none;margin-top:10px}
+html[data-theme=dark] .unx{background:#0A1020;border:1px solid var(--line)}
+html[data-theme=dark] .unl{color:var(--ink)!important}
+html[data-theme=dark] .unl-s{color:#4FD18B}
+@media (max-width:860px){h1.greet{font-size:26px}.unx{grid-template-columns:96px minmax(0,1fr);gap:12px}.unx-art{min-height:110px}.unx-art span{font-size:20px}.unx-t{font-size:24px}.unls{grid-template-columns:1fr}}
+/* calendar like a planner: event chips */
+html:not([data-theme=dark]) .cal{border-radius:18px;overflow:hidden;background:#fff;border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow)}
+html:not([data-theme=dark]) .cd:hover{background:#F4FAF6}
+html:not([data-theme=dark]) .cd.off{background:#F5F7F5}
+html:not([data-theme=dark]) .cd.today{box-shadow:inset 0 0 0 2px #16191D}
+html:not([data-theme=dark]) .cd.today .dn{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:50%;background:#16191D;color:#fff}
+html:not([data-theme=dark]) .cd .dn{color:var(--ink)}
+.cg .cd .ok,.cg .cd .ev{display:block;margin-top:3px;border-radius:6px;padding:1px 6px;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cg .cd .ok{background:var(--green);color:#fff}
+.cg .cd .ev{background:#E2F4EA;color:#145C3A}
+.cg .cd .ev.jp{background:#FDECC8;color:#7A5200}
+.cg .cd .miss{display:block;margin-top:3px;border-radius:6px;padding:1px 6px;font-size:11.5px;background:#FDE3E1;color:#B42318}
+html[data-theme=dark] .cg .cd .ev{background:#1C3A2C;color:#9BE6BF}html[data-theme=dark] .cg .cd .ev.jp{background:#3A2E14;color:#FFD48A}html[data-theme=dark] .cg .cd .miss{background:#3A1A1A;color:#FFB4AB}html[data-theme=dark] .cg .cd .ok{background:#1E7A4D}
+@media (max-width:860px){html:not([data-theme=dark]) .mtop{border-bottom:1px solid rgba(255,255,255,.9)}html:not([data-theme=dark]) .mtop button{color:var(--ink)}}
+.topnav a.on.wait,html[data-theme=dark] .topnav a.on.wait{color:var(--ink2)}
+html:not([data-theme=dark]) .main :not(.topnav)>a:not(.btn):not(.unx):not(.unl):not(.alertbar):not([class*=ny]){color:#1C5B43}
+html:not([data-theme=dark]) .topnav a,html:not([data-theme=dark]) .main .topnav a{color:var(--ink2)}
+html:not([data-theme=dark]) .main .topnav a.on{color:#fff}
+html:not([data-theme=dark]) .main .topnav a.on.wait{color:var(--ink2)}
+html:not([data-theme=dark]) .btn.ghost{color:var(--ink)}
+.toprow{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:16px 28px;align-items:center;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.toprow .top{flex-direction:column;align-items:flex-start;justify-content:center;border:none;padding:0;margin:0}
+.toprow .swal{margin:0}.toprow .swal .wcard{max-width:none}
+@media (max-width:1100px){.toprow{grid-template-columns:1fr}.toprow .swal .wcard{max-width:400px}}
