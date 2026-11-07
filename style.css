@@ -461,3 +461,7 @@ html[data-theme=dark] .cd .hl{color:#E2B54A}html[data-theme=dark] .cd .ev.jp,htm
 html[data-theme=dark] .tabs button.on,html[data-theme=dark] .steps a.pipe{color:#DCE4F5}
 html[data-theme=dark] .cd .dn,html[data-theme=dark] .cw div,html[data-theme=dark] .avatar span,html[data-theme=dark] .avcam{color:#DCE4F5}
 html[data-theme=dark] .cal.c-l{color:#1B1405!important}
+/* dark look: white letters on green / red chips get dark letters instead; navy written inline becomes light */
+html[data-theme=dark] .opt.right .ab,html[data-theme=dark] .opt.wrong .ab,html[data-theme=dark] .mqo li.ok .ab,html[data-theme=dark] .cnt1,html[data-theme=dark] .mk button.on.present,html[data-theme=dark] .mk button.on.absent,html[data-theme=dark] .vck.ok,html[data-theme=dark] .js.done span{color:#0D1322!important}
+html[data-theme=dark] .shell [style*="color:var(--navy)"],html[data-theme=dark] .modal [style*="color:var(--navy)"]{color:#DCE4F5!important}
+html[data-theme=dark] .opt .ab{color:#C8D0E4;border-color:#3A4868}
