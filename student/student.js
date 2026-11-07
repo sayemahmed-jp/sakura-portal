@@ -1790,6 +1790,32 @@ function matRow(m) {
 
 let NAVSEC = 'home';
 // ---- home: a greeting, today's three jobs in one place, and the four things students open most
+
+// ---- the student's ID card at the top of home, like a card in a wallet app: front = card, tap = QR on the back
+let WQR = null;   // QR svg, made once per visit
+function walletHtml(d) {
+  if (d.blocked) return ''; const s = d.student || {}; const I = d.institute || {};
+  return `<div class="wcard" id="wcard" role="button" tabindex="0" aria-label="আমার আইডি কার্ড — উল্টাতে চাপুন"><div class="wci">
+    <div class="wf wfront">
+      <div class="wtop"><span class="kamon">${KAMON}</span><div class="wbrand"><b>${esc(I.bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}</b><small>さくら日本語学院 · STUDENT ID</small></div></div>
+      <div class="wmid"><div class="wph" id="wph"><span>${esc(((s.name_bn || s.name_en || '?').trim()[0] || '?').toUpperCase())}</span></div>
+        <div class="wtx"><b>${esc(s.name_bn || s.name_en || '')}</b>${s.name_en && s.name_bn ? `<small>${esc(s.name_en)}</small>` : ''}<div class="wtags">${(d.levels || []).map(l => `<i>${esc(l)}</i>`).join('')}${s.batch && BATCH[s.batch] ? `<i class="b">${esc(BATCH[s.batch])}</i>` : ''}</div></div></div>
+      <div class="wbot"><span class="wno">${esc(s.admission_no || '')}</span><span class="whint">QR দেখতে চাপুন ↻</span></div>
+    </div>
+    <div class="wf wback"><div class="wstrip"></div><div class="wqr" id="wqr">${WQR || '<small>QR তৈরি হচ্ছে…</small>'}</div><div class="wbk"><b>${esc(s.admission_no || '')}</b><small>অফিসে এই QR দেখান — স্ক্যান করলে আপনার তথ্য খুলবে</small><span class="whint">আবার উল্টাতে চাপুন ↻</span></div></div>
+  </div></div>`;
+}
+async function bindWallet(d) {
+  const c = $('#wcard'); if (!c) return;
+  const flip = () => { c.classList.toggle('flip'); if (c.classList.contains('flip')) makeWalletQr(d); };
+  c.onclick = flip; c.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+  try { const ph = (d.docs || []).find(x => x.doc_type === 'photo' && x.file_path && !/\.pdf$/i.test(x.file_path)); if (ph) { const u = await API.docFileUrl(ph.file_path); const b = $('#wph'); if (b && u) b.innerHTML = `<img src="${esc(u)}" alt="">`; } } catch { /* no photo yet */ }
+}
+async function makeWalletQr(d) {
+  if (WQR) return; const box = $('#wqr');
+  try { const sid = await API.myStudentId(); if (!sid) throw new Error('not_linked'); await loadQrGen(); const q = window.qrcode(0, 'M'); q.addData(new URL('../', location.href).href + '#/student/' + sid); q.make(); WQR = q.createSvgTag({ cellSize: 4, margin: 1, scalable: true }); if (box) box.innerHTML = WQR; }
+  catch (e) { if (box) box.innerHTML = `<small>${d.preview ? 'প্রিভিউতে QR নেই — ছাত্রের অ্যাকাউন্টে দেখাবে' : esc(errMsg(e))}</small>`; }
+}
 function greetHtml(d) {
   const s = d.student || {}; const h = new Date(Date.now() + 6 * 3600000).getUTCHours();
   const hi = h < 5 ? 'শুভ রাত্রি' : h < 12 ? 'সুপ্রভাত' : h < 16 ? 'শুভ দুপুর' : h < 18 ? 'শুভ বিকেল' : h < 21 ? 'শুভ সন্ধ্যা' : 'শুভ রাত্রি';
@@ -1892,7 +1918,7 @@ function renderHome(d, user) {
       ${d.blocked === 'due' ? `<p style="margin:0">মোট কোর্স ফি ${tk(fee.net)} · পরিশোধ ${tk(fee.paid)} · <b style="color:var(--red)">বাকি ${tk(fee.due)}</b></p><p class="small muted" style="margin:6px 0 0">অফিসে বা বিকাশে টাকা দেওয়ার পর অফিস রশিদ লিখলেই এই পাতা নিজে থেকে খুলে যাবে — আবার লগইন করে দেখুন।</p>` : ''}
       ${total ? `<div class="teaser">${Object.entries(counts).map(([k, n]) => `<span>${esc(LEVEL_NAME[k] || k)}: ${n}টি উপকরণ</span>`).join('')}</div>` : ''}
       ${wa ? `<p style="margin:12px 0 0"><a class="btn sm wa" href="https://wa.me/${wa}?text=${encodeURIComponent(`আসসালামু আলাইকুম। আমি ${s.name_bn || s.name_en} (${s.admission_no})। ছাত্রদের সাইট নিয়ে কথা বলতে চাই।`)}" target="_blank" rel="noopener">অফিসে WhatsApp করুন</a></p>` : ''}</div>`;
-  else if (NAVSEC === 'home') body = `${greetHtml(d)}${todayHtml(d)}${quickHtml(d, vids)}${noticesHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}${feedbackCardHtml(d)}${installCardHtml(d)}`;
+  else if (NAVSEC === 'home') body = `${greetHtml(d)}${walletHtml(d)}${todayHtml(d)}${quickHtml(d, vids)}${noticesHtml(d)}${countdownHtml(d)}${dailyHtml(d)}${leaderboardHtml(d)}${feedbackCardHtml(d)}${installCardHtml(d)}`;
   else if (NAVSEC === 'study') { const qn = qaUnread(d).length;
     body = `<h1 class="sech">📚 পড়া</h1><div class="mlist2">${vids.length ? row('vidgo', '🎬', 'ভিডিও ক্লাস', `${BN_NUM(vids.filter(v => vidDone(d, v.id)).length)}/${BN_NUM(vids.length)}টি দেখা শেষ`) : ''}${row('qago', '❓', 'শিক্ষককে প্রশ্ন', 'কিছু না বুঝলে জিজ্ঞেস করুন', qn ? BN_NUM(qn) : '')}</div>
       <div class="authtabs" style="margin:0 0 14px;flex-wrap:nowrap"><button data-ht="mat" class="${HOME_TAB === 'mat' ? 'on' : ''}">📚 উপকরণ (${mats.length})</button><button data-ht="kana" class="${HOME_TAB === 'kana' ? 'on' : ''}">あ কানা ও বলা</button><button data-ht="fc" class="${HOME_TAB === 'fc' ? 'on' : ''}">🃏 কার্ড</button></div>
@@ -1917,6 +1943,7 @@ function renderHome(d, user) {
   const idg = $('#idgo'); if (idg) idg.onclick = () => renderMyId(d, user);
   const dcg = $('#dcgo'); if (dcg) dcg.onclick = () => { DU = null; renderDocs(d, user); };
   const lo = $('#lo'); if (lo) lo.onclick = async () => { await API.signOut(); renderAuth(); };
+  if (NAVSEC === 'home') bindWallet(d);
   $$('.mfold').forEach(f => f.addEventListener('toggle', () => { const o = meOpen(); o[f.dataset.mf] = f.open; try { localStorage.setItem('sakura_me_open', JSON.stringify(o)); } catch (_) {} }));
   if (NAVSEC === 'me' && $('#statt')) fillAttStat(d);
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });

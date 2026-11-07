@@ -597,6 +597,36 @@
   .opt.right{border-color:var(--green)!important}.opt.wrong{border-color:var(--red)!important}
   .st .card.today,.st .today{border-color:transparent!important}
 
+
+  /* wallet-style ID card on home (v62): sized to the phone, flips to the QR */
+  .wcard{container-type:inline-size;width:100%;max-width:440px;aspect-ratio:85.6/54;margin:0 auto 16px;perspective:1400px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .wci{position:relative;width:100%;height:100%;transition:transform .7s cubic-bezier(.2,.75,.25,1);transform-style:preserve-3d}
+  .wcard.flip .wci{transform:rotateY(180deg)}
+  .wcard:active .wci{scale:.985}
+  .wf{position:absolute;inset:0;border-radius:4.5cqw;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;color:#fff;
+    background:radial-gradient(120% 90% at 100% 0%,rgba(201,169,92,.35),transparent 55%),var(--seigaiha) 0 100%/48px 24px repeat-x,linear-gradient(135deg,#2E4373 0%,#1B2945 55%,#101a30 100%);
+    box-shadow:0 18px 34px -16px rgba(16,26,48,.75),inset 0 1px 0 rgba(255,255,255,.18);border:1px solid rgba(201,169,92,.45)}
+  .wf::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.14) 45%,transparent 60%);pointer-events:none}
+  .wfront{display:flex;flex-direction:column;padding:4.5cqw 5cqw}
+  .wtop{display:flex;align-items:center;gap:2.6cqw}.wtop .kamon{width:9cqw;height:9cqw;flex:none;border-width:1.5px;box-shadow:none}
+  .wbrand b{display:block;font:700 3.6cqw/1.2 'Noto Serif Bengali',serif}.wbrand small{display:block;font-size:2.5cqw;letter-spacing:.12em;color:#E2C987;margin-top:.4cqw}
+  .wmid{flex:1;display:flex;align-items:center;gap:4cqw}
+  .wph{flex:none;width:18cqw;height:22cqw;border-radius:2.4cqw;background:rgba(255,255,255,.12);border:1.5px solid rgba(226,201,135,.7);display:grid;place-items:center;overflow:hidden;font:800 9cqw 'Noto Serif Bengali';color:#E2C987}
+  .wph img{width:100%;height:100%;object-fit:cover}
+  .wtx{min-width:0}.wtx b{display:block;font:800 5.4cqw/1.2 'Hind Siliguri',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wtx small{display:block;font-size:3cqw;opacity:.8;letter-spacing:.04em;margin-top:.4cqw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wtags{display:flex;gap:1.4cqw;flex-wrap:wrap;margin-top:1.6cqw}.wtags i{font-style:normal;font-size:2.7cqw;font-weight:700;background:#E2C987;color:#1B2945;border-radius:99px;padding:.2cqw 2cqw}.wtags i.b{background:rgba(255,255,255,.16);color:#fff}
+  .wbot{display:flex;justify-content:space-between;align-items:flex-end}
+  .wno{font:700 5.2cqw ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.14em;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+  .whint{font-size:2.6cqw;opacity:.75}
+  .wback{transform:rotateY(180deg);display:flex;align-items:center;gap:4cqw;padding:4cqw 5cqw 4cqw 5cqw}
+  .wstrip{position:absolute;left:0;right:0;top:0;height:5cqw;background:linear-gradient(90deg,#C9A95C,#E2C987,#C9A95C);opacity:.9}
+  html[data-theme=dark] .wstrip{background:linear-gradient(90deg,#E8772E,#FFB36B,#E8772E)}
+  .wqr{position:relative;z-index:1;flex:none;width:38cqw;height:38cqw;margin-top:3cqw;background:#fff;border-radius:2.5cqw;padding:1.6cqw;display:grid;place-items:center;color:#1B2945;text-align:center;font-size:2.6cqw;box-shadow:0 6px 14px -6px rgba(0,0,0,.6)}
+  .wqr svg{width:100%;height:100%}
+  .wbk{position:relative;z-index:1;margin-top:3cqw;min-width:0;display:flex;flex-direction:column;gap:1.4cqw}.wbk b{font:700 5cqw ui-monospace,Menlo,monospace;letter-spacing:.1em}.wbk small{font-size:2.9cqw;line-height:1.5;opacity:.85}
+  html[data-theme=dark] .wf{border-color:rgba(242,140,56,.55);background:radial-gradient(120% 90% at 100% 0%,rgba(242,140,56,.3),transparent 55%),var(--seigaiha) 0 100%/48px 24px repeat-x,linear-gradient(135deg,#2A3A63 0%,#18233E 55%,#0B1222 100%)}
+  @media (prefers-reduced-motion:reduce){.wci{transition:none}}
+
 </style>
 </head>
 <body>
@@ -608,6 +638,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=61"></script>
+<script src="student.js?v=62"></script>
 </body>
 </html>
