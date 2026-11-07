@@ -476,12 +476,20 @@ const ICON = {
 const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
 const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+// the most-used pages sit in a bar across the top; everything else is in the side menu, folded by topic
+const TOP_NAV = ['#/', '#/attendance', '#/students', '#/payments', '#/alerts', '#/scan'];
+const SIDE_ICON = { 'প্রতিদিনের কাজ': 'cal', 'ছাত্র ও ভর্তি': 'users', 'পড়াশোনা': 'book', 'টাকা-পয়সা': 'money', 'প্রশাসন': 'gear' };
+const navOpenGet = () => { try { return JSON.parse(localStorage.getItem('sakura_nav_open') || '{}'); } catch (_) { return {}; } };
+const navOpenSet = (o) => { try { localStorage.setItem('sakura_nav_open', JSON.stringify(o)); } catch (_) {} };
 const navAllowed = (h) => isTeacher() ? TEACHER_ROUTES.includes(h.slice(2)) : h === '#/people' ? isDirector() : (isAdmin() || !ADMIN_ROUTES.includes(h.slice(2)));
 const WDAY_LONG = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 function shell(active, inner) {
   const al = isTeacher() ? [] : computeAlerts(); const red = al.filter(a => a.level === 'red').length;
   const item = (h) => { const n = NAV.find(x => x[0] === h); if (!n || !navAllowed(h)) return ''; const [, l, i] = n; return `<a href="${h}" class="${active === h ? 'on' : ''}" ${active === h ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[i]}</svg><span>${l}</span>${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`; };
-  const nav = NAV_GROUPS.map(([g, hs]) => { const items = hs.map(item).join(''); return items ? `<div class="grp">${g}</div>${items}` : ''; }).join('');
+  const svg = (i) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[i]}</svg>`;
+  const top = TOP_NAV.filter(navAllowed).map(h => { const n = NAV.find(x => x[0] === h); return `<a href="${h}" class="${active === h ? 'on' : ''}" ${active === h ? 'aria-current="page"' : ''}>${svg(n[2])}<span>${h === '#/scan' ? 'আইডি / QR' : n[1]}</span>${h === '#/alerts' && al.length ? `<span class="nb ${red ? 'red' : ''}">${al.length}</span>` : ''}</a>`; }).join('');
+  const open = navOpenGet();
+  const nav = NAV_GROUPS.map(([g, hs]) => { const rest = hs.filter(h => !TOP_NAV.includes(h)); const items = rest.map(item).join(''); if (!items) return ''; const here = rest.includes(active); const isOpen = here || open[g]; return `<details class="ng" data-g="${g}" ${isOpen ? 'open' : ''}><summary class="${here ? 'here' : ''}">${svg(SIDE_ICON[g] || 'log')}<span>${g}</span><span class="cnt">${rest.filter(navAllowed).length}</span><span class="chev" aria-hidden="true"></span></summary><div class="ngi">${items}</div></details>`; }).join('');
   const grp = NAV_GROUPS.find(([, hs]) => hs.includes(active)); const page = NAV.find(x => x[0] === active);
   const d = new Date(); const name = S.profile.name || S.user.email || '';
   return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b><a href="#/scan" class="mscan" aria-label="আইডি / QR দিয়ে খুঁজুন" title="আইডি / QR">📷</a>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
@@ -490,13 +498,14 @@ function shell(active, inner) {
     <nav class="nav">${nav}</nav>
     <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
       <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${langBtnHtml()}${themeBtnHtml()}</div></div>
-  </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
+  </aside><div class="scrim" id="scrim"></div><main class="main"><nav class="topnav no-print" aria-label="প্রধান মেনু">${top}</nav>${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
 function mount(active, inner, after) {
   $('#app').innerHTML = shell(active, inner);
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
+  $$('.ng').forEach(d => d.addEventListener('toggle', () => { const o = navOpenGet(); o[d.dataset.g] = d.open; navOpenSet(o); }));
   $('#scrim').onclick = () => $('#side').classList.remove('open');
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
   const cp = $('#chpw'); if (cp) cp.onclick = changePasswordModal;
