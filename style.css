@@ -732,3 +732,26 @@ html:not([data-theme=dark]) .unx-art{background:radial-gradient(circle at 28% 22
 html:not([data-theme=dark]) .cd.today{box-shadow:inset 0 0 0 2px #14432F}
 html:not([data-theme=dark]) .cd.today .dn{background:#14432F}
 @media (max-width:860px){html:not([data-theme=dark]) .side{border-radius:0 24px 24px 0}}
+/* v59 — phone: the top menu becomes a floating tab bar at the bottom (like the student app), with the same sliding pill */
+@media (max-width:860px){
+  .topnav,html[data-theme=dark] .topnav,html:not([data-theme=dark]) .topnav{position:fixed!important;left:10px;right:10px;top:auto!important;bottom:calc(8px + env(safe-area-inset-bottom));margin:0!important;width:auto!important;max-width:none!important;display:flex;justify-content:space-around;gap:0;padding:5px!important;border-radius:26px;z-index:35;overflow:visible}
+  html[data-theme=dark] .topnav{background:rgba(20,28,48,.88);border:1px solid rgba(255,255,255,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 14px 34px -16px rgba(0,0,0,.7)}
+  .topnav a,html:not([data-theme=dark]) .topnav a{flex:1 1 0;min-width:0;flex-direction:column;justify-content:center;gap:3px;padding:7px 2px 6px!important;font-size:10.5px!important;border-radius:21px;line-height:1.15}
+  .topnav a>span:not(.nb){display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topnav a svg{width:21px;height:21px}
+  .topnav a[href="#/scan"]{display:none}
+  .topnav .nb{position:absolute;top:2px;left:calc(50% + 6px);margin:0;font-size:10px;line-height:16px;min-width:16px;height:16px;padding:0 4px}
+  .topnav .tpill{border-radius:21px}
+  .main{padding-bottom:100px!important}
+  #toast{bottom:96px!important}
+  /* number cards: two per row without the label breaking into three lines */
+  .kpis .kpi .ki{display:none}
+  .kpis .kpi .kh{flex-wrap:wrap;gap:4px 6px}
+  .kpis .kpi .l{flex:1 1 100%;font-size:12.5px;line-height:1.3}
+  .kpis .kpi .delta{order:3}
+  .kpis .kpi .v{font-size:22px}
+  .kpis .kpi{padding:14px}
+  /* shorter staff card on the phone */
+  .toprow{gap:14px;padding-bottom:14px}
+  .toprow .top .row .btn{min-height:34px;padding:5px 13px;font-size:13.5px}
+}
