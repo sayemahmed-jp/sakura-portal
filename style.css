@@ -353,3 +353,10 @@ html[data-theme=dark] .modal-card{background:var(--card)}
 html[data-theme=dark] .empty{color:var(--muted)}
 html[data-theme=dark] .demo-bar{border-color:#4A3E1C;color:#EBDDB5}
 @media print{html[data-theme=dark]{color-scheme:light}}
+/* dark look: orange accents instead of gold (the logo keeps its own gold) */
+html[data-theme=dark]{--gold:#E8772E;--gold2:#F28C38;--gold3:#FFB36B;--ring:0 0 0 3px rgba(242,140,56,.45)}
+html[data-theme=dark] .kamon{border-color:#C9A95C}
+html[data-theme=dark] .nav a.on{background:rgba(242,140,56,.16)}
+html[data-theme=dark] .btn.gold{background:#E8772E;border-color:#E8772E}html[data-theme=dark] .btn.gold:hover{background:#D0661F;border-color:#D0661F}
+html[data-theme=dark] body{background:radial-gradient(1200px 500px at 80% -10%,rgba(242,140,56,.08),transparent 60%),var(--bg)}
+html[data-theme=dark] .chart .ln{stroke:#F28C38}html[data-theme=dark] .chart .la{fill:#F28C38}
