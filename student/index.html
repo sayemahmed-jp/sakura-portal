@@ -496,6 +496,29 @@
   html[data-theme=dark] .mchips button.on,html[data-theme=dark] .authtabs button.on,html[data-theme=dark] .lvchip.on,html[data-theme=dark] .krows button.on{background:#2E4577;border-color:#3A548C}
   html[data-theme=dark] .opt.sel .ab{background:#2E4577}
   html[data-theme=dark] input,html[data-theme=dark] textarea,html[data-theme=dark] select{background:#0F1729;color:var(--ink);border-color:var(--line)}
+
+  /* 3D icons in place of emoji (v57) */
+  .e3{display:inline-block;width:1.25em;height:1.25em;object-fit:contain;vertical-align:-.25em;filter:drop-shadow(0 2px 3px rgba(0,0,0,.18))}
+  .bnav .ni .e3{width:28px;height:28px;vertical-align:0;filter:drop-shadow(0 2px 2px rgba(0,0,0,.18))}
+  .bnav button:not(.on) .ni{filter:grayscale(.35);opacity:.85}.bnav button.on .ni .e3{transform:translateY(-2px) scale(1.08);transition:transform .2s}
+  .quick .qi .e3{width:36px;height:36px;vertical-align:0}
+  .ri .e3{width:32px;height:32px;vertical-align:0}
+  .sech .e3{width:32px;height:32px;vertical-align:-.3em;margin-right:2px}
+  .mfold summary .e3{width:26px;height:26px;vertical-align:0}
+  .mst .k .e3{width:16px;height:16px;vertical-align:-.2em}
+  .bell .e3{width:22px;height:22px;vertical-align:-.3em}.dhd b .e3,.lbh b .e3,.prog .row>b .e3,.cd b .e3{width:22px;height:22px}
+  html[data-theme=dark] .e3{filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+  /* filter chips above the test and material lists: rounder, clearer, with the count in its own bubble */
+  .mchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -2px 10px;flex-wrap:nowrap}
+  .mchips::-webkit-scrollbar{display:none}
+  .mchips button{flex:none;display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font:700 14px 'Hind Siliguri',sans-serif;box-shadow:0 2px 0 var(--line);transition:transform .1s,box-shadow .1s,background .15s}
+  .mchips button:active{transform:translateY(2px);box-shadow:none}
+  .mchips button.on{background:linear-gradient(135deg,var(--navy2),var(--navy));border-color:var(--navy);color:#fff;box-shadow:0 3px 0 var(--navy3),0 8px 16px -8px rgba(27,41,69,.6)}
+  html[data-theme=dark] .mchips button{background:#1A2440;border-color:#34426A;color:#F4F1EA;box-shadow:0 2px 0 #0A0F1C}
+  html[data-theme=dark] .mchips button.on{background:linear-gradient(135deg,#F7A35C,#E8772E);border-color:#F28C38;color:#14100A;box-shadow:0 3px 0 #A94C16,0 8px 18px -8px rgba(242,140,56,.6)}
+  .lvl{display:flex;align-items:center;gap:8px}.lvl::before{content:'';width:6px;height:1.1em;border-radius:3px;background:linear-gradient(180deg,var(--gold2),var(--gold))}
+  html[data-theme=dark] .lvl::before{background:linear-gradient(180deg,#FFB36B,#E8772E)}
+
 </style>
 </head>
 <body>
@@ -507,6 +530,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=56"></script>
+<script src="student.js?v=58"></script>
 </body>
 </html>

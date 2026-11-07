@@ -1818,6 +1818,18 @@ function quickHtml(d, vids) {
   const Q = [['qmock', '📝', 'মক টেস্ট'], ['qfc', '🃏', 'ফ্ল্যাশকার্ড'], vids.length ? ['vidgo', '🎬', 'ভিডিও ক্লাস'] : ['qmat', '📚', 'উপকরণ'], ['qago', '❓', 'প্রশ্ন করুন', qn]];
   return `<nav class="quick" aria-label="দ্রুত যান">${Q.map(([id, ic, l, n]) => `<button id="${id}"><span class="qi">${ic}${n ? `<i>${BN_NUM(n)}</i>` : ''}</span><span>${l}</span></button>`).join('')}</nav>`;
 }
+// ---- 3D icons (Microsoft Fluent Emoji, MIT — see icons/3d/LICENSE.txt) in place of plain emoji in menus, buttons and headings
+const EMO3D = { '🏠': 'house', '📚': 'books', '📝': 'memo', '🗾': 'japanese-castle', '👤': 'student', '🃏': 'flower-cards', '❓': 'red-question-mark', '🔔': 'bell', '🪪': 'identification-card', '💳': 'credit-card', '📅': 'spiral-calendar', '📄': 'page-facing-up', '🏅': 'sports-medal', '🤝': 'handshake', '🌐': 'globe-with-meridians', '🌙': 'crescent-moon', '🎬': 'clapper-board', '🎤': 'microphone', '📂': 'open-file-folder', '📁': 'open-file-folder', '🇯🇵': 'airplane', '⚙️': 'gear', '🔥': 'fire', '📈': 'bar-chart', '🎯': 'bullseye', '🏆': 'trophy', '💡': 'light-bulb', '☀️': 'sun', '🎓': 'graduation-cap', '🌸': 'cherry-blossom', '📢': 'megaphone', '📖': 'open-book', '⏳': 'hourglass-not-done', '✅': 'check-mark-button', '🎉': 'party-popper' };
+const EMO3D_RE = new RegExp('(' + Object.keys(EMO3D).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
+const EMO3D_SEL = '.ni,.qi,.ri,.sech,.mfold summary,.mst .k,.dsec,.bell,.dhd b,.lbh b,.prog .row>b,.tip,.ivtip,.cd b';
+function emo3d(root) {
+  (root.matches && root.matches(EMO3D_SEL) ? [root] : []).concat([...(root.querySelectorAll ? root.querySelectorAll(EMO3D_SEL) : [])]).forEach(el => {
+    if (el.dataset.e3) return; el.dataset.e3 = '1';
+    const w = document.createTreeWalker(el, 4); const nodes = []; let n; while ((n = w.nextNode())) if (EMO3D_RE.test(n.nodeValue)) nodes.push(n); EMO3D_RE.lastIndex = 0;
+    nodes.forEach(t => { const f = document.createDocumentFragment(); t.nodeValue.split(EMO3D_RE).forEach((part, i) => { if (i % 2) { const im = document.createElement('img'); im.className = 'e3'; im.alt = ''; im.src = '../icons/3d/' + EMO3D[part] + '.png'; im.decoding = 'async'; f.appendChild(im); } else if (part) f.appendChild(document.createTextNode(part)); }); t.replaceWith(f); });
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => { if (x.nodeType === 1) emo3d(x); }))).observe(document.documentElement, { childList: true, subtree: true });
 const SECS = [['home', '🏠', 'হোম'], ['study', '📚', 'পড়া'], ['test', '📝', 'টেস্ট'], ['japan', '🗾', 'জাপান'], ['me', '👤', 'আমি']];
 const O = (html, n) => html ? `<div class="ob" style="order:${n}">${html}</div>` : '';   // a home block with its place in the phone layout
 function renderHome(d, user) {

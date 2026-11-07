@@ -2,7 +2,7 @@
    Network first, so updates appear at once; the saved copy is used only with no internet.
    Nothing from the database (marks, fees, files) is ever cached — those go straight to the network. */
 const CACHE = 'sakura-student-v2';
-const SHELL = ['./', './index.html', './student.js', './daily.js', './kana-strokes.js', './interview.js', './japan-guide.js', './manifest.webmanifest', '../style.css', '../config.js', '../icons/icon-192.png'];
+const SHELL = ['./', './index.html', './student.js', './daily.js', './kana-strokes.js', './interview.js', './japan-guide.js', './manifest.webmanifest', '../style.css', '../config.js', '../icons/icon-192.png', '../icons/3d/house.png', '../icons/3d/books.png', '../icons/3d/memo.png', '../icons/3d/japanese-castle.png', '../icons/3d/student.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('sakura-student-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
