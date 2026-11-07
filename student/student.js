@@ -1818,15 +1818,56 @@ function quickHtml(d, vids) {
   const Q = [['qmock', '📝', 'মক টেস্ট'], ['qfc', '🃏', 'ফ্ল্যাশকার্ড'], vids.length ? ['vidgo', '🎬', 'ভিডিও ক্লাস'] : ['qmat', '📚', 'উপকরণ'], ['qago', '❓', 'প্রশ্ন করুন', qn]];
   return `<nav class="quick" aria-label="দ্রুত যান">${Q.map(([id, ic, l, n]) => `<button id="${id}"><span class="qi">${ic}${n ? `<i>${BN_NUM(n)}</i>` : ''}</span><span>${l}</span></button>`).join('')}</nav>`;
 }
-// ---- 3D icons (Microsoft Fluent Emoji, MIT — see icons/3d/LICENSE.txt) in place of plain emoji in menus, buttons and headings
-const EMO3D = { '🏠': 'house', '📚': 'books', '📝': 'memo', '🗾': 'japanese-castle', '👤': 'student', '🃏': 'flower-cards', '❓': 'red-question-mark', '🔔': 'bell', '🪪': 'identification-card', '💳': 'credit-card', '📅': 'spiral-calendar', '📄': 'page-facing-up', '🏅': 'sports-medal', '🤝': 'handshake', '🌐': 'globe-with-meridians', '🌙': 'crescent-moon', '🎬': 'clapper-board', '🎤': 'microphone', '📂': 'open-file-folder', '📁': 'open-file-folder', '🇯🇵': 'airplane', '⚙️': 'gear', '🔥': 'fire', '📈': 'bar-chart', '🎯': 'bullseye', '🏆': 'trophy', '💡': 'light-bulb', '☀️': 'sun', '🎓': 'graduation-cap', '🌸': 'cherry-blossom', '📢': 'megaphone', '📖': 'open-book', '⏳': 'hourglass-not-done', '✅': 'check-mark-button', '🎉': 'party-popper' };
+// ---- app icons: each emoji in menus, buttons and headings becomes a glossy coloured tile with a white line icon
+const GLYPH = {
+  home: '<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>',
+  book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3M8 7h8M8 11h6"/>',
+  test: '<rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5h6v3H9zM8.5 13l2.2 2.2 4.8-5"/>',
+  torii: '<path d="M3 5.5c3 1 15 1 18 0M4.5 9h15M7 5.8V21M17 5.8V21M10 9v3M14 9v3"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>',
+  cards: '<rect x="3" y="7" width="12" height="14" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v12"/><path d="M7 12h4M7 15.5h3"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.5v.5M12 17h.01"/>',
+  bell: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+  id: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/>',
+  card: '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h2M14 14h2M8 17.5h2"/>',
+  doc: '<path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 16.5h5"/>',
+  medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 10.5L6 3h4l2 5 2-5h4l-2.5 7.5M12 12.8l.9 1.6 1.8.3-1.3 1.2.3 1.8-1.7-.9-1.7.9.3-1.8-1.3-1.2 1.8-.3z"/>',
+  hand: '<path d="M3 12l4-4 3 2 3-3 4 4M7 8l-4 4 6 6a1.5 1.5 0 0 0 2 0l.6-.6M17 11l4 1-6 6M13.5 15.5l-2-2M15.5 13.5l-2-2"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9S14.5 18.3 12 21c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  play: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 10.5h18"/>',
+  plane: '<path d="M2.5 13.5l19-8-5 15-4.5-5.5z"/><path d="M12 15l-2.5 5-1-6.5"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+  fire: '<path d="M12 21c-3.9 0-7-2.8-7-6.5 0-3 2-5 3.5-6.5.3 1.6 1.2 2.8 2.5 3.3C11 7.5 12.5 5 14.5 3c.4 3 4.5 5.5 4.5 11.5 0 3.7-3.1 6.5-7 6.5z"/><path d="M12 21c-1.7 0-3-1.2-3-2.8 0-1.6 1.5-2.7 3-4.2 1.5 1.5 3 2.6 3 4.2 0 1.6-1.3 2.8-3 2.8z"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  trophy: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1.5A3.5 3.5 0 0 0 7.5 11M17 6h3v1.5a3.5 3.5 0 0 1-3.5 3.5M12 14v3.5M8 21h8M9.5 17.5h5"/>',
+  bulb: '<path d="M9 17.5h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V17h5v-1.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+  cap: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v5"/>',
+  flower: '<circle cx="12" cy="12" r="2"/><path d="M12 10c-2.5-2-2.5-6 0-7 2.5 1 2.5 5 0 7zM14 12c2-2.5 6-2.5 7 0-1 2.5-5 2.5-7 0zM12 14c2.5 2 2.5 6 0 7-2.5-1-2.5-5 0-7zM10 12c-2 2.5-6 2.5-7 0 1-2.5 5-2.5 7 0z"/>',
+  mega: '<path d="M3 10v4a1 1 0 0 0 1 1h3l7 4.5V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17.5 9a4 4 0 0 1 0 6"/>',
+  hour: '<path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16.5 9"/>',
+  spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>'
+};
+const TONE = { blue: ['#6C8BFF', '#3A55D9'], pink: ['#FF7EB3', '#D6336C'], green: ['#5EDC7E', '#2B9348'], orange: ['#FFA94D', '#E8590C'], yellow: ['#FFD43B', '#F08C00'], teal: ['#3BC9DB', '#0B7285'], violet: ['#9775FA', '#6741D9'], red: ['#FF8787', '#E03131'], navy: ['#5B78C2', '#26365A'], gray: ['#A6B0C3', '#5C677D'] };
+const EMO3D = { '🏠': ['home', 'red'], '📚': ['book', 'green'], '📝': ['test', 'blue'], '🗾': ['torii', 'red'], '👤': ['user', 'teal'], '🃏': ['cards', 'pink'], '❓': ['help', 'orange'], '🔔': ['bell', 'yellow'], '🪪': ['id', 'teal'], '💳': ['card', 'violet'], '📅': ['cal', 'blue'], '📄': ['doc', 'navy'], '🏅': ['medal', 'yellow'], '🤝': ['hand', 'green'], '🌐': ['globe', 'blue'], '🌙': ['moon', 'violet'], '🎬': ['play', 'pink'], '🎤': ['mic', 'violet'], '📂': ['folder', 'yellow'], '📁': ['folder', 'yellow'], '🇯🇵': ['plane', 'blue'], '⚙️': ['gear', 'gray'], '🔥': ['fire', 'orange'], '📈': ['chart', 'green'], '🎯': ['target', 'red'], '🏆': ['trophy', 'yellow'], '💡': ['bulb', 'yellow'], '☀️': ['sun', 'orange'], '🎓': ['cap', 'navy'], '🌸': ['flower', 'pink'], '📢': ['mega', 'orange'], '📖': ['book', 'teal'], '⏳': ['hour', 'orange'], '✅': ['check', 'green'], '🎉': ['spark', 'pink'] };
 const EMO3D_RE = new RegExp('(' + Object.keys(EMO3D).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'g');
 const EMO3D_SEL = '.ni,.qi,.ri,.sech,.mfold summary,.mst .k,.dsec,.bell,.dhd b,.lbh b,.prog .row>b,.tip,.ivtip,.cd b';
+function tileEl(e) {
+  const [g, t] = EMO3D[e]; const [c1, c2] = TONE[t]; const sp = document.createElement('span'); sp.className = 'tile'; sp.setAttribute('aria-hidden', 'true');
+  sp.style.setProperty('--c1', c1); sp.style.setProperty('--c2', c2);
+  sp.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GLYPH[g]}</svg>`; return sp;
+}
 function emo3d(root) {
   (root.matches && root.matches(EMO3D_SEL) ? [root] : []).concat([...(root.querySelectorAll ? root.querySelectorAll(EMO3D_SEL) : [])]).forEach(el => {
     if (el.dataset.e3) return; el.dataset.e3 = '1';
-    const w = document.createTreeWalker(el, 4); const nodes = []; let n; while ((n = w.nextNode())) if (EMO3D_RE.test(n.nodeValue)) nodes.push(n); EMO3D_RE.lastIndex = 0;
-    nodes.forEach(t => { const f = document.createDocumentFragment(); t.nodeValue.split(EMO3D_RE).forEach((part, i) => { if (i % 2) { const im = document.createElement('img'); im.className = 'e3'; im.alt = ''; im.src = '../icons/3d/' + EMO3D[part] + '.png'; im.decoding = 'async'; f.appendChild(im); } else if (part) f.appendChild(document.createTextNode(part)); }); t.replaceWith(f); });
+    const w = document.createTreeWalker(el, 4); const nodes = []; let n; while ((n = w.nextNode())) { EMO3D_RE.lastIndex = 0; if (EMO3D_RE.test(n.nodeValue)) nodes.push(n); }
+    nodes.forEach(t => { const f = document.createDocumentFragment(); EMO3D_RE.lastIndex = 0; t.nodeValue.split(EMO3D_RE).forEach((part, i) => { if (i % 2) f.appendChild(tileEl(part)); else if (part) f.appendChild(document.createTextNode(part.replace(/^\s+/, i ? ' ' : ''))); }); t.replaceWith(f); });
   });
 }
 new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => { if (x.nodeType === 1) emo3d(x); }))).observe(document.documentElement, { childList: true, subtree: true });
