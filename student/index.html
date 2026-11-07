@@ -34,6 +34,8 @@
   .mat .ic{width:42px;height:42px;border-radius:9px;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none;color:#fff;background:var(--navy)}
   .mat .ic.audio{background:var(--gold)}.mat .ic.video{background:var(--red)}.mat .ic.link{background:var(--navy2)}.mat .ic.image{background:var(--green)}.mat .ic.book{background:#C4577A}
   .mat .bd{flex:1;min-width:0}
+  .mat .bd,html[data-theme=dark] .mat .bd{flex:1;min-width:0;display:block;background:none;border:0;padding:0;border-radius:0;text-align:left;filter:none;opacity:1}   /* not the badge tile (.bd below) */
+  html[data-theme=dark] [data-start]{background:#F28C38;border-color:#F28C38;color:#14100A;font-weight:800}
   .mat .bd b{display:block;overflow-wrap:anywhere}
   .mat .bd .small{overflow-wrap:anywhere}
   .mat .bd audio,.mat .bd video{width:100%;margin-top:8px}
@@ -505,6 +507,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=55"></script>
+<script src="student.js?v=56"></script>
 </body>
 </html>
