@@ -213,6 +213,7 @@ git push -u origin main
 - **উপ-পরিচালক:** নতুন ভূমিকা — পরিচালকের মতো সব তথ্য ও কাজ (ফি, রিপোর্ট, খরচ, সেটিংস), শুধু স্টাফ যোগ করা, ভূমিকা বদলানো আর অন্যের আইডি কার্ড পরিচালকের হাতে (`supabase-migration-v40.sql`)
 - **নিজে থেকে হালনাগাদ:** পরিচালকের নাম সেটিংস আর আইডি কার্ড/লগইনে একসাথে বদলায়; শিক্ষক তালিকা আর লগইন (একই ইমেইল) নাম-ফোনে মিলে থাকে; পোর্টাল বা ছাত্রদের সাইটে ফিরে এলে নতুন তথ্য নিজে থেকে লোড হয় (`supabase-migration-v41.sql`)
 - **ইংরেজি:** ছাত্রদের সাইট বাংলা বা English-এ — লগইন পাতায় আর "আমি"-তে বদলানোর বোতাম; সব পাতা, ইন্টারভিউ, জাপান গাইড আর আজকের পড়ার অর্থ ইংরেজিতে (`student/i18n.js`, `student/i18n-en.js`); শিক্ষক/অফিসের লেখা নোটিশ ইত্যাদি যেমন লেখা তেমনই থাকে
+Student app: one-tap EN / বাং language button at the top
 On phones the portal's main menu is a floating tab bar at the bottom, like the student app
 New day look (mint) with sliding pill menu, icon-rail side menu, next-class countdown and a needs-you list; dark mode keeps the navy/orange look. Old look saved as tag before-mint
 Portal mock test page: answers can be hidden, and staff can take the test in student exam mode (preview, nothing saved)
