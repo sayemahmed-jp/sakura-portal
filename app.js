@@ -3165,6 +3165,8 @@ function mockTestModal(t, presetLevel, presetCat) {
   };
 }
 
+// the question list can hide the answers, so a teacher can read the test the way a student meets it
+const mockAnsShown = () => { try { return localStorage.getItem('sakura_mock_ans') !== 'hide'; } catch (_) { return true; } };
 function viewMock(id, q) {
   const t = byId(S.mock_tests || [], id);
   if (!t) return mount('#/mocks', '<div class="empty">মক টেস্ট পাওয়া যায়নি</div>');
@@ -3192,10 +3194,12 @@ function viewMock(id, q) {
   }
   mount('#/mocks', `
   <div class="top"><div><h1>${esc(t.title)}</h1><p>${esc(t.level)} · ${MOCK_CAT[mockCat(t)]} · ${t.duration_min} মিনিট · পাস ${t.pass_pct}% · ${qs.length}টি প্রশ্ন (${MOCK_SEC_ORDER.map(s => `${MOCK_SEC[s].split(' ')[0]} ${cnt[s]}`).join(', ')})${t.max_attempts ? ` · সর্বোচ্চ ${t.max_attempts} বার` : ''}</p><div class="row" style="margin-top:4px">${t.published ? badge('active', 'ছাত্রদের জন্য চালু') : badge('dropped', 'লুকানো — ছাত্ররা দেখে না')}</div></div>
-    <div class="row"><a class="btn ghost" href="#/mocks">‹ সব মক টেস্ট</a><button class="btn ghost" id="mkedit">তথ্য বদলান</button><button class="btn ghost" id="mkcsv">CSV থেকে প্রশ্ন</button><button class="btn ${t.published ? 'ghost' : 'gold'}" id="mkpub">${t.published ? 'লুকিয়ে রাখুন' : 'ছাত্রদের জন্য চালু করুন'}</button></div></div>
+    <div class="row"><a class="btn ghost" href="#/mocks">‹ সব মক টেস্ট</a><a class="btn" href="student/#mock=${esc(t.id)}" target="_blank" rel="noopener" title="ছাত্রদের সাইটে খুলবে — সময়, প্রশ্ন, ফলাফল ঠিক ছাত্রের মতো; নম্বর জমা হবে না">📝 ছাত্রের মতো পরীক্ষা দিন</a><button class="btn ghost" id="mkans" type="button">${mockAnsShown() ? '🙈 উত্তর লুকান' : '👁 উত্তর দেখান'}</button><button class="btn ghost" id="mkedit">তথ্য বদলান</button><button class="btn ghost" id="mkcsv">CSV থেকে প্রশ্ন</button><button class="btn ${t.published ? 'ghost' : 'gold'}" id="mkpub">${t.published ? 'লুকিয়ে রাখুন' : 'ছাত্রদের জন্য চালু করুন'}</button></div></div>
   <div class="tabs"><button data-mt="qs" class="${tab === 'qs' ? 'on' : ''}">প্রশ্ন (${qs.length})</button><button data-mt="res" class="${tab === 'res' ? 'on' : ''}">ফলাফল (${new Set(done.map(a => a.student_id)).size} জন)</button></div>${body}`, () => {
     bindGo();
     $$('[data-mt]').forEach(b => b.onclick = () => { location.hash = `#/mock/${t.id}${b.dataset.mt === 'res' ? '?t=res' : ''}`; });
+    const main = $('.main'); main.classList.toggle('hideans', !mockAnsShown());
+    $('#mkans').onclick = () => { const show = !mockAnsShown(); try { localStorage.setItem('sakura_mock_ans', show ? 'show' : 'hide'); } catch (_) {} main.classList.toggle('hideans', !show); $('#mkans').textContent = show ? '🙈 উত্তর লুকান' : '👁 উত্তর দেখান'; };
     $('#mkedit').onclick = () => mockTestModal(t);
     $('#mkcsv').onclick = () => mockCsvModal(t);
     $('#mkpub').onclick = async () => {

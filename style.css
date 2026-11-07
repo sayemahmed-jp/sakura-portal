@@ -551,3 +551,7 @@ html[data-theme=dark] .wf{border-color:rgba(242,140,56,.55);background:radial-gr
 html[data-theme=dark] .sgroup{border-color:rgba(255,255,255,.14)}
 html[data-theme=dark] .sgroup input:focus,html[data-theme=dark] .sgroup select:focus,html[data-theme=dark] .sgroup textarea:focus{border-color:#F28C38;box-shadow:0 0 0 3px rgba(242,140,56,.25)}
 .sform>.full.row{margin-top:18px;position:sticky;bottom:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:0 10px 24px -14px rgba(0,0,0,.4);z-index:5}
+/* mock test page with the answers hidden (v56) */
+.hideans .mqo li.ok{background:none!important;border-color:var(--line)!important;color:inherit!important}
+.hideans .mqo li.ok .ab{background:var(--soft)!important;color:var(--ink)!important;border-color:var(--line)!important}
+.hideans .mqo .tick,.hideans .mqa{display:none!important}

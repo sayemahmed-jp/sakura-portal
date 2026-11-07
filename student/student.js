@@ -2223,7 +2223,7 @@ async function start() {
     if (!user) return renderAuth();
     const d = await API.me();
     if (!d) return renderAuth();
-    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } try { p.qa = await API.qa(); } catch (e) { p.qa = null; } try { p.routine = await previewRoutine(); } catch (e) { p.routine = null; } return renderHome(p, user); }
+    if (!d.linked && d.staff && !DEMO) { const p = await Preview.load(user, d); p.streak = await API.streak(); try { p.exams = await API.examDates(); } catch (e) { p.exams = {}; } try { p.notices = await API.notices(); } catch (e) { p.notices = []; } try { p.lb = await API.leaderboard('N5'); } catch (e) { p.lb = null; } try { p.qa = await API.qa(); } catch (e) { p.qa = null; } try { p.routine = await previewRoutine(); } catch (e) { p.routine = null; } renderHome(p, user); const mk = /^#mock=([\w-]+)/.exec(location.hash); if (mk) { history.replaceState(null, '', location.pathname); NAVSEC = 'test'; renderHome(p, user); askStartMock(mk[1]); } return; }   // the portal's "take it like a student" button opens #mock=<id>
     if (!d.linked) return renderLink(d, user);
     if (!d.blocked) { try { [d.mocks, d.history] = await Promise.all([API.mockList(), API.mockHistory()]); } catch (e) { d.mocks = d.mocks || []; d.history = []; console.warn(e); } }
     if (!d.blocked) { try { d.streak = await API.streak(); } catch (e) { d.streak = null; console.warn(e); } }
