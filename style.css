@@ -415,3 +415,4 @@ html[data-theme=dark] .topnav a:not(.on){color:var(--ink2)}
 .wrow button:hover{background:rgba(255,255,255,.12)!important}
 html[data-theme=dark] .wmenu{background:#172138}
 @media (prefers-reduced-motion:reduce){.wmenu{animation:none}}
+html[data-theme=dark] .login h1{color:#F1ECE0}html[data-theme=dark] .login .card{background:var(--card)}

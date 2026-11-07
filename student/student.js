@@ -362,8 +362,9 @@ const shellCard = (inner) => `<div class="login"><div class="card" style="max-wi
 
 // ---- "আমি": profile card, a small progress dashboard, light / dark look
 const meOpen = () => { try { return JSON.parse(localStorage.getItem('sakura_me_open') || '{}'); } catch (_) { return {}; } };
+function stThemeSmall() { const dk = document.documentElement.dataset.theme === 'dark'; return `<span class="thwrap"><button type="button" class="thsm" data-sttheme="${dk ? 'light' : 'dark'}" aria-label="${dk ? 'হালকা রং' : 'গাঢ় রং'}" title="${dk ? 'হালকা রং' : 'গাঢ় রং'}">${dk ? '☀️' : '🌙'}</button></span>`; }
 function stThemeHtml() { const dk = document.documentElement.dataset.theme === 'dark'; return `<div class="langsw"><button type="button" data-sttheme="light" class="${dk ? '' : 'on'}">☀️ হালকা</button><button type="button" data-sttheme="dark" class="${dk ? 'on' : ''}">🌙 গাঢ়</button></div>`; }
-document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-sttheme]'); if (!b) return; const t = b.dataset.sttheme; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_st_theme', t); } catch (_) {} b.parentElement.outerHTML = stThemeHtml(); const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = t === 'dark' ? '#0D1322' : '#1B2945'; });
+document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-sttheme]'); if (!b) return; const t = b.dataset.sttheme; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_st_theme', t); } catch (_) {} b.parentElement.outerHTML = b.classList.contains('thsm') ? stThemeSmall() : stThemeHtml(); const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = t === 'dark' ? '#0D1322' : '#1B2945'; });
 function meCardHtml(d, s) {
   const nm = s.name_bn || s.name_en || ''; const st = d.streak || {};
   return `<div class="mecard"><div class="mav">${esc((nm.trim()[0] || '?').toUpperCase())}</div><div class="mtx"><b>${esc(nm)}</b><span>${esc(s.admission_no || '')}</span><div class="mtags">${(d.levels || []).map(l => `<i>${esc(l)}</i>`).join('')}${s.batch && BATCH[s.batch] ? `<i class="b">${esc(BATCH[s.batch])}</i>` : ''}</div></div>${st.streak ? `<div class="mfire" title="টানা পড়ার দিন"><b>${BN_NUM(st.streak)}</b><span>🔥 দিন</span></div>` : ''}</div>`;
@@ -400,7 +401,7 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-la
 function renderAuth(mode = 'in', note = '') {
   document.title = 'ছাত্রদের সাইট · সাকুরা';
   $('#app').innerHTML = shellCard(`
-    ${langSwitchHtml()}<h1>ছাত্রদের সাইট</h1><p class="muted" style="margin:0 0 14px">সাকুরা জাপানিজ ইনস্টিটিউটের ভর্তি হওয়া ছাত্র-ছাত্রীদের পড়ার নোট, শিট আর অডিও</p>
+    ${stThemeSmall()}${langSwitchHtml()}<h1>ছাত্রদের সাইট</h1><p class="muted" style="margin:0 0 14px">সাকুরা জাপানিজ ইনস্টিটিউটের ভর্তি হওয়া ছাত্র-ছাত্রীদের পড়ার নোট, শিট আর অডিও</p>
     ${DEMO ? '<div class="demo-bar">ডেমো মোড: যেকোনো ইমেইল দিয়ে ঢুকে দেখুন। পোর্টালের ডেমো তথ্য ব্যবহার হবে।</div>' : ''}
     <div class="authtabs"><button data-m="in" class="${mode === 'in' ? 'on' : ''}">লগইন</button><button data-m="up" class="${mode === 'up' ? 'on' : ''}">নতুন অ্যাকাউন্ট</button></div>
     <form id="af" autocomplete="on">
