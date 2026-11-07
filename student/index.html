@@ -627,6 +627,27 @@
   html[data-theme=dark] .wf{border-color:rgba(242,140,56,.55);background:radial-gradient(120% 90% at 100% 0%,rgba(242,140,56,.3),transparent 55%),var(--seigaiha) 0 100%/48px 24px repeat-x,linear-gradient(135deg,#2A3A63 0%,#18233E 55%,#0B1222 100%)}
   @media (prefers-reduced-motion:reduce){.wci{transition:none}}
 
+
+  /* home fits the phone screen (v63): ID card + quick buttons stay put, the rest is a row of swipe cards with dots */
+  @media (max-width:999px){
+    .st.hasnav:has(.hfit){height:100dvh;display:flex;flex-direction:column;padding-bottom:0!important;overflow:hidden}
+    .st.hasnav:has(.hfit) .shell2{flex:1;min-height:0;display:flex;flex-direction:column}
+    .st.hasnav:has(.hfit) .smain{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+    .st.hasnav:has(.hfit) .smain>:not(.hfit){display:none}
+    .hfit{flex:1;min-height:0;display:flex;flex-direction:column}
+    .hfit .greet{margin:0 2px 8px}.hfit .greet h1{font-size:20px}.hfit .greet p{font-size:12.5px}
+    .hfit .wcard{flex:none;width:min(100%,calc((100dvh - 430px) * 1.585));margin-bottom:10px}
+    .hfit .quick{flex:none;margin-bottom:8px}
+    .hslider{flex:1;min-height:120px;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;gap:12px;margin:0 -16px;padding:0 16px;scroll-padding:0 16px;overscroll-behavior-x:contain}
+    .hslider::-webkit-scrollbar{display:none}
+    .hs{flex:0 0 100%;scroll-snap-align:start;min-height:0;overflow-y:auto;border-radius:16px;scrollbar-width:thin}
+    .hs>*{margin:0!important}.hs>.card,.hs>div{min-height:100%;box-sizing:border-box}
+    .hdots{flex:none;display:flex;justify-content:center;gap:7px;padding:8px 0 2px}
+    .hdots button{width:7px;height:7px;border-radius:99px;border:0;padding:0;background:var(--ios-edge,#ccc);cursor:pointer;transition:width .2s,background .2s}
+    .hdots button.on{width:22px;background:var(--ios-tint,#1B2945)}
+  }
+  @media (max-width:999px) and (max-height:640px){.hfit .greet{display:none}.hfit .quick .qi .tile{--s:48px!important}}
+
 </style>
 </head>
 <body>
@@ -638,6 +659,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=62"></script>
+<script src="student.js?v=63"></script>
 </body>
 </html>
