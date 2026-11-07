@@ -586,6 +586,17 @@
   .mat{background:var(--ios-card)!important;border:0!important;border-radius:12px!important}
   .mat .ic{border-radius:9px}
 
+
+  /* visible outlines so every card, list and option stands apart (v61) */
+  :root{--ios-edge:rgba(60,60,67,.26)}html[data-theme=dark]{--ios-edge:rgba(255,255,255,.2);--ios-sep:rgba(255,255,255,.16)}
+  .mlist2:not(.mfold .mlist2),.mfold,.mst,.st .card,.mat,.mchips button:not(.on){border:1px solid var(--ios-edge)!important;box-shadow:0 1px 2px rgba(0,0,0,.06)!important}
+  html[data-theme=dark] .mlist2:not(.mfold .mlist2),html[data-theme=dark] .mfold,html[data-theme=dark] .mst,html[data-theme=dark] .st .card,html[data-theme=dark] .mat,html[data-theme=dark] .mchips button:not(.on){box-shadow:0 1px 0 rgba(255,255,255,.04) inset!important}
+  .mlist2>.mrow+.mrow::before,.mlist2>.langrow+.langrow::before,.mlist2>.mrow+.langrow::before,.mlist2>.langrow+.mrow::before{transform:none!important;height:1px!important}
+  .opt{border:1.5px solid var(--ios-edge)!important}
+  .opt.sel{border-color:var(--navy)!important}html[data-theme=dark] .opt.sel{border-color:#F28C38!important}
+  .opt.right{border-color:var(--green)!important}.opt.wrong{border-color:var(--red)!important}
+  .st .card.today,.st .today{border-color:transparent!important}
+
 </style>
 </head>
 <body>
@@ -597,6 +608,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=60"></script>
+<script src="student.js?v=61"></script>
 </body>
 </html>
