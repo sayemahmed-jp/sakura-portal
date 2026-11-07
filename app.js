@@ -420,6 +420,8 @@ async function afterLogin(user) {
 }
 // language switch: the portal is written in Bengali; i18n.js translates it when English is picked
 // light / dark look for the office portal, remembered on this device
+const W_ICON = { card: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13.5h3"/>', phone: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>', lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>', out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/>' };
+const wIcon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${W_ICON[k]}</svg>`;
 function themeBtnHtml() { const dk = document.documentElement.dataset.theme === 'dark'; return `<button type="button" class="themebtn" data-theme-to="${dk ? 'light' : 'dark'}" title="${dk ? 'হালকা রং' : 'গাঢ় রং'}">${dk ? '☀️ হালকা' : '🌙 গাঢ়'}</button>`; }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-theme-to]'); if (!b) return; const t = b.dataset.themeTo; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_theme', t); } catch (_) {} b.outerHTML = themeBtnHtml(); });
 function langBtnHtml() { const en = window.SK_LANG === 'en'; return `<button type="button" data-noi18n class="langbtn" data-lang="${en ? 'bn' : 'en'}">🌐 ${en ? 'বাংলা' : 'English'}</button>`; }
@@ -496,8 +498,18 @@ function shell(active, inner) {
   <div class="shell"><aside class="side" id="side" aria-label="মেনু">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
-    <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
-      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${langBtnHtml()}${themeBtnHtml()}</div></div>
+    <div class="who" id="who">
+      <div class="wmenu" id="wmenu" hidden>
+        <button type="button" id="mycard" class="wi">${wIcon('card')}<span>আমার আইডি কার্ড</span></button>
+        ${isStandalone() ? '' : `<button type="button" id="inst" class="wi">${wIcon('phone')}<span>অ্যাপ হিসেবে ইনস্টল</span></button>`}
+        ${DEMO ? '' : `<button type="button" id="chpw" class="wi">${wIcon('lock')}<span>পাসওয়ার্ড বদলান</span></button>`}
+        <div class="wsep"></div>
+        <div class="wrow">${langBtnHtml()}${themeBtnHtml()}</div>
+        <div class="wsep"></div>
+        <button type="button" id="logout" class="wi out">${wIcon('out')}<span>${DEMO ? 'বের হন' : 'লগআউট'}</span></button>
+      </div>
+      <button type="button" class="whob" id="whob" aria-expanded="false" aria-controls="wmenu"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="wt"><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span></span><span class="wchev" aria-hidden="true"></span></button>
+    </div>
   </aside><div class="scrim" id="scrim"></div><main class="main"><nav class="topnav no-print" aria-label="প্রধান মেনু">${top}</nav>${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
@@ -507,6 +519,8 @@ function mount(active, inner, after) {
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
   $$('.ng').forEach(d => d.addEventListener('toggle', () => { const o = navOpenGet(); o[d.dataset.g] = d.open; navOpenSet(o); }));
   $('#scrim').onclick = () => $('#side').classList.remove('open');
+  const wb = $('#whob'), wm = $('#wmenu');
+  if (wb) { const setW = (o) => { wm.hidden = !o; wb.setAttribute('aria-expanded', o); $('#who').classList.toggle('open', o); }; wb.onclick = (e) => { e.stopPropagation(); setW(wm.hidden); }; wm.onclick = (e) => { if (!e.target.closest('[data-theme-to],[data-lang]')) setW(false); }; document.addEventListener('click', (e) => { if (e.target.isConnected && !e.target.closest('#who')) setW(false); }); document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setW(false); }); }
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
   const cp = $('#chpw'); if (cp) cp.onclick = changePasswordModal;
   const mc = $('#mycard'); if (mc) mc.onclick = () => staffCardModal(S.profile, true);
