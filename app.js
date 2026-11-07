@@ -332,11 +332,11 @@ const bar = (pct) => pct == null ? '<span class="muted small">—</span>' : `<di
 
 // ------------------------------------------------------------------ passwords: forgot, reset link, change
 function renderForgot(note = '') {
-  $('#app').innerHTML = `<div class="login"><form class="card" id="fgf">
+  $('#app').innerHTML = `<div class="login auth-in"><form class="card" id="fgf">
     <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
-    <h1>পাসওয়ার্ড ভুলে গেছেন?</h1><p class="muted" style="margin:0 0 14px">আপনার ইমেইল লিখুন। নতুন পাসওয়ার্ড দেওয়ার একটা লিংক ইমেইলে যাবে।</p>
-    <label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
-    <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লিংক পাঠান</button>
+    <h1 class="ahead">Reset <em>password</em></h1><p class="muted" style="margin:0 0 14px">আপনার ইমেইল লিখুন। নতুন পাসওয়ার্ড দেওয়ার একটা লিংক ইমেইলে যাবে।</p>
+    <label class="f">ইমেইল<span class="glow"><input name="email" type="email" required autocomplete="username" placeholder="you@example.com"></span></label>
+    <button class="btn abtn" type="submit">লিংক পাঠান</button>
     <p class="small" id="fgm" style="margin:12px 0 0;line-height:1.6">${esc(note)}</p>
     <p class="small" style="margin:12px 0 0"><a href="#" id="fgback">← লগইনে ফিরে যান</a></p></form></div>`;
   $('#fgback').onclick = (e) => { e.preventDefault(); renderLogin(); };
@@ -426,20 +426,27 @@ function themeBtnHtml() { const dk = document.documentElement.dataset.theme === 
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-theme-to]'); if (!b) return; const t = b.dataset.themeTo; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_theme', t); } catch (_) {} b.outerHTML = themeBtnHtml(); });
 function langBtnHtml() { const en = window.SK_LANG === 'en'; return `<button type="button" data-noi18n class="langbtn" data-lang="${en ? 'bn' : 'en'}">🌐 ${en ? 'বাংলা' : 'English'}</button>`; }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lang]'); if (b && window.setLang) { e.preventDefault(); window.setLang(b.dataset.lang); } });
-function renderLogin() {
-  $('#app').innerHTML = `<div class="login"><form class="card" id="lf" autocomplete="on">
+// login screens: the card turns like a page (green in the middle) between "Welcome back" and the new-account side
+function authTurn(next, toUp) {
+  const card = $('.login .card'); const lg = $('.login');
+  if (!card || matchMedia('(prefers-reduced-motion: reduce)').matches) return next();
+  card.classList.add('turn-out'); lg.classList.add(toUp ? 'go-up' : 'go-in'); setTimeout(next, 360);
+}
+function renderLogin(turned) {
+  const glow = (h) => `<span class="glow">${h}</span>`;
+  $('#app').innerHTML = `<div class="login auth-in"><form class="card ${turned ? 'turn-in' : ''}" id="lf" autocomplete="on">
     <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
-    <h1>সাকুরা পোর্টাল</h1><p class="muted" style="margin:0 0 16px">শুধু ইনস্টিটিউটের স্টাফদের জন্য</p>
+    <h1 class="ahead">Welcome <em>back</em></h1><p class="asub">সাকুরা পোর্টাল — শুধু ইনস্টিটিউটের স্টাফ ও শিক্ষকদের জন্য</p>
     ${DEMO ? `<div class="demo-bar">ডেমো মোড: এখনো ডেটাবেস যুক্ত হয়নি। তথ্য শুধু এই ব্রাউজারে থাকবে।</div>
-      <button class="btn" type="submit" style="width:100%;justify-content:center">ডেমো মোডে ঢুকুন</button>` :
-      `<label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
-      <label class="f" style="margin-top:10px">পাসওয়ার্ড<input name="password" type="password" required autocomplete="current-password"></label>
-      <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">লগইন</button>
-      <p class="small" style="margin:14px 0 0"><a href="#" id="toforgot">পাসওয়ার্ড ভুলে গেছেন?</a></p>
-      <p class="small" style="margin:6px 0 0">প্রথমবার? <a href="#" id="tosignup">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
-    <div style="margin-top:14px">${langBtnHtml()}</div>
+      <button class="btn abtn" type="submit">ডেমো মোডে ঢুকুন</button>` :
+      `<label class="f">ইমেইল${glow('<input name="email" type="email" required autocomplete="username" placeholder="you@example.com">')}</label>
+      <label class="f">পাসওয়ার্ড${glow('<input name="password" type="password" required autocomplete="current-password" placeholder="••••••••">')}</label>
+      <button class="btn abtn" type="submit">লগইন</button>
+      <p class="aline"><a href="#" id="toforgot" class="linkbtn">পাসওয়ার্ড ভুলে গেছেন?</a></p>
+      <p class="aswap">প্রথমবার? <a href="#" id="tosignup" class="linkbtn up">আমন্ত্রণ কোড দিয়ে অ্যাকাউন্ট খুলুন</a></p>`}
+    <div style="margin-top:14px;text-align:center">${langBtnHtml()}</div>
   </form></div>`;
-  const ts = $('#tosignup'); if (ts) ts.onclick = (e) => { e.preventDefault(); renderSignup(); };
+  const ts = $('#tosignup'); if (ts) ts.onclick = (e) => { e.preventDefault(); authTurn(() => renderSignup('', true), true); };
   const tf = $('#toforgot'); if (tf) tf.onclick = (e) => { e.preventDefault(); renderForgot(); };
   $('#lf').onsubmit = async (e) => {
     e.preventDefault();
@@ -513,8 +520,15 @@ function shell(active, inner) {
   </aside><div class="scrim" id="scrim"></div><main class="main"><nav class="topnav no-print" aria-label="প্রধান মেনু">${top}</nav>${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
+// settings page in the iPhone-Settings style: each section becomes its own rounded group with a small grey heading
+function groupForm(f) {
+  if (!f || f.dataset.g) return; f.dataset.g = '1'; let sec = null; const out = document.createDocumentFragment();
+  [...f.children].forEach(k => { if (k.tagName === 'H3') { k.classList.add('sgh'); out.appendChild(k); sec = document.createElement('div'); sec.className = 'sgroup form'; out.appendChild(sec); } else if (sec && !k.matches('.full.row')) sec.appendChild(k); else out.appendChild(k); });
+  f.appendChild(out); f.classList.add('sform');
+}
 function mount(active, inner, after) {
   $('#app').innerHTML = shell(active, inner);
+  if (active === '#/settings') groupForm($('#stf'));
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
   $('#mnav').onclick = () => $('#side').classList.toggle('open');
   $$('.ng').forEach(d => d.addEventListener('toggle', () => { const o = navOpenGet(); o[d.dataset.g] = d.open; navOpenSet(o); }));
@@ -625,7 +639,7 @@ function viewDashboard() {
     <div class="card"><h2>আজকের ফলো-আপ</h2>${follow.length ? `<div class="tw"><table><tr><th>নাম</th><th>অবস্থা</th><th>তারিখ</th><th></th></tr>${follow.slice(0, 8).map(l => `<tr class="click" data-go="#/leads"><td>${esc(l.name)}<div class="small muted">${esc(l.phone)}</div></td><td>${badge(LEAD_ST_CLS[l.status], LEAD_ST[l.status])}</td><td>${l.next_follow_up < today ? badge('due', fmtD(l.next_follow_up)) : 'আজ'}</td><td class="num">${waBtn(l.phone, leadMsg(l), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">আজ কাউকে ফোন করার নেই</div>'}</div>
     <div class="card"><h2>জাপান আবেদন: সামনের তারিখ</h2>${jpSoon.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>স্কুল</th><th>তারিখ</th></tr>${jpSoon.slice(0, 8).map(a => `<tr class="click" data-go="#/student/${a.student_id}?t=japan"><td>${esc(studentName(byId(S.students, a.student_id)))}</td><td>${esc(schoolName(byId(S.jp_schools, a.school_id)))}</td><td>${nextCell(a)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনের ৩ সপ্তাহে কোনো তারিখ নেই</div>'}</div>
     ${isAdmin() ? expCard : ''}
-  </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); });
+  </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); addStaffWallet(); });
 }
 // ------------------------------------------------------------------ dashboard charts (plain SVG, no library)
 const BN_MON_SHORT = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রি', 'মে', 'জুন', 'জুলা', 'আগ', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
@@ -663,6 +677,24 @@ function lineChart(rows) {
   const dots = rows.map((r, i) => `<g><title>${fmtD(r.d)}: ${r.pct}%</title><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4" class="${r.pct < 80 ? 'dl' : 'dg'}"/></g>`).join('');
   const lab = rows.map((r, i) => i % Math.ceil(rows.length / 6) === 0 || i === rows.length - 1 ? `<text x="${pts[i][0]}" y="${H - 8}" text-anchor="middle" class="ax">${r.d.slice(8)}/${r.d.slice(5, 7)}</text>` : '').join('');
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="শেষ কয়েক দিনের উপস্থিতির হার">${grid}<path d="${d} L${pts[pts.length - 1][0]} ${H - 26} L${pts[0][0]} ${H - 26}Z" class="la"/><path d="${d}" class="ln"/>${dots}${lab}</svg>`;
+}
+// ---- my staff ID card on the home page, like a card in a wallet app: tap to turn it over to the QR
+function addStaffWallet() {
+  const top = $('.main .top'); if (!top || $('#wcard')) return; const p = S.profile || {}; const c = cardOf(p) || {}; const st = S.settings || {};
+  const tag = /ব্যবস্থাপনা|managing|\bMD\b/i.test(c.designation || '') ? 'MANAGING DIRECTOR' : (ROLE_EN[p.role] || 'STAFF');
+  const el = document.createElement('div'); el.className = 'swal no-print';
+  el.innerHTML = `<div class="wcard" id="wcard" role="button" tabindex="0" aria-label="আমার আইডি কার্ড — উল্টাতে চাপুন"><div class="wci">
+    <div class="wf wfront"><div class="wtop"><span class="kamon">${KAMON}</span><div class="wbrand"><b>${esc(st.institute_bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}</b><small>さくら日本語学院 · STAFF ID</small></div></div>
+      <div class="wmid"><div class="wph" id="wph"><span>${esc(((p.name || '?').trim()[0] || '?').toUpperCase())}</span></div>
+        <div class="wtx"><b>${esc(p.name || '')}</b><small>${esc(c.designation || ROLE_NAME[p.role] || '')}</small><div class="wtags"><i>${esc(tag)}</i>${c.blood_group ? `<i class="b">🩸 ${esc(c.blood_group)}</i>` : ''}</div></div></div>
+      <div class="wbot"><span class="wno">${esc(c.staff_no || '')}</span><span class="whint">QR দেখতে চাপুন ↻</span></div></div>
+    <div class="wf wback"><div class="wstrip"></div><div class="wqr" id="wqr"><small>QR তৈরি হচ্ছে…</small></div><div class="wbk"><b>${esc(c.staff_no || '')}</b><small>${esc(st.institute_bn || '')}${st.phone ? ' · ' + esc(st.phone) : ''}</small><small>মেয়াদ: ${fmtD(c.valid_until)}</small><span class="whint">আবার উল্টাতে চাপুন ↻</span></div></div>
+  </div></div>`;
+  top.after(el);
+  const card = $('#wcard'); let qr = false;
+  const flip = async () => { card.classList.toggle('flip'); if (qr || !card.classList.contains('flip')) return; qr = true; try { await loadQR(); $('#wqr').innerHTML = qrSvg(`${location.origin}${location.pathname}#/people`); } catch (e) { $('#wqr').innerHTML = '<small>QR তৈরি করা যায়নি</small>'; qr = false; } };
+  card.onclick = flip; card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+  if (c.photo_path && !DEMO) API.fileUrlFrom('staffphoto', c.photo_path).then(u => { const b = $('#wph'); if (b && u) b.innerHTML = `<img src="${esc(u)}" alt="">`; }).catch(() => {});
 }
 function bindGo() { $$('[data-go]').forEach(el => el.onclick = () => { location.hash = el.dataset.go; }); $$('[data-stop]').forEach(el => el.addEventListener('click', e => e.stopPropagation())); }
 
@@ -3284,7 +3316,7 @@ function viewTeacherHome() {
     <div class="card"><h2>সামনের পরীক্ষা</h2>${exams.length ? `<div class="tw"><table>${exams.slice(0, 8).map(e => `<tr class="click" data-go="#/exam/${e.id}"><td>${fmtD(e.exam_date)}</td><td>${esc(e.title)}</td><td>${esc(e.level)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনে কোনো পরীক্ষা নেই</div>'}</div>
     <div class="card"><h2>উপস্থিতি ৮০%-এর নিচে</h2>${low.length ? `<div class="tw"><table>${low.slice(0, 10).map(({ s, a }) => `<tr class="click" data-go="#/student/${s.id}?t=att"><td>${esc(studentName(s))}</td><td>${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td>${bar(a.pct)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সবার উপস্থিতি ভালো</div>'}</div>
     <div class="card"><h2>সাম্প্রতিক অনলাইন মক টেস্ট</h2>${mocks.length ? `<div class="tw"><table>${mocks.map(a => { const t = byId(S.mock_tests || [], a.test_id); const s = byId(S.students, a.student_id); const p = num(a.total) ? Math.round(num(a.score) * 100 / num(a.total)) : 0; return `<tr class="click" data-go="#/mock/${a.test_id}?t=res"><td>${esc(s ? studentName(s) : '—')}</td><td>${esc(t ? t.title : '')}</td><td class="num"><b style="color:${t && p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${num(a.score)}/${num(a.total)}</b></td></tr>`; }).join('')}</table></div>` : '<div class="empty">এখনো কেউ অনলাইনে মক টেস্ট দেয়নি</div>'}</div>
-  </div>`, () => bindGo());
+  </div>`, () => { bindGo(); addStaffWallet(); });
 }
 
 // ------------------------------------------------------------------ people: the director adds and removes logins (v17 database)
@@ -3369,19 +3401,20 @@ function inviteModal() {
   };
 }
 // first-time login: create the account and claim the invite code
-function renderSignup(note = '') {
-  $('#app').innerHTML = `<div class="login"><form class="card" id="sgf" autocomplete="on">
+function renderSignup(note = '', turned) {
+  const glow = (h) => `<span class="glow">${h}</span>`;
+  $('#app').innerHTML = `<div class="login auth-up"><form class="card ${turned ? 'turn-in' : ''}" id="sgf" autocomplete="on">
     <div class="kamon" style="width:56px;height:56px">${KAMON}</div>
-    <h1>প্রথমবার? অ্যাকাউন্ট খুলুন</h1><p class="muted" style="margin:0 0 14px">পরিচালকের পাঠানো আমন্ত্রণ কোড লাগবে। যে ইমেইলে আমন্ত্রণ এসেছে, সেটাই দিন।</p>
-    <label class="f">ইমেইল<input name="email" type="email" required autocomplete="username"></label>
-    <label class="f" style="margin-top:10px">নতুন পাসওয়ার্ড (অন্তত ৮ অক্ষর)<input name="password" type="password" minlength="8" required autocomplete="new-password"></label>
-    <label class="f" style="margin-top:10px">আবার পাসওয়ার্ড<input name="password2" type="password" minlength="8" required autocomplete="new-password"></label>
-    <label class="f" style="margin-top:10px">আমন্ত্রণ কোড<input name="code" required maxlength="12" autocapitalize="characters" autocomplete="off" style="letter-spacing:.1em"></label>
-    <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">অ্যাকাউন্ট খুলুন</button>
-    <p class="small" id="sgm" style="margin:10px 0 0;color:var(--red)">${esc(note)}</p>
-    <p class="small" style="margin:12px 0 0"><a href="#" id="sgback">← লগইনে ফিরে যান</a></p>
+    <h1 class="ahead">Start your first page<br>with <em>Sakura</em></h1><p class="asub">পরিচালকের পাঠানো আমন্ত্রণ কোড লাগবে। যে ইমেইলে আমন্ত্রণ এসেছে, সেটাই দিন।</p>
+    <label class="f">ইমেইল${glow('<input name="email" type="email" required autocomplete="username" placeholder="you@example.com">')}</label>
+    <label class="f">নতুন পাসওয়ার্ড (অন্তত ৮ অক্ষর)${glow('<input name="password" type="password" minlength="8" required autocomplete="new-password" placeholder="••••••••">')}</label>
+    <label class="f">আবার পাসওয়ার্ড${glow('<input name="password2" type="password" minlength="8" required autocomplete="new-password" placeholder="••••••••">')}</label>
+    <label class="f">আমন্ত্রণ কোড${glow('<input name="code" required maxlength="12" autocapitalize="characters" autocomplete="off" style="letter-spacing:.1em" placeholder="ABCD1234">')}</label>
+    <button class="btn abtn" type="submit">অ্যাকাউন্ট খুলুন</button>
+    <p class="small" id="sgm" style="margin:10px 0 0;color:var(--red);text-align:center">${esc(note)}</p>
+    <p class="aswap">আগেই অ্যাকাউন্ট আছে? <a href="#" id="sgback" class="linkbtn">লগইন করুন</a></p>
   </form></div>`;
-  $('#sgback').onclick = (e) => { e.preventDefault(); renderLogin(); };
+  $('#sgback').onclick = (e) => { e.preventDefault(); authTurn(() => renderLogin(true), false); };
   $('#sgf').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target; const m = $('#sgm'); const btn = f.querySelector('button[type=submit]');
     if (f.password.value !== f.password2.value) { m.textContent = 'দুটো পাসওয়ার্ড মেলেনি।'; return; }
