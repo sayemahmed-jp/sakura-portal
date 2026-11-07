@@ -539,6 +539,8 @@ function slidePill(active) {
   if (from && !still) { put(from, from.o); pill.getBoundingClientRect(); pill.classList.add('go'); if (on && (from.l !== to.l || !from.o)) { on.classList.add('wait'); setTimeout(() => on.classList.remove('wait'), 260); } if (to) put(to, 1); else pill.style.opacity = 0; }
   else if (to) put(to, 1); else pill.style.opacity = 0;
   PILL_PREV = to ? { ...to, o: 1 } : from ? { ...from, o: 0 } : null;
+  // the English switch rewrites the labels a moment after drawing, which changes their widths — follow the tab when that happens
+  if (on) { const fix = () => { if (!on.isConnected) return; const r = { l: on.offsetLeft, w: on.offsetWidth }; put(r, 1); PILL_PREV = { ...r, o: 1 }; }; requestAnimationFrame(() => requestAnimationFrame(fix)); setTimeout(fix, 350); if (window.ResizeObserver) new ResizeObserver(fix).observe(on); }
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 function railToggle() { const r = !document.documentElement.classList.contains('rail'); document.documentElement.classList.toggle('rail', r); try { localStorage.setItem('sakura_rail', r ? '1' : ''); } catch (_) {} }
