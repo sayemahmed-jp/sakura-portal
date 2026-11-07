@@ -529,6 +529,63 @@
   .lvl{display:flex;align-items:center;gap:8px}.lvl::before{content:'';width:6px;height:1.1em;border-radius:3px;background:linear-gradient(180deg,var(--gold2),var(--gold))}
   html[data-theme=dark] .lvl::before{background:linear-gradient(180deg,#FFB36B,#E8772E)}
 
+
+  /* iPhone-Settings look (v60): grey page, white grouped lists with hairlines, small flat colour squares, plain tab bar */
+  :root{--ios-bg:#F2F2F7;--ios-card:#FFFFFF;--ios-sep:rgba(60,60,67,.18);--ios-label:#000;--ios-sub:#8A8A8E;--ios-chev:#C4C4C7;--ios-tint:#1B2945}
+  html[data-theme=dark]{--ios-bg:#000;--ios-card:#1C1C1E;--ios-sep:rgba(84,84,88,.6);--ios-label:#FFF;--ios-sub:#98989F;--ios-chev:#5A5A5F;--ios-tint:#FF9F0A}
+  body{background:var(--ios-bg)!important}.st,.app2{background:var(--ios-bg)}
+  html[data-theme=dark] body{background:#000!important}
+  /* flat tiles */
+  .tile{background:var(--c2)!important;box-shadow:none!important;border-radius:calc(var(--s) * .24)!important}
+  .tile::after{display:none}.tile svg{filter:none;width:60%;height:60%}
+  html[data-theme=dark] .tile{background:var(--c1)!important}
+  /* big plain titles */
+  .sech{font:800 30px/1.15 'Hind Siliguri',sans-serif!important;color:var(--ios-label)!important;margin:6px 4px 14px!important;letter-spacing:-.3px}
+  .sech .tile{display:none}
+  /* grouped lists */
+  .mlist2{gap:0!important;background:var(--ios-card);border-radius:12px;overflow:hidden;margin-bottom:22px}
+  .mlist2>.mrow,.mlist2>.langrow{position:relative;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;padding:9px 14px!important;min-height:52px;margin:0!important}
+  .mlist2>.mrow+.mrow::before,.mlist2>.langrow+.langrow::before,.mlist2>.mrow+.langrow::before,.mlist2>.langrow+.mrow::before{content:'';position:absolute;top:0;left:58px;right:0;height:1px;transform:scaleY(.5);transform-origin:top;background:var(--ios-sep)}
+  .mlist2>.mrow:active{background:rgba(127,127,127,.15)!important;transform:none!important}
+  .mlist2 .ri .tile{--s:30px!important;border-radius:7px!important}
+  .mlist2 .mrow .ri,.mlist2 .langrow .ri{width:30px!important}
+  .mrow .rt b{font-weight:500!important;font-size:16px!important;color:var(--ios-label)!important}
+  .mrow .rt small{color:var(--ios-sub)!important;font-size:12.5px}
+  .mrow .rc{color:var(--ios-chev)!important;font-size:22px;font-weight:600}
+  .mlist2>.instc,.mlist2>.btn{margin:10px!important}
+  /* folding groups look like a settings group */
+  .mfold{background:var(--ios-card)!important;border:0!important;border-radius:12px!important;margin:0 0 22px!important;box-shadow:none!important}
+  .mfold summary{padding:9px 14px;min-height:52px}.mfold summary b{font-weight:500;font-size:16px;color:var(--ios-label)}
+  .mfold summary .tile{--s:30px!important;border-radius:7px!important}
+  .mfold .chev{border-color:var(--ios-chev)!important}
+  .mfold .mlist2{background:transparent;border-radius:0;margin:0!important;padding:0!important;border-top:.5px solid var(--ios-sep)}
+  .mfold .mlist2>.mrow{padding-left:14px!important}
+  /* cards and tiles on the grey page */
+  .st .card,.mst,.mrow,.quick .qi{border-color:transparent}
+  .st .card{background:var(--ios-card);box-shadow:none}
+  .mst{background:var(--ios-card)!important;border:0!important;box-shadow:none!important;border-radius:12px}
+  html[data-theme=dark] .st .card,html[data-theme=dark] .mst{background:var(--ios-card)}
+  /* home quick buttons: app-icon squares */
+  .quick .qi .tile{--s:58px!important;border-radius:14px!important}
+  .quick button{color:var(--ios-label)!important;font-weight:500!important}
+  /* tab bar: plain glyphs, tinted when active */
+  .bnav{background:rgba(249,249,249,.94)!important;border-top:.5px solid rgba(0,0,0,.2)!important;box-shadow:none!important;backdrop-filter:saturate(180%) blur(20px)}
+  html[data-theme=dark] .bnav{background:rgba(22,22,24,.94)!important;border-top-color:rgba(255,255,255,.15)!important}
+  .bnav .ni .tile{background:none!important;color:#999!important;--s:30px!important;filter:none!important;opacity:1!important;transform:none!important}
+  .bnav .ni .tile svg{width:82%;height:82%;stroke-width:1.8}
+  .bnav button.on .ni .tile{color:var(--ios-tint)!important}
+  .bnav button{color:#999!important}.bnav button.on{color:var(--ios-tint)!important}
+  .bnav button.on::before{display:none}
+  .bnav .nl{font-size:10.5px!important;font-weight:500!important}
+  /* chips and section names in the same quiet style */
+  .lvl{font:700 13px 'Hind Siliguri',sans-serif!important;color:var(--ios-sub)!important;letter-spacing:.02em;border:0!important;margin:20px 16px 6px!important;padding:0!important}
+  .lvl::before{display:none}
+  .mchips button{box-shadow:none!important;border:0!important;background:var(--ios-card)!important;color:var(--ios-label)!important;font-weight:600!important}
+  .mchips button.on{background:var(--ios-tint)!important;color:#fff!important}
+  html[data-theme=dark] .mchips button.on{color:#000!important}
+  .mat{background:var(--ios-card)!important;border:0!important;border-radius:12px!important}
+  .mat .ic{border-radius:9px}
+
 </style>
 </head>
 <body>
@@ -540,6 +597,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=59"></script>
+<script src="student.js?v=60"></script>
 </body>
 </html>
