@@ -15,7 +15,7 @@
 <title>ছাত্রদের সাইট · সাকুরা জাপানিজ ইনস্টিটিউট</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@700;800&display=swap">
-<link rel="stylesheet" href="../style.css?v=49">
+<link rel="stylesheet" href="../style.css?v=50">
 <style>
   body{background:var(--bg)}
   .st{max-width:820px;margin:0 auto;padding:16px 16px 40px}
@@ -371,70 +371,100 @@
   html[data-theme=dark] .mecard{box-shadow:0 10px 24px -14px rgba(0,0,0,.8)}
   @media (prefers-reduced-motion:reduce){.mfold[open] .mlist2{animation:none}}
 
-  /* dark look for the student app (generated from the rules above: light fills → dark, navy text → light) */
-  html[data-theme=dark] .mchips button{background:var(--card);color:#DCE4F5}
+  /* dark look for the student app (generated from the rules above: light fills → dark, dark text → light) */
+  html[data-theme=dark] .mchips button{background:#1A2440;color:#DCE4F5}
   html[data-theme=dark] .lvl{color:#DCE4F5}
-  html[data-theme=dark] .search{background:var(--card)}
+  html[data-theme=dark] .search{background:#1A2440}
   html[data-theme=dark] .linkbtn{color:#DCE4F5}
-  html[data-theme=dark] .opt{background:var(--card)}
+  html[data-theme=dark] .opt{background:#1A2440}
   html[data-theme=dark] .opt.sel{background:#1E2B4A}
-  html[data-theme=dark] .expl{background:#33290F}
-  html[data-theme=dark] .warnline{color:#EBDDB5}
-  html[data-theme=dark] .cnt .c-ok{background:#15301F}
-  html[data-theme=dark] .cnt .c-bad{background:#3A1C1E}
-  html[data-theme=dark] .cnt .c-bl{color:#B9B2A3}
+  html[data-theme=dark] .opt.right{background:#15301F}
+  html[data-theme=dark] .opt.wrong{background:#3A1C1E}
+  html[data-theme=dark] .expl{background:#2E2712}
+  html[data-theme=dark] .warnline{background:#2E2712;color:#B6AC8F;border-color:var(--line)}
+  html[data-theme=dark] .cnt .c-ok{background:#15301F;border-color:var(--line)}
+  html[data-theme=dark] .cnt .c-bad{background:#3A1C1E;border-color:var(--line)}
+  html[data-theme=dark] .cnt .c-bl{background:#1A2440;color:#B7B5B1}
   html[data-theme=dark] table.hist th{color:#DCE4F5}
-  html[data-theme=dark] .pvbar{color:#DCE4F5}
-  html[data-theme=dark] .hidtag{color:#B9B2A3}
-  html[data-theme=dark] .lvchip{background:var(--card);color:#DCE4F5}
+  html[data-theme=dark] table.hist tr[data-rev]:hover td{background:#2E2712}
+  html[data-theme=dark] .pvbar{background:#1E2B4A;color:#DCE4F5;border-color:var(--line)}
+  html[data-theme=dark] .hidtag{background:#1A2440;color:#BCB8B1}
+  html[data-theme=dark] .lvchip{background:#1A2440;color:#DCE4F5}
+  html[data-theme=dark] .daily .kbig{background:#1A2440}
   html[data-theme=dark] .daily .opt.right{background:#15301F}
   html[data-theme=dark] .daily .opt.wrong{background:#3A1C1E}
   html[data-theme=dark] .fc .fcstat b{color:#DCE4F5}
-  html[data-theme=dark] .fccard{background:var(--card)}
+  html[data-theme=dark] .fccard{background:#1A2440}
   html[data-theme=dark] .prog .fcstat b{color:#DCE4F5}
   html[data-theme=dark] .acct .fcstat b{color:#DCE4F5}
   html[data-theme=dark] .pill.ok{background:#15301F}
-  html[data-theme=dark] .pill.warn{background:#33290F;color:#E2B54A}
+  html[data-theme=dark] .pill.warn{background:#2E2712;color:#CAB48C}
   html[data-theme=dark] .pill.bad{background:#3A1C1E}
   html[data-theme=dark] .nt .newtag{background:#3A1C1E}
   html[data-theme=dark] .js.cur small{color:#DCE4F5}
   html[data-theme=dark] .doc .ds{background:#3A1C1E}
   html[data-theme=dark] .doc.verified .ds{background:#15301F}
-  html[data-theme=dark] .doc.received .ds{background:#33290F;color:#E2B54A}
-  html[data-theme=dark] .lbr.me{background:#33290F}
-  html[data-theme=dark] .bdlink{background:#33290F;color:#E2B54A}
-  html[data-theme=dark] .kcell{background:var(--card)}
+  html[data-theme=dark] .doc.received .ds{background:#2E2712;color:#CAB48C}
+  html[data-theme=dark] .lbr.me{background:#2E2712}
+  html[data-theme=dark] .bdlink{background:#2E2712;color:#CAB48C;border-color:var(--line)}
+  html[data-theme=dark] .bd.on{background:#1A2440}
+  html[data-theme=dark] .kcell{background:#1A2440}
   html[data-theme=dark] .kcell.on{background:#1E2B4A}
-  html[data-theme=dark] .krows button{background:var(--card)}
+  html[data-theme=dark] .ksvg .grid rect{fill:#1A2440;stroke:#2C3858}
+  html[data-theme=dark] .ksvg .grid path{stroke:#2C3858}
+  html[data-theme=dark] .ksvg .ghost path{stroke:#2C3858}
+  html[data-theme=dark] .krows button{background:#1A2440}
   html[data-theme=dark] .kqbig b{color:#DCE4F5}
-  html[data-theme=dark] .kchip{background:var(--card)}
-  html[data-theme=dark] .ivans .ja em,html[data-theme=dark] .ivq .jq em{color:#E2B54A}
-  html[data-theme=dark] .ivtip{color:#E2B54A}
-  html[data-theme=dark] .hwlink{background:#1E2B4A;color:#DCE4F5}
-  html[data-theme=dark] .qalink{background:#182A20;color:#8FD3A6}
+  html[data-theme=dark] .kchip{background:#1A2440}
+  html[data-theme=dark] .ivans .ja em,html[data-theme=dark] .ivq .jq em{background:#2E2712;color:#CAB48C}
+  html[data-theme=dark] .ivtip{color:#C3AE8C}
+  html[data-theme=dark] .hwlink{background:#1E2B4A;color:#DCE4F5;border-color:var(--line)}
+  html[data-theme=dark] .qalink{background:#1A2440;color:#A0B6A7;border-color:var(--line)}
   html[data-theme=dark] .mtile .ml{color:#DCE4F5}
-  html[data-theme=dark] .dpg.add{color:#DCE4F5}
-  html[data-theme=dark] .idc{background:var(--card)}
-  html[data-theme=dark] .idp{background:#1A2440}
+  html[data-theme=dark] .dpg{background:#1A2440}
+  html[data-theme=dark] .dpg.add{background:#1A2440;color:#DCE4F5}
   html[data-theme=dark] .idi .nm{color:#DCE4F5}
   html[data-theme=dark] .greet h1{color:#DCE4F5}
+  html[data-theme=dark] .tjob.ok .tck{color:#DCE4F5}
   html[data-theme=dark] .quick button{color:#DCE4F5}
-  html[data-theme=dark] .quick .qi{background:var(--card)}
-  html[data-theme=dark] .langsw{background:var(--card)}
+  html[data-theme=dark] .quick .qi{background:#1A2440}
+  html[data-theme=dark] .quick .qi i{border-color:var(--line)}
+  html[data-theme=dark] .langsw{background:#1A2440}
   html[data-theme=dark] .sech{color:#DCE4F5}
   html[data-theme=dark] .mrow .rt b{color:#DCE4F5}
   html[data-theme=dark] .bnav{background:rgba(20,28,48,.97)}
+  html[data-theme=dark] .bnav button{color:#C3C5CB}
   html[data-theme=dark] .bnav button.on{color:#DCE4F5}
-  html[data-theme=dark] .reflink{color:#A8D88A}
-  html[data-theme=dark] .reflinkbox{background:var(--card)}
-  html[data-theme=dark] .jglink{color:#F2B1A8}
-  html[data-theme=dark] .qans{background:#182A20}
+  html[data-theme=dark] .reflink{background:#1A2440;color:#A8BC9A;border-color:var(--line)}
+  html[data-theme=dark] .reflinkbox{background:#1A2440}
+  html[data-theme=dark] .jglink{background:#1A2440;color:#CC9F9A;border-color:var(--line)}
+  html[data-theme=dark] .ivlink{background:#1E2B4A;color:#DCE4F5;border-color:var(--line)}
+  html[data-theme=dark] .qans{background:#1A2440}
   html[data-theme=dark] .qai .newtag{background:#3A1C1E}
   html[data-theme=dark] .spsent{color:#DCE4F5}
   html[data-theme=dark] .spheard.ok{background:#15301F}
-  html[data-theme=dark] .spheard.no{background:#33290F}
+  html[data-theme=dark] .spheard.no{background:#2E2712}
   html[data-theme=dark] .lefttag{background:#3A1C1E}
-
+  html[data-theme=dark] .mst b{color:#DCE4F5}
+  /* dark look: gold touches become orange (the logo keeps its gold) */
+  html[data-theme=dark] .xin small{color:#FFB36B}
+  html[data-theme=dark] .daily{border-color:#F28C38}
+  html[data-theme=dark] .daily .kbig{border-color:#F28C38}
+  html[data-theme=dark] .c-l{background:#E8772E}
+  html[data-theme=dark] .lb{border-color:#F59A3A}
+  html[data-theme=dark] .bd.on{border-color:#F59A3A}
+  html[data-theme=dark] .kdot.y{background:#E8772E}
+  html[data-theme=dark] .fbc{border-color:#E8772E}
+  html[data-theme=dark] .fbstars button{color:#E8772E}
+  html[data-theme=dark] .mtile:hover{border-color:#F28C38}
+  html[data-theme=dark] .dpg.add{border-color:#F28C38}
+  html[data-theme=dark] .idh small{color:#FFB36B}
+  html[data-theme=dark] .thead span{color:#FFC08A}
+  html[data-theme=dark] .tjob.ok .tck{background:#F28C38;border-color:#F28C38}
+  html[data-theme=dark] .tjob .rc{color:#FFC08A}
+  html[data-theme=dark] .tfoot{color:#FFC08A}
+  html[data-theme=dark] .mrow:hover{border-color:#F28C38}
+  html[data-theme=dark] .bnav button.on::before{background:#F28C38}
   html[data-theme=dark] .st [style*="color:var(--navy)"]{color:#DCE4F5!important}
   html[data-theme=dark] .st [style*="background:#fff"],html[data-theme=dark] .st [style*="background:#FFF"]{background:var(--card)!important}
   html[data-theme=dark] .sech,html[data-theme=dark] .st h1,html[data-theme=dark] .st h2,html[data-theme=dark] .st h3,html[data-theme=dark] .st .card b{color:#F1ECE0}
@@ -460,6 +490,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=52"></script>
+<script src="student.js?v=53"></script>
 </body>
 </html>

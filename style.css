@@ -416,3 +416,48 @@ html[data-theme=dark] .topnav a:not(.on){color:var(--ink2)}
 html[data-theme=dark] .wmenu{background:#172138}
 @media (prefers-reduced-motion:reduce){.wmenu{animation:none}}
 html[data-theme=dark] .login h1{color:#F1ECE0}html[data-theme=dark] .login .card{background:var(--card)}
+
+/* dark look: generated overrides for the remaining light fills and dark text (v50) */
+html[data-theme=dark] a{color:#DCE4F5}
+html[data-theme=dark] .top h1{color:#DCE4F5}
+html[data-theme=dark] .demo-bar{color:#B6AC8F;border-color:var(--line)}
+html[data-theme=dark] .card h2{color:#DCE4F5}
+html[data-theme=dark] .stat .v{color:#DCE4F5}
+html[data-theme=dark] .stat.red{border-color:var(--line)}
+html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#1A2440;border-color:var(--line)}
+html[data-theme=dark] .form h3{color:#DCE4F5}
+html[data-theme=dark] th{color:#DCE4F5}
+html[data-theme=dark] tr:nth-child(even) td{background:#1A2440}
+html[data-theme=dark] tr.click:hover td{background:#2E2712}
+html[data-theme=dark] .b.active,html[data-theme=dark] .b.paid,html[data-theme=dark] .b.verified{border-color:var(--line)}
+html[data-theme=dark] .b.trial,html[data-theme=dark] .b.received{border-color:var(--line)}
+html[data-theme=dark] .b.completed{background:#1E2B4A;color:#DCE4F5;border-color:var(--line)}
+html[data-theme=dark] .b.dropped,html[data-theme=dark] .b.missing{background:#1A2440;color:#BBBAB6;border-color:var(--line)}
+html[data-theme=dark] .b.japan,html[data-theme=dark] .b.due{border-color:var(--line)}
+html[data-theme=dark] .tabs button:hover{color:#DCE4F5}
+html[data-theme=dark] .tabs button.on{color:#DCE4F5}
+html[data-theme=dark] .avatar{color:#DCE4F5}
+html[data-theme=dark] .mk{background:#1A2440;border-color:var(--line)}
+html[data-theme=dark] .mk button{background:#1A2440}
+html[data-theme=dark] .bar{background:#2E2712}
+html[data-theme=dark] .steps a.pipe{color:#DCE4F5}
+html[data-theme=dark] .alertbar{color:#B6AC8F;border-color:var(--line)}
+html[data-theme=dark] .alertbar.red{color:#C49A96;border-color:var(--line)}
+html[data-theme=dark] tr.audmoney td{background:#1A2440}
+html[data-theme=dark] .modal-card h2{color:#DCE4F5}
+html[data-theme=dark] .cw div{color:#DCE4F5}
+html[data-theme=dark] .cd:hover{background:#1A2440}
+html[data-theme=dark] .cd.off{background:#1A2440}
+html[data-theme=dark] .cd .dn{color:#DCE4F5}
+html[data-theme=dark] .cd .hl{color:#CCBB94}
+html[data-theme=dark] .cd .ev{color:#DCE4F5}
+html[data-theme=dark] .cd .ev.jp{color:#BCA8D4}
+html[data-theme=dark] .mqo li{background:#1A2440}
+html[data-theme=dark] .avcam{background:#1A2440}
+html[data-theme=dark] .kpi .ki{color:#DCE4F5}
+html[data-theme=dark] .nb.red{background:#B83A2C}
+html[data-theme=dark] .btn.gold{background:#C2581A;border-color:#C2581A}html[data-theme=dark] .btn.gold:hover{background:#A94C16;border-color:#A94C16}
+html[data-theme=dark] .cd .hl{color:#E2B54A}html[data-theme=dark] .cd .ev.jp,html[data-theme=dark] .ev.jp{color:#CDB0F2}
+html[data-theme=dark] .tabs button.on,html[data-theme=dark] .steps a.pipe{color:#DCE4F5}
+html[data-theme=dark] .cd .dn,html[data-theme=dark] .cw div,html[data-theme=dark] .avatar span,html[data-theme=dark] .avcam{color:#DCE4F5}
+html[data-theme=dark] .cal.c-l{color:#1B1405!important}
