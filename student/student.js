@@ -398,23 +398,31 @@ async function fillAttStat(d) {
 }
 function langSwitchHtml() { const en = window.SK_LANG === 'en'; return `<div class="langsw" data-noi18n><button type="button" data-lang="bn" class="${en ? '' : 'on'}">বাংলা</button><button type="button" data-lang="en" class="${en ? 'on' : ''}">English</button></div>`; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b && window.setLang && b.dataset.lang !== window.SK_LANG) window.setLang(b.dataset.lang); });
-function renderAuth(mode = 'in', note = '') {
+function renderAuth(mode = 'in', note = '', turned = false) {
   document.title = 'ছাত্রদের সাইট · সাকুরা';
+  const up = mode === 'up'; const glow = (html) => `<span class="glow">${html}</span>`;
   $('#app').innerHTML = shellCard(`
-    ${stThemeSmall()}${langSwitchHtml()}<h1>ছাত্রদের সাইট</h1><p class="muted" style="margin:0 0 14px">সাকুরা জাপানিজ ইনস্টিটিউটের ভর্তি হওয়া ছাত্র-ছাত্রীদের পড়ার নোট, শিট আর অডিও</p>
+    ${langSwitchHtml()}
+    <h1 class="ahead">${up ? 'Start your first page<br>with <em>Sakura</em>' : mode === 'reset' ? 'Reset password' : 'Welcome <em>back</em>'}</h1>
+    <p class="asub">${up ? 'সাকুরার সাথে আপনার প্রথম পাতা শুরু করুন — ভর্তি হওয়া ছাত্র-ছাত্রীদের জন্য' : mode === 'reset' ? 'ইমেইলে পাসওয়ার্ড বদলানোর লিংক পাঠানো হবে' : 'আবার স্বাগতম — আপনার পড়া, টেস্ট আর আইডি কার্ড এখানে'}</p>
     ${DEMO ? '<div class="demo-bar">ডেমো মোড: যেকোনো ইমেইল দিয়ে ঢুকে দেখুন। পোর্টালের ডেমো তথ্য ব্যবহার হবে।</div>' : ''}
-    <div class="authtabs"><button data-m="in" class="${mode === 'in' ? 'on' : ''}">লগইন</button><button data-m="up" class="${mode === 'up' ? 'on' : ''}">নতুন অ্যাকাউন্ট</button></div>
     <form id="af" autocomplete="on">
-      <label class="f">ইমেইল<input name="email" type="email" required autocomplete="username" inputmode="email"></label>
-      ${mode === 'reset' ? '' : `<label class="f" style="margin-top:10px">পাসওয়ার্ড${mode === 'up' ? ' (অন্তত ৮ অক্ষর)' : ''}<input name="password" type="password" required minlength="${mode === 'up' ? 8 : 1}" autocomplete="${mode === 'up' ? 'new-password' : 'current-password'}"></label>`}
-      ${mode === 'up' ? '<label class="f" style="margin-top:10px">আবার পাসওয়ার্ড<input name="password2" type="password" required minlength="8" autocomplete="new-password"></label>' : ''}
-      <button class="btn" type="submit" style="width:100%;justify-content:center;margin-top:16px">${mode === 'up' ? 'অ্যাকাউন্ট খুলুন' : mode === 'reset' ? 'রিসেট লিংক পাঠান' : 'লগইন'}</button>
+      <label class="f">ইমেইল${glow('<input name="email" type="email" required autocomplete="username" inputmode="email" placeholder="you@example.com">')}</label>
+      ${mode === 'reset' ? '' : `<label class="f">পাসওয়ার্ড${up ? ' (অন্তত ৮ অক্ষর)' : ''}${glow(`<input name="password" type="password" required minlength="${up ? 8 : 1}" autocomplete="${up ? 'new-password' : 'current-password'}" placeholder="••••••••">`)}</label>`}
+      ${up ? `<label class="f">আবার পাসওয়ার্ড${glow('<input name="password2" type="password" required minlength="8" autocomplete="new-password" placeholder="••••••••">')}</label>` : ''}
+      <button class="btn abtn" type="submit">${up ? 'অ্যাকাউন্ট খুলুন' : mode === 'reset' ? 'রিসেট লিংক পাঠান' : 'লগইন'}</button>
       <div class="msg ${note && note.startsWith('!') ? 'err' : 'ok'}" id="am">${esc(note.replace(/^!/, ''))}</div>
-      ${mode === 'in' && !DEMO ? '<p style="margin:12px 0 0"><button type="button" class="linkbtn" id="fg">পাসওয়ার্ড ভুলে গেছেন?</button></p>' : ''}
-      ${mode === 'reset' ? '<p style="margin:12px 0 0"><button type="button" class="linkbtn" data-m="in">← লগইনে ফিরে যান</button></p>' : ''}
+      ${mode === 'in' && !DEMO ? '<p class="aline"><button type="button" class="linkbtn" id="fg">পাসওয়ার্ড ভুলে গেছেন?</button></p>' : ''}
     </form>
-    <p class="small muted" style="margin:16px 0 0">স্টাফ? <a href="../">স্টাফ পোর্টালে যান</a></p>`);
-  $$('[data-m]').forEach(b => b.onclick = () => renderAuth(b.dataset.m));
+    <p class="aswap">${up ? 'আগেই অ্যাকাউন্ট আছে? <button type="button" class="linkbtn" data-m="in">লগইন করুন</button>' : mode === 'reset' ? '<button type="button" class="linkbtn" data-m="in">← লগইনে ফিরে যান</button>' : 'নতুন? <button type="button" class="linkbtn up" data-m="up">নতুন অ্যাকাউন্ট খুলুন</button>'}</p>
+    <p class="small muted astaff">স্টাফ? <a href="../">স্টাফ পোর্টালে যান</a></p>`);
+  const lg = $('.login'); lg.classList.add(up ? 'auth-up' : 'auth-in'); if (turned) lg.querySelector('.card').classList.add('turn-in');
+  $$('[data-m]').forEach(b => b.onclick = () => {
+    const to = b.dataset.m; const card = $('.login .card');
+    if (!card || matchMedia('(prefers-reduced-motion: reduce)').matches || (to !== 'up' && mode !== 'up')) return renderAuth(to);
+    card.classList.add('turn-out'); lg.classList.add(to === 'up' ? 'go-up' : 'go-in'); setTimeout(() => renderAuth(to, '', true), 360);
+  });
+
   const fg = $('#fg'); if (fg) fg.onclick = () => renderAuth('reset');
   $('#af').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target; const btn = f.querySelector('button[type=submit]'); const am = $('#am');
