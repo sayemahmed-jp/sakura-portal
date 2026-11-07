@@ -304,3 +304,52 @@ td .dobx select{padding:4px 2px;font-size:13px}
 @keyframes mpop{0%{transform:translateY(14px) scale(.97);opacity:0}100%{transform:none;opacity:1}}
 table.stack tr{transition:background .12s}
 @media (prefers-reduced-motion:reduce){.shell .card,.shell .btn:active,.shell .nav a:active{transition:none;transform:none}.modal:not([hidden]) .modal-card{animation:none}}
+
+/* ---------------------------------------------------------------- dashboard: KPI cards with trend lines, charts (v44) */
+.kpi .kh{display:flex;align-items:center;gap:9px}
+.kpi .ki{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--soft);color:var(--navy);border:1px solid var(--line2)}
+.kpi .ki svg{width:17px;height:17px}
+.kpi.green .ki{color:var(--green);background:var(--green-bg)}.kpi.red .ki{color:var(--red);background:var(--red-bg)}
+.delta{margin-left:auto;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.delta.up{color:var(--green);background:var(--green-bg)}.delta.down{color:var(--red);background:var(--red-bg)}
+.spark{display:block;width:100%;height:36px;margin-top:10px}
+.kbar{height:7px;border-radius:99px;background:var(--line2);overflow:hidden;margin-top:12px}.kbar span{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--green));border-radius:99px}
+.chartcard .ch{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}.chartcard .ch h2{margin:0}
+.chart{display:block;width:100%;height:auto}
+.chart .gl{stroke:var(--line);stroke-width:1;stroke-dasharray:3 4}.chart .g80{stroke:var(--gold2);stroke-dasharray:6 4}
+.chart .ax{fill:var(--muted);font:12px var(--f-body)}
+.chart .bi{fill:var(--green)}.chart .be{fill:var(--red);opacity:.85}
+.chart rect{transition:opacity .15s}.chart g:hover rect{opacity:.7}
+.chart .ln{fill:none;stroke:var(--navy);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.chart .la{fill:var(--navy);opacity:.08}
+.chart .dg{fill:var(--card);stroke:var(--green);stroke-width:2.5}.chart .dl{fill:var(--card);stroke:var(--red);stroke-width:2.5}
+.chartcard .lg{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin-top:4px}.chartcard .lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.who .themebtn{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:7px;padding:4px 10px;cursor:pointer;font-size:12.5px}
+
+/* ---------------------------------------------------------------- dark look (portal only: set from the sidebar button) */
+html[data-theme=dark]{color-scheme:dark;
+  --bg:#0D1322;--card:#141C30;--soft:#1A2440;--head:#18213A;--line:#283453;--line2:#1F2944;
+  --ink:#E9E5DB;--ink2:#C8C2B4;--muted:#8E98B0;
+  --red-bg:#3A1C1E;--green-bg:#15301F;--amber-bg:#33290F;--red:#E2675A;--green:#4CB97A;--amber:#E2B54A;
+  --shadow:0 1px 0 rgba(0,0,0,.25),0 10px 26px -16px rgba(0,0,0,.7)}
+html[data-theme=dark] body{background:radial-gradient(1200px 500px at 80% -10%,rgba(201,169,92,.07),transparent 60%),var(--bg)}
+html[data-theme=dark] .main h1,html[data-theme=dark] .main h2,html[data-theme=dark] .main h3,html[data-theme=dark] .stat .v,html[data-theme=dark] .kpi .ki,html[data-theme=dark] .card h2,html[data-theme=dark] .modal-card h2{color:#F1ECE0}
+html[data-theme=dark] a{color:var(--gold3)}html[data-theme=dark] .btn{color:#fff}
+html[data-theme=dark] .btn{background:#2E4577;border-color:#3A548C}html[data-theme=dark] .btn:hover{background:#38528C}
+html[data-theme=dark] .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea,html[data-theme=dark] .mk,html[data-theme=dark] .mk button,html[data-theme=dark] .mqo li{background:#0F1729;border-color:var(--line);color:var(--ink)}
+html[data-theme=dark] tr:nth-child(even) td,html[data-theme=dark] table.stack tr:nth-child(even){background:#111A2D}
+html[data-theme=dark] tr.click:hover td{background:#1C2745}html[data-theme=dark] tr.audmoney td{background:#2A1A1C}
+html[data-theme=dark] th{background:var(--head);color:var(--ink2)}
+html[data-theme=dark] .stat.red{background:var(--card);border-color:#4A2A2C}
+html[data-theme=dark] .b.completed{background:#1E2A48;color:#B9C6E6;border-color:#2C3A5E}html[data-theme=dark] .b.dropped,html[data-theme=dark] .b.missing{background:#22252C;color:#A6A39C;border-color:#33363E}
+html[data-theme=dark] .bar,html[data-theme=dark] .kbar{background:#222D49}
+html[data-theme=dark] .cd.off{background:#121A2C}html[data-theme=dark] .cardprev{background:#1A2440}
+html[data-theme=dark] .avatar{box-shadow:0 0 0 4px var(--card),0 0 0 5px var(--line)}html[data-theme=dark] .avcam{background:var(--card)}
+html[data-theme=dark] .chart .ln{stroke:var(--gold2)}html[data-theme=dark] .chart .la{fill:var(--gold2)}
+html[data-theme=dark] .kpi .ki{background:#1E2946;border-color:#2A3758}
+html[data-theme=dark] .alertbar{background:#2A2414;border-color:#4A3E1C;color:#EBDDB5}html[data-theme=dark] .alertbar.red{background:#2E1A1C;border-color:#5A2B2D;color:#F0C9C3}
+html[data-theme=dark] .modal-card{background:var(--card)}
+html[data-theme=dark] .empty{color:var(--muted)}
+html[data-theme=dark] .demo-bar{border-color:#4A3E1C;color:#EBDDB5}
+@media print{html[data-theme=dark]{color-scheme:light}}

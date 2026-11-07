@@ -419,6 +419,9 @@ async function afterLogin(user) {
   } catch (e) { $('#app').innerHTML = `<div class="login"><div class="card"><h1>সমস্যা হয়েছে</h1><p>${esc(errMsg(e))}</p><button class="btn" onclick="location.reload()">আবার চেষ্টা</button></div></div>`; }
 }
 // language switch: the portal is written in Bengali; i18n.js translates it when English is picked
+// light / dark look for the office portal, remembered on this device
+function themeBtnHtml() { const dk = document.documentElement.dataset.theme === 'dark'; return `<button type="button" class="themebtn" data-theme-to="${dk ? 'light' : 'dark'}" title="${dk ? 'হালকা রং' : 'গাঢ় রং'}">${dk ? '☀️ হালকা' : '🌙 গাঢ়'}</button>`; }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-theme-to]'); if (!b) return; const t = b.dataset.themeTo; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_theme', t); } catch (_) {} b.outerHTML = themeBtnHtml(); });
 function langBtnHtml() { const en = window.SK_LANG === 'en'; return `<button type="button" data-noi18n class="langbtn" data-lang="${en ? 'bn' : 'en'}">🌐 ${en ? 'বাংলা' : 'English'}</button>`; }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-lang]'); if (b && window.setLang) { e.preventDefault(); window.setLang(b.dataset.lang); } });
 function renderLogin() {
@@ -486,7 +489,7 @@ function shell(active, inner) {
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div></div>
     <nav class="nav">${nav}</nav>
     <div class="who"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="nm">${esc(name)}</span><span class="rl">${ROLE_NAME[S.profile.role] || 'স্টাফ'}</span>
-      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${langBtnHtml()}</div></div>
+      <div class="acts"><button id="mycard">🪪 আমার আইডি কার্ড</button>${isStandalone() ? '' : '<button id="inst">📱 অ্যাপ হিসেবে ইনস্টল</button>'}${DEMO ? '' : '<button id="chpw">পাসওয়ার্ড বদলান</button>'}<button id="logout">${DEMO ? 'বের হন' : 'লগআউট'}</button>${langBtnHtml()}${themeBtnHtml()}</div></div>
   </aside><div class="scrim" id="scrim"></div><main class="main">${DEMO ? '<div class="demo-bar">ডেমো মোড: তথ্য শুধু এই ব্রাউজারে আছে। আসল ব্যবহারের আগে Supabase যুক্ত করুন (README দেখুন)।</div>' : ''}
     <div class="crumb no-print">${grp ? `<b>${grp[0]}</b>${page && active !== '#/' ? `<span class="sep">›</span><span>${page[1]}</span>` : ''}` : ''}<span class="dt">${WDAY_LONG[d.getDay()]}, ${fmtD(todayISO())}</span></div>${inner}</main></div>`;
 }
@@ -566,6 +569,14 @@ function viewDashboard() {
   const jpSoon = S.applications.filter(a => appOpen(a) && appNext(a) && appNext(a)[0] <= isoPlus(21)).sort((a, b) => appNext(a)[0].localeCompare(appNext(b)[0]));
   const expByCat = {}; S.expenses.filter(e => (e.spent_on || '').startsWith(m)).forEach(e => { expByCat[e.category] = (expByCat[e.category] || 0) + num(e.amount); });
   const expCard = `<div class="card"><h2>এ মাসের খরচ</h2>${Object.keys(expByCat).length ? `<div class="tw"><table><tr><th>খাত</th><th class="num">টাকা</th></tr>${Object.entries(expByCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<tr class="click" data-go="#/expenses"><td>${esc(EXP_CAT[k] || k)}</td><td class="num">${tk(v)}</td></tr>`).join('')}</table></div>` : '<div class="empty">এ মাসে কোনো খরচ লেখা হয়নি</div>'}</div>`;
+  // numbers for the trend lines and charts
+  const m6 = monthsUpTo(6);
+  const inc6 = m6.map(incomeOf), exp6 = m6.map(x => monthSum(S.expenses, 'spent_on', x));
+  const admits = m6.map(x => S.students.filter(st => (st.admission_date || '').startsWith(x)).length);
+  const att14 = [...new Set(S.sessions.map(x => x.class_date))].filter(d => d && d <= today).sort().slice(-14).map(d => { const ids = S.sessions.filter(x => x.class_date === d).map(x => x.id); const rs = S.attendance.filter(a => ids.includes(a.session_id)); return { d, pct: rs.length ? Math.round(rs.filter(a => a.status === 'present' || a.status === 'late').length * 100 / rs.length) : null }; }).filter(x => x.pct != null);
+  const paidCur = current.reduce((a, st) => a + Math.max(0, num(st.total_fee) - num(st.discount) - dueOf(st)), 0);
+  const collectPct = paidCur + totalDue ? Math.round(paidCur * 100 / (paidCur + totalDue)) : 0;
+  const collectBar = `<div class="kbar" title="চলমান ছাত্রদের ফি-র কত অংশ আদায় হয়েছে"><span style="width:${collectPct}%"></span></div><div class="s" style="margin-top:4px">ফি আদায় ${collectPct}%</div>`;
   mount('#/', `
   <div class="top"><div><h1>ড্যাশবোর্ড</h1><p>আজ ${fmtD(today)}</p></div>
     <div class="row no-print"><a class="btn" href="#/students/new">+ নতুন ছাত্র</a><button class="btn gold" id="qp">+ টাকা জমা</button><a class="btn ghost" href="#/attendance">আজকের হাজিরা</a>${isAdmin() ? '<a class="btn ghost" href="#/weekly">সাপ্তাহিক সারাংশ</a>' : ''}</div></div>
@@ -573,11 +584,15 @@ function viewDashboard() {
   ${isAdmin() && (!S.settings.last_backup_at || daysBetween(S.settings.last_backup_at.slice(0, 10), today) >= 7) ? `<a class="alertbar" href="#/reports" style="margin-bottom:16px"><b>${S.settings.last_backup_at ? daysBetween(S.settings.last_backup_at.slice(0, 10), today) + ' দিন ব্যাকআপ নেওয়া হয়নি' : 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি'}</b><span>রিপোর্ট পাতা থেকে "পুরো ব্যাকআপ নিন" চেপে ZIP ফাইলটা ল্যাপটপ বা Google Drive-এ রাখুন।</span><span class="go">ব্যাকআপ নিন →</span></a>` : ''}
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''} — ছুটি থাকলে ক্যালেন্ডারে ছুটি দিন</span><span class="go">হাজিরা নিন →</span></a>` : ''}
-  <div class="grid g4">
-    <div class="card stat"><div class="l">চলমান ছাত্র-ছাত্রী</div><div class="v">${current.length}</div><div class="s">মোট ভর্তি ${S.students.length} জন</div></div>
-    ${isAdmin() ? `<div class="card stat green"><div class="l">এ মাসের আয়</div><div class="v">${tk(monthIncome)}</div><div class="s">খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b></div></div>` : (() => { const tp = S.payments.filter(x => x.paid_on === today); return `<div class="card stat green"><div class="l">আজকের জমা</div><div class="v">${tk(tp.reduce((a, x) => a + num(x.amount), 0))}</div><div class="s">${tp.length}টি রশিদ</div></div>`; })()}
-    <div class="card stat red"><div class="l">মোট বকেয়া</div><div class="v">${tk(totalDue)}</div><div class="s">${dues.length} জনের কাছে</div></div>
-    <div class="card stat"><div class="l">আজকের উপস্থিতি</div><div class="v">${todayRecs.length ? todayCame + ' / ' + todayRecs.length : '—'}</div><div class="s">${todaySessions.length ? todaySessions.length + 'টি ক্লাস' : 'আজ হাজিরা নেওয়া হয়নি'}</div></div>
+  <div class="grid g4 kpis">
+    ${kpi('users', 'চলমান ছাত্র-ছাত্রী', current.length, `মোট ভর্তি ${S.students.length} জন · এ মাসে নতুন ${admits[5]}`, '', spark(admits, 'var(--navy)'), delta(admits[5], admits[4]))}
+    ${isAdmin() ? kpi('money', 'এ মাসের আয়', tk(monthIncome), `খরচ ${tk(monthExp)} · <b style="color:${profit < 0 ? 'var(--red)' : 'var(--green)'}">${profit < 0 ? 'ক্ষতি' : 'লাভ'} ${tk(Math.abs(profit))}</b>`, 'green', spark(inc6, 'var(--green)'), delta(inc6[5], inc6[4])) : (() => { const tp = S.payments.filter(x => x.paid_on === today); return kpi('money', 'আজকের জমা', tk(tp.reduce((a, x) => a + num(x.amount), 0)), `${tp.length}টি রশিদ`, 'green', '', ''); })()}
+    ${kpi('wallet', 'মোট বকেয়া', tk(totalDue), `${dues.length} জনের কাছে`, 'red', collectBar, '')}
+    ${kpi('check', 'আজকের উপস্থিতি', todayRecs.length ? todayCame + ' / ' + todayRecs.length : '—', todaySessions.length ? todaySessions.length + 'টি ক্লাস' : 'আজ হাজিরা নেওয়া হয়নি', '', att14.length > 1 ? spark(att14.map(x => x.pct), 'var(--gold)') : '', '')}
+  </div>
+  <div class="grid g2 charts" style="margin-top:16px">
+    ${isAdmin() ? `<div class="card chartcard"><div class="ch"><h2>আয় ও খরচ</h2><span class="muted small">শেষ ৬ মাস</span></div>${barChart(m6, inc6, exp6)}<div class="lg"><span><i style="background:var(--green)"></i>আয়</span><span><i style="background:var(--red)"></i>খরচ</span></div></div>` : ''}
+    <div class="card chartcard"><div class="ch"><h2>উপস্থিতির হার</h2><span class="muted small">শেষ ${att14.length || 0}টি ক্লাসের দিন</span></div>${att14.length > 1 ? lineChart(att14) : '<div class="empty" style="padding:30px">হাজিরা নেওয়া শুরু করলে এখানে গ্রাফ দেখা যাবে</div>'}</div>
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>বকেয়া ফি</h2>${dues.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th class="num">বকেয়া</th><th>পরের কিস্তি</th><th></th></tr>${dues.slice(0, 8).map(({ s, due }) => `<tr class="click" data-go="#/student/${s.id}?t=fees"><td>${esc(studentName(s))}<div class="small muted">${esc(s.admission_no)}</div></td><td class="num">${tk(due)}</td><td>${s.next_due_date ? (s.next_due_date < today ? badge('due', fmtD(s.next_due_date) + ' পার হয়েছে') : fmtD(s.next_due_date)) : '<span class="muted">—</span>'}</td><td class="num">${waBtn(guardianPhone(s), dueMsg(s), '')}</td></tr>`).join('')}</table></div>` : '<div class="empty">কোনো বকেয়া নেই</div>'}</div>
@@ -588,6 +603,43 @@ function viewDashboard() {
     <div class="card"><h2>জাপান আবেদন: সামনের তারিখ</h2>${jpSoon.length ? `<div class="tw"><table><tr><th>ছাত্র</th><th>স্কুল</th><th>তারিখ</th></tr>${jpSoon.slice(0, 8).map(a => `<tr class="click" data-go="#/student/${a.student_id}?t=japan"><td>${esc(studentName(byId(S.students, a.student_id)))}</td><td>${esc(schoolName(byId(S.jp_schools, a.school_id)))}</td><td>${nextCell(a)}</td></tr>`).join('')}</table></div>` : '<div class="empty">সামনের ৩ সপ্তাহে কোনো তারিখ নেই</div>'}</div>
     ${isAdmin() ? expCard : ''}
   </div>`, () => { $('#qp').onclick = () => paymentModal(null); bindGo(); });
+}
+// ------------------------------------------------------------------ dashboard charts (plain SVG, no library)
+const BN_MON_SHORT = ['জানু', 'ফেব্রু', 'মার্চ', 'এপ্রি', 'মে', 'জুন', 'জুলা', 'আগ', 'সেপ্টে', 'অক্টো', 'নভে', 'ডিসে'];
+function monthsUpTo(n) { const d = new Date(); return Array.from({ length: n }, (_, i) => { const x = new Date(d.getFullYear(), d.getMonth() - (n - 1 - i), 1); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); }); }
+function kpi(icon, label, value, sub, tone, extra, dl) {
+  return `<div class="card stat kpi ${tone}"><div class="kh"><span class="ki"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[icon] || ''}</svg></span><span class="l">${label}</span>${dl || ''}</div><div class="v">${value}</div><div class="s">${sub}</div>${extra || ''}</div>`;
+}
+function delta(now, before) {
+  if (!before && !now) return '';
+  if (!before) return '<span class="delta up" title="গত মাসের তুলনায়">নতুন</span>';
+  const p = Math.round((now - before) * 100 / Math.abs(before));
+  return `<span class="delta ${p >= 0 ? 'up' : 'down'}" title="গত মাসের তুলনায়">${p >= 0 ? '▲' : '▼'} ${Math.abs(p)}%</span>`;
+}
+function spark(vals, color) {
+  if (!vals.length || vals.every(v => !v)) return '<div class="spark"></div>';
+  const w = 120, h = 36, max = Math.max(...vals), min = Math.min(0, ...vals), step = w / Math.max(1, vals.length - 1);
+  const pts = vals.map((v, i) => [i * step, h - 3 - ((v - min) / ((max - min) || 1)) * (h - 8)]);
+  const d = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d} L${w} ${h} L0 ${h}Z" fill="${color}" opacity=".13"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${last[0]}" cy="${last[1]}" r="2.6" fill="${color}"/></svg>`;
+}
+function barChart(months, a, b) {
+  const W = 520, H = 210, P = 44, max = Math.max(1, ...a, ...b), gw = (W - P - 8) / months.length, bw = Math.min(22, gw / 3);
+  const y = v => H - 26 - (v / max) * (H - 46);
+  const grid = [0, .5, 1].map(f => { const v = max * f, yy = y(v); return `<line x1="${P}" x2="${W - 4}" y1="${yy}" y2="${yy}" class="gl"/><text x="${P - 6}" y="${yy + 4}" text-anchor="end" class="ax">${v >= 1000 ? Math.round(v / 1000) + 'k' : Math.round(v)}</text>`; }).join('');
+  const bars = months.map((mo, i) => { const x = P + gw * i + gw / 2; return `<g><title>${BN_MON_SHORT[+mo.slice(5) - 1]}: আয় ${tk(a[i])} · খরচ ${tk(b[i])}</title><rect x="${x - bw - 2}" y="${y(a[i])}" width="${bw}" height="${H - 26 - y(a[i])}" rx="4" class="bi"/><rect x="${x + 2}" y="${y(b[i])}" width="${bw}" height="${H - 26 - y(b[i])}" rx="4" class="be"/><text x="${x}" y="${H - 8}" text-anchor="middle" class="ax">${BN_MON_SHORT[+mo.slice(5) - 1]}</text></g>`; }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="শেষ ৬ মাসের আয় ও খরচ">${grid}${bars}</svg>`;
+}
+function lineChart(rows) {
+  const W = 520, H = 210, P = 44, step = (W - P - 16) / Math.max(1, rows.length - 1);
+  const y = v => H - 26 - (v / 100) * (H - 46);
+  const pts = rows.map((r, i) => [P + 8 + i * step, y(r.pct)]);
+  const d = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+  const grid = [0, 50, 80, 100].map(v => `<line x1="${P}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}" class="gl ${v === 80 ? 'g80' : ''}"/><text x="${P - 6}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}%</text>`).join('');
+  const dots = rows.map((r, i) => `<g><title>${fmtD(r.d)}: ${r.pct}%</title><circle cx="${pts[i][0]}" cy="${pts[i][1]}" r="4" class="${r.pct < 80 ? 'dl' : 'dg'}"/></g>`).join('');
+  const lab = rows.map((r, i) => i % Math.ceil(rows.length / 6) === 0 || i === rows.length - 1 ? `<text x="${pts[i][0]}" y="${H - 8}" text-anchor="middle" class="ax">${r.d.slice(8)}/${r.d.slice(5, 7)}</text>` : '').join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="শেষ কয়েক দিনের উপস্থিতির হার">${grid}<path d="${d} L${pts[pts.length - 1][0]} ${H - 26} L${pts[0][0]} ${H - 26}Z" class="la"/><path d="${d}" class="ln"/>${dots}${lab}</svg>`;
 }
 function bindGo() { $$('[data-go]').forEach(el => el.onclick = () => { location.hash = el.dataset.go; }); $$('[data-stop]').forEach(el => el.addEventListener('click', e => e.stopPropagation())); }
 
