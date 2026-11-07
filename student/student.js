@@ -359,6 +359,42 @@ const API = {
 const shellCard = (inner) => `<div class="login"><div class="card" style="max-width:420px"><div class="kamon" style="width:56px;height:56px">${KAMON}</div>${inner}</div></div>`;
 
 // ---- language: বাংলা / English (the switch itself lives in i18n.js)
+
+// ---- "আমি": profile card, a small progress dashboard, light / dark look
+const meOpen = () => { try { return JSON.parse(localStorage.getItem('sakura_me_open') || '{}'); } catch (_) { return {}; } };
+function stThemeHtml() { const dk = document.documentElement.dataset.theme === 'dark'; return `<div class="langsw"><button type="button" data-sttheme="light" class="${dk ? '' : 'on'}">☀️ হালকা</button><button type="button" data-sttheme="dark" class="${dk ? 'on' : ''}">🌙 গাঢ়</button></div>`; }
+document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-sttheme]'); if (!b) return; const t = b.dataset.sttheme; document.documentElement.dataset.theme = t; try { localStorage.setItem('sakura_st_theme', t); } catch (_) {} b.parentElement.outerHTML = stThemeHtml(); const mt = document.querySelector('meta[name=theme-color]'); if (mt) mt.content = t === 'dark' ? '#0D1322' : '#1B2945'; });
+function meCardHtml(d, s) {
+  const nm = s.name_bn || s.name_en || ''; const st = d.streak || {};
+  return `<div class="mecard"><div class="mav">${esc((nm.trim()[0] || '?').toUpperCase())}</div><div class="mtx"><b>${esc(nm)}</b><span>${esc(s.admission_no || '')}</span><div class="mtags">${(d.levels || []).map(l => `<i>${esc(l)}</i>`).join('')}${s.batch && BATCH[s.batch] ? `<i class="b">${esc(BATCH[s.batch])}</i>` : ''}</div></div>${st.streak ? `<div class="mfire" title="টানা পড়ার দিন"><b>${BN_NUM(st.streak)}</b><span>🔥 দিন</span></div>` : ''}</div>`;
+}
+function sparkSt(vals, cls) {
+  if (vals.length < 2) return '';
+  const w = 100, h = 30, max = Math.max(...vals, 1), min = Math.min(...vals, 0), step = w / (vals.length - 1);
+  const pts = vals.map((v, i) => [i * step, h - 3 - ((v - min) / ((max - min) || 1)) * (h - 7)]);
+  const dd = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+  return `<svg class="msp ${cls}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${dd} L${w} ${h} L0 ${h}Z" class="a"/><path d="${dd}" class="l"/></svg>`;
+}
+function meStatsHtml(d) {
+  const st = d.streak || {}; const days = new Set(st.days || []); const t = bdToday();
+  const last14 = Array.from({ length: 14 }, (_, i) => { const x = new Date(t + 'T00:00:00'); x.setDate(x.getDate() - (13 - i)); return x.toISOString().slice(0, 10); });
+  const wk = last14.slice(-7).filter(x => days.has(x)).length;
+  const hs = (d.history || []).filter(a => a.total).slice().reverse(); const ps = hs.map(a => Math.round(a.score * 100 / a.total));
+  const avg5 = ps.length ? Math.round(ps.slice(-5).reduce((a, b) => a + b, 0) / Math.min(5, ps.length)) : null;
+  return `<div class="mstats">
+    <div class="mst"><span class="k">🔥 এই সপ্তাহে পড়েছেন</span><b>${BN_NUM(wk)}<small>/৭ দিন</small></b><div class="mdays">${last14.map(x => `<i class="${days.has(x) ? 'on' : ''} ${x === t ? 'td' : ''}"></i>`).join('')}</div><span class="s">শেষ ১৪ দিন</span></div>
+    <div class="mst"><span class="k">📝 মক টেস্টের গড়</span><b>${avg5 == null ? '—' : BN_NUM(avg5) + '<small>%</small>'}</b>${sparkSt(ps.slice(-10), avg5 != null && avg5 >= 60 ? 'ok' : 'bad')}<span class="s">${ps.length ? `শেষ ${BN_NUM(Math.min(5, ps.length))}টির গড় · মোট ${BN_NUM(ps.length)}টি` : 'এখনো টেস্ট দেননি'}</span></div>
+    <div class="mst" id="statt"><span class="k">📅 হাজিরা</span><b>…</b><span class="s">লোড হচ্ছে</span></div>
+  </div>`;
+}
+async function fillAttStat(d) {
+  try { const rows = d.att || await API.attendance(); d.att = rows; const el = $('#statt'); if (!el) return;
+    if (!rows.length) { el.innerHTML = '<span class="k">📅 হাজিরা</span><b>—</b><span class="s">এখনো হাজিরা নেই</span>'; return; }
+    const ok = (r) => r.status === 'present' || r.status === 'late'; const pct = Math.round(rows.filter(ok).length * 100 / rows.length);
+    const last = [...rows].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-10);
+    el.innerHTML = `<span class="k">📅 হাজিরা</span><b class="${pct >= 80 ? 'g' : 'r'}">${BN_NUM(pct)}<small>%</small></b><div class="mdays">${last.map(r => `<i class="${ok(r) ? 'on' : 'off'}" title="${esc(String(r.date))}"></i>`).join('')}</div><span class="s">${pct >= 80 ? 'দারুণ! ৮০%-এর ওপরে' : 'সার্টিফিকেটের জন্য ৮০% লাগে'}</span>`;
+  } catch (e) { const el = $('#statt'); if (el) el.remove(); }
+}
 function langSwitchHtml() { const en = window.SK_LANG === 'en'; return `<div class="langsw" data-noi18n><button type="button" data-lang="bn" class="${en ? '' : 'on'}">বাংলা</button><button type="button" data-lang="en" class="${en ? 'on' : ''}">English</button></div>`; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-lang]'); if (b && window.setLang && b.dataset.lang !== window.SK_LANG) window.setLang(b.dataset.lang); });
 function renderAuth(mode = 'in', note = '') {
@@ -1812,9 +1848,12 @@ function renderHome(d, user) {
   else if (NAVSEC === 'test') body = `<h1 class="sech">📝 মক টেস্ট</h1>${MK ? mistakesViewHtml(d) : progressHtml(d.history) + mistakesCardHtml(d) + mockListHtml(d.mocks || []) + historyHtml(d.history || [])}`;
   else if (NAVSEC === 'japan') body = `<h1 class="sech">🇯🇵 জাপান</h1><div class="mlist2">${row('ivgo', '🎤', 'ইন্টারভিউ প্র্যাকটিস', 'স্কুল ও ভিসা ইন্টারভিউর প্রশ্ন, নমুনা উত্তর, মক ইন্টারভিউ')}${window.SAKURA_JPGUIDE ? row('jggo', '🗾', 'জাপান লাইফ গাইড', 'যাওয়ার আগে ও পরে যা জানা দরকার') : ''}${docsRowHtml(d)}${d.preview ? '' : row('jpgo', '🇯🇵', 'আমার জাপান আবেদন', 'স্কুল, ধাপ আর আবেদনের অবস্থা')}</div>${countdownHtml(d)}`;
   else if (NAVSEC === 'me') { const bd = d.preview ? null : badgeList(d); const ib = inboxCount(d);
-    body = `<h1 class="sech">👤 আমি</h1><div class="card acct"><b style="font-size:16px">${esc(s.name_bn || s.name_en)}</b><div class="small muted">${esc(s.admission_no)} · ${esc((d.levels || []).join(', '))}${s.batch && BATCH[s.batch] ? ' · ' + esc(BATCH[s.batch]) : ''}</div></div>
-      <div class="mlist2">${d.preview ? '' : '<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>' + langSwitchHtml() + '</div>' + row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে') + row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া') + row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক')}</div>
-      ${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center;margin-top:6px">লগআউট</button>`; }
+    const fold = (k, ic, t, inner) => inner ? `<details class="mfold" data-mf="${k}" ${meOpen()[k] ? 'open' : ''}><summary><span class="ri">${ic}</span><b>${t}</b><span class="chev" aria-hidden="true"></span></summary><div class="mlist2">${inner}</div></details>` : '';
+    body = `<h1 class="sech">👤 আমি</h1>${meCardHtml(d, s)}${d.preview ? '' : meStatsHtml(d)}
+      <div class="mlist2">${d.preview ? '' : row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে')}</div>
+      ${d.preview ? '' : fold('money', '💳', 'ফি, হাজিরা ও কাগজপত্র', row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া'))}
+      ${d.preview ? '' : fold('fun', '🏅', 'ব্যাজ ও বন্ধু', row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক'))}
+      ${fold('set', '⚙️', 'সেটিংস', `${d.preview ? '' : `<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>${langSwitchHtml()}</div>`}<div class="card acct langrow"><span class="ri">🌙</span><span style="flex:1"><b>রং</b></span>${stThemeHtml()}</div>${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center">লগআউট</button>`)}`; }
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
     return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;
   $('#app').innerHTML = `<div class="st app2 ${d.blocked ? '' : 'hasnav'}">${head}<div class="shell2">${nav}<main class="smain">${body}${foot}</main></div></div>`;
@@ -1824,6 +1863,8 @@ function renderHome(d, user) {
   const idg = $('#idgo'); if (idg) idg.onclick = () => renderMyId(d, user);
   const dcg = $('#dcgo'); if (dcg) dcg.onclick = () => { DU = null; renderDocs(d, user); };
   const lo = $('#lo'); if (lo) lo.onclick = async () => { await API.signOut(); renderAuth(); };
+  $$('.mfold').forEach(f => f.addEventListener('toggle', () => { const o = meOpen(); o[f.dataset.mf] = f.open; try { localStorage.setItem('sakura_me_open', JSON.stringify(o)); } catch (_) {} }));
+  if (NAVSEC === 'me' && $('#statt')) fillAttStat(d);
   $$('[data-ht]').forEach(b => b.onclick = () => { HOME_TAB = b.dataset.ht; renderHome(d, user); const t = $('.authtabs'); if (t && t.getBoundingClientRect().top < 0) t.scrollIntoView({ block: 'start' }); });
   $$('[data-mc]').forEach(b => b.onclick = () => { MOCK_CAT_TAB = b.dataset.mc; renderHome(d, user); });
   bindDaily(d, user);
