@@ -1,7 +1,7 @@
 -- Sakura Portal v43 · mock tests open one at a time.
 -- In each level and section (full / kanji / grammar / listening), a student can start a test only after
 -- finishing (submitting) the published test just above it in the list. Retaking a finished test is always allowed.
--- The director's preview on the student site is not limited (that happens in the app; the preview saves nothing).
+-- Staff previewing the student site (any role) are not limited: that happens in the app, and the preview saves nothing.
 -- Safe to run more than once.
 create or replace function public.mock_prev_unfinished(p_student uuid, p_test uuid) returns text
 language sql stable security definer set search_path = public as $$

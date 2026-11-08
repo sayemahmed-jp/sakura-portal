@@ -2064,10 +2064,10 @@ function mockCat(t) {
   return /মক টেস্ট/.test(x) ? 'full' : /কানজি/.test(x) ? 'kanji' : /ব্যাকরণ/.test(x) ? 'grammar' : /শোনা/.test(x) ? 'listening' : 'other';
 }
 // tests open one at a time: in each section (and level) a test opens after the one above it has been finished once.
-// The director can open any test; other staff in preview follow the same order as students (their preview finishes are remembered on this device).
+// Only students follow the order; anyone from the office looking through the preview can open every test.
 let MOCK_LOCKS = {};
 function mockLocks(list) {
-  const out = {}; if (PREVIEW && PREVIEW.director) return out;
+  const out = {}; if (PREVIEW) return out; // staff preview (director, head teacher, teachers, office staff): every test is open
   let pdone = new Set(); try { pdone = new Set(JSON.parse(localStorage.getItem('sakura_preview_done') || '[]')); } catch (_) {}
   const last = {};
   for (const t of list) { if (t.hidden) continue; const k = mockCat(t) + '|' + t.level; const prev = last[k];
