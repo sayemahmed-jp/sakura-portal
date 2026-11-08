@@ -1669,7 +1669,7 @@ function viewTnotesApp() {
   const A = window.TNOTES.app || [];
   mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>অ্যাপ নির্দেশিকা — ছাত্রদের অ্যাপ আর শিক্ষকের পোর্টাল কীভাবে কাজ করে, আর বইয়ের সাথে কীভাবে ব্যবহার করবেন</p></div><div class="row"><div class="tntabs">${tnTabs('app')}</div><button class="btn ghost" id="tnprintapp">🖨 প্রিন্ট</button></div></div>
   ${A.map(sec => `<div class="card tnc"><h3>${sec.ic} ${esc(sec.t)}</h3><div class="tnapp">${sec.items.map(([t, d]) => `<div><b>${esc(t)}</b><p>${esc(d)}</p></div>`).join('')}</div></div>`).join('')}`, () => {
-    $('#tnprintapp').onclick = () => printWindow('App guide for teachers', headHtml() + `<div style="padding:14px 4px"><h2 style="margin:0 0 6px;font:800 22px 'Shippori Mincho B1',serif">শিক্ষকের নোট · অ্যাপ নির্দেশিকা</h2>${A.map(sec => `<h3 style="margin:16px 0 6px">${sec.ic} ${esc(sec.t)}</h3><table>${sec.items.map(([t, d]) => `<tr><th style="width:24%">${esc(t)}</th><td>${esc(d)}</td></tr>`).join('')}</table>`).join('')}</div>`);
+    $('#tnprintapp').onclick = () => printWindow('App guide for teachers', headHtml() + `<style>@page{size:A4;margin:8mm}.ag table{font-size:12px;line-height:1.5}.ag td,.ag th{padding:5px 7px}.hd{padding:8px 12px}.km{width:40px;height:40px}.t1{font-size:16px}</style><div class="ag" style="padding:6px 2px"><h2 style="margin:0 0 2px;font:800 17px 'Shippori Mincho B1',serif">শিক্ষকের নোট · অ্যাপ নির্দেশিকা</h2>${A.map(sec => `<h3 style="margin:10px 0 4px;font-size:14px">${sec.ic} ${esc(sec.t)}</h3><table>${sec.items.map(([t, d]) => `<tr><th style="width:19%">${esc(t)}</th><td>${esc(d)}</td></tr>`).join('')}</table>`).join('')}</div>`);
   });
 }
 function viewTnotes(lv, id) {
