@@ -7,7 +7,7 @@
   window.setLang = function (l) { try { localStorage.setItem('sakura_portal_lang', l); } catch (e) { /* not kept */ } location.reload(); };
   if (window.SK_LANG !== 'en') return;
   document.documentElement.lang = 'en';
-  document.write('<script src="i18n-en.js?v=8"><\/script>');
+  document.write('<script src="i18n-en.js?v=9"><\/script>');
   var BN = /[ঀ-৿]/, BNL = /[অ-হ়-ৗড়-ৣ]/g, DIG = '০১২৩৪৫৬৭৮৯', map = null, re = null;
   function build() {
     map = window.SK_EN || {};
