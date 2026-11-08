@@ -2071,7 +2071,8 @@ function mockLocks(list) {
   let pdone = new Set(); try { pdone = new Set(JSON.parse(localStorage.getItem('sakura_preview_done') || '[]')); } catch (_) {}
   const last = {};
   for (const t of list) { if (t.hidden) continue; const k = mockCat(t) + '|' + t.level; const prev = last[k];
-    if (prev && !(prev.attempts > 0 || (PREVIEW && pdone.has(prev.id)))) out[t.id] = prev.title;
+    const done = (x) => x.attempts > 0 || (PREVIEW && pdone.has(x.id));
+    if (prev && !done(prev) && !done(t)) out[t.id] = prev.title; // a test already taken can always be taken again
     last[k] = t; }
   return out;
 }
