@@ -13,6 +13,8 @@ const BUCKET = 'materials';
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// furigana written as {漢字|かんじ} shows as small reading above the kanji
+const fx = (s) => esc(s).replace(/\{([^|{}]+)\|([^{}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
 const num = (v) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? n : 0; };
 const tk = (n) => '৳ ' + Math.round(num(n)).toLocaleString('en-IN');
 const fmtD = (iso) => iso ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}` : '—';
@@ -538,8 +540,8 @@ function mistakesCardHtml(d) {
 }
 function mkQuestionHtml(x, n, opts) {
   const o = optsOf(x);
-  return `${x.passage ? `<div class="card passage" style="margin:0 0 8px">${esc(x.passage)}</div>` : ''}
-    <div class="qt"><b>${n}.</b> <span style="white-space:pre-line">${esc(x.question)}</span></div>
+  return `${x.passage ? `<div class="card passage" style="margin:0 0 8px">${fx(x.passage)}</div>` : ''}
+    <div class="qt"><b>${n}.</b> <span style="white-space:pre-line">${fx(x.question)}</span></div>
     ${x.section === 'listening' ? `<div style="margin:8px 0"><button type="button" class="btn sm" data-mkl="${esc(x.id)}">🔊 শুনুন</button></div>` : ''}
     ${o.map((op, i) => opts.render(op, i)).join('')}`;
 }
@@ -547,7 +549,7 @@ function mistakesViewHtml(d) {
   const m = d.mistakes || [];
   if (MK.mode === 'list') {
     return `<div class="row" style="justify-content:space-between;margin:0 0 10px"><b style="font-size:17px">📒 ভুলের খাতা (${BN_NUM(m.length)})</b><button class="btn sm ghost" id="mkclose">‹ ফিরে যান</button></div>
-      ${m.length ? m.map((x, i) => `<div class="q card">${mkQuestionHtml(x, i + 1, { render: (op, j) => `<div class="opt ${j === Number(x.correct) ? 'right' : j === x.mine ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === x.mine ? ' <b>✗</b>' : ''}</div>` })}
+      ${m.length ? m.map((x, i) => `<div class="q card">${mkQuestionHtml(x, i + 1, { render: (op, j) => `<div class="opt ${j === Number(x.correct) ? 'right' : j === x.mine ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${fx(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === x.mine ? ' <b>✗</b>' : ''}</div>` })}
         <div class="small muted" style="margin-top:6px">${esc(x.test_title)} · ${SEC[x.section] || ''} · ${x.mine == null ? 'উত্তর দেননি' : 'ভুল'}${x.times_wrong > 1 ? ` · ${BN_NUM(x.times_wrong)} বার ভুল` : ''}</div>
         ${x.explanation ? `<div class="small expl">💡 ${esc(x.explanation)}</div>` : ''}</div>`).join('') : '<div class="card"><div class="empty">খাতা খালি 🎉</div></div>'}
       ${m.length ? '<button class="btn" id="mkgo" style="width:100%;justify-content:center;margin-top:12px">অনুশীলন শুরু করুন</button>' : ''}`;
@@ -558,7 +560,7 @@ function mistakesViewHtml(d) {
     <button class="btn" id="mkclose" style="width:100%;justify-content:center;margin-top:14px">ঠিক আছে</button></div>`;
   const pick = MK.pick; const ok = pick != null && pick === Number(x.correct);
   return `<div class="row" style="justify-content:space-between;margin:0 0 8px"><span class="small muted">ভুলের খাতা · ${BN_NUM(MK.i + 1)}/${BN_NUM(MK.q.length)} · ${SEC[x.section] || ''}</span><button class="linkbtn" id="mkclose">থামুন</button></div>
-    <div class="q card">${mkQuestionHtml(x, MK.i + 1, { render: (op, j) => pick == null ? `<button type="button" class="opt" data-mkp="${j}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span></button>` : `<div class="opt ${j === Number(x.correct) ? 'right' : j === pick ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${esc(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === pick ? ' <b>✗</b>' : ''}</div>` })}
+    <div class="q card">${mkQuestionHtml(x, MK.i + 1, { render: (op, j) => pick == null ? `<button type="button" class="opt" data-mkp="${j}"><span class="ab">${ABCD[j]}</span><span>${fx(op)}</span></button>` : `<div class="opt ${j === Number(x.correct) ? 'right' : j === pick ? 'wrong' : ''}"><span class="ab">${ABCD[j]}</span><span>${fx(op)}</span>${j === Number(x.correct) ? ' <b>✓</b>' : j === pick ? ' <b>✗</b>' : ''}</div>` })}
       ${pick == null ? '' : `<div class="small expl" style="margin-top:8px"><b style="color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? '✓ ঠিক! খাতা থেকে সরে গেল।' : '✗ এখনো ভুল — ঠিক উত্তর সবুজ রঙে।'}</b> ${esc(x.explanation || '')}</div>
       ${x.section === 'listening' && x.script ? `<details class="small" style="margin-top:6px"><summary>শোনার লেখা দেখুন</summary><div style="white-space:pre-line;margin-top:4px">${esc(x.script)}</div></details>` : ''}
       <button class="btn" id="mknext" style="width:100%;justify-content:center;margin-top:12px">${MK.i + 1 < MK.q.length ? 'পরের প্রশ্ন ›' : 'শেষ'}</button>`}</div>`;
@@ -2126,11 +2128,11 @@ function renderExam(d) {
   let html = ''; let sec = null, pas = null, n = 0;
   for (const q of qs) {
     if (q.section !== sec) { sec = q.section; pas = null; html += `<div class="lvl">${esc(SEC[sec] || sec)}</div>`; }
-    if (q.passage && q.passage !== pas) { pas = q.passage; html += `<div class="card passage">${esc(q.passage)}</div>`; }
+    if (q.passage && q.passage !== pas) { pas = q.passage; html += `<div class="card passage">${fx(q.passage)}</div>`; }
     n++; const o = optsOf(q);
-    html += `<div class="q card" id="q-${esc(q.id)}"><div class="qt"><b>${n}.</b> <span>${esc(q.question)}</span></div>
+    html += `<div class="q card" id="q-${esc(q.id)}"><div class="qt"><b>${n}.</b> <span>${fx(q.question)}</span></div>
       ${q.section === 'listening' ? `<div style="margin:8px 0"><button type="button" class="btn sm" data-listen="${esc(q.id)}">🔊 শুনুন</button></div>` : ''}
-      ${o.map((op, i) => `<label class="opt ${String(answers[q.id]) === String(i) ? 'sel' : ''}"><input type="radio" name="a-${esc(q.id)}" value="${i}" ${String(answers[q.id]) === String(i) ? 'checked' : ''}><span class="ab">${ABCD[i]}</span><span>${esc(op)}</span></label>`).join('')}</div>`;
+      ${o.map((op, i) => `<label class="opt ${String(answers[q.id]) === String(i) ? 'sel' : ''}"><input type="radio" name="a-${esc(q.id)}" value="${i}" ${String(answers[q.id]) === String(i) ? 'checked' : ''}><span class="ab">${ABCD[i]}</span><span>${fx(op)}</span></label>`).join('')}</div>`;
   }
   $('#app').innerHTML = `<div class="xbar"><div class="xin"><div style="min-width:0"><b class="xt">${esc(d.test.title)}</b><small id="xcount"></small></div><span class="timer" id="xtimer"></span><button class="btn sm gold" id="xsub">জমা দিন</button></div></div>
     <div class="st" style="padding-top:8px"><div class="warnline">⚠️ এই পাতা ছেড়ে গেলে (অন্য অ্যাপ/ট্যাব, ফোন লক, রিফ্রেশ) পরীক্ষা সঙ্গে সঙ্গে জমা হয়ে যাবে।</div>${html}
@@ -2210,10 +2212,10 @@ function renderResult(r) {
   let rev = ''; let sec = null, pas = null, n = 0;
   for (const q of r.questions || []) {
     if (q.section !== sec) { sec = q.section; pas = null; rev += `<div class="lvl">${esc(SEC[sec] || sec)}</div>`; }
-    if (q.passage && q.passage !== pas) { pas = q.passage; rev += `<div class="card passage">${esc(q.passage)}</div>`; }
+    if (q.passage && q.passage !== pas) { pas = q.passage; rev += `<div class="card passage">${fx(q.passage)}</div>`; }
     n++; const o = optsOf(q); const mine = q.mine == null ? null : Number(q.mine); const ok = mine === Number(q.correct);
-    rev += `<div class="q card ${ok ? 'qok' : 'qbad'}"><div class="qt"><b>${n}.</b> <span>${esc(q.question)}</span> <span class="small" style="color:${ok ? 'var(--green)' : 'var(--red)'};font-weight:700">${ok ? '✓ সঠিক' : mine == null ? '— উত্তর দেননি' : '✗ ভুল'}</span></div>
-      ${o.map((op, i) => `<div class="opt ${i === Number(q.correct) ? 'right' : i === mine ? 'wrong' : ''}"><span class="ab">${ABCD[i]}</span><span>${esc(op)}</span>${i === Number(q.correct) ? ' <b>✓</b>' : i === mine ? ' <b>✗</b>' : ''}</div>`).join('')}
+    rev += `<div class="q card ${ok ? 'qok' : 'qbad'}"><div class="qt"><b>${n}.</b> <span>${fx(q.question)}</span> <span class="small" style="color:${ok ? 'var(--green)' : 'var(--red)'};font-weight:700">${ok ? '✓ সঠিক' : mine == null ? '— উত্তর দেননি' : '✗ ভুল'}</span></div>
+      ${o.map((op, i) => `<div class="opt ${i === Number(q.correct) ? 'right' : i === mine ? 'wrong' : ''}"><span class="ab">${ABCD[i]}</span><span>${fx(op)}</span>${i === Number(q.correct) ? ' <b>✓</b>' : i === mine ? ' <b>✗</b>' : ''}</div>`).join('')}
       ${q.section === 'listening' && q.script ? `<details class="small" style="margin-top:6px"><summary>শোনার লেখা দেখুন</summary><div style="white-space:pre-line;margin-top:4px">${esc(q.script)}</div><button type="button" class="btn sm ghost" data-say="${esc(q.id)}" style="margin-top:6px">🔊 আবার শুনুন</button></details>` : ''}
       ${q.explanation ? `<div class="small expl">💡 ${esc(q.explanation)}</div>` : ''}</div>`;
   }

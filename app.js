@@ -94,6 +94,8 @@ const ADMIN_ONLY_MSG = '<div class="empty">🔒 এই অংশটি শুধ
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// furigana written as {漢字|かんじ} shows as small reading above the kanji
+const fx = (s) => esc(s).replace(/\{([^|{}]+)\|([^{}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
 const num = (v) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? n : 0; };
 const tk = (n) => '৳ ' + Math.round(num(n)).toLocaleString('en-IN');
 const pad = (n, w) => String(n).padStart(w, '0');
@@ -3255,11 +3257,11 @@ function viewMock(id, q) {
     body = MOCK_SEC_ORDER.map(sec => { const items = qs.filter(x => x.section === sec); lastPassage = null;
       return `<div class="row" style="margin:18px 0 8px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">${MOCK_SEC[sec]} <span class="small muted">(${items.length})</span></h2><span class="spacer"></span><button class="btn sm ghost" data-qadd="${sec}">+ প্রশ্ন</button></div>
       ${items.length ? items.map(x => { n++; const o = mockOpts(x); const showP = x.passage && x.passage !== lastPassage; lastPassage = x.passage;
-        return `${showP ? `<div class="card" style="padding:10px 14px;margin-bottom:6px;background:var(--soft);white-space:pre-line;font-size:14.5px">${esc(x.passage)}</div>` : ''}
-        <div class="card click" data-qe="${x.id}" style="padding:12px 14px;margin-bottom:8px"><div class="row" style="align-items:flex-start;gap:10px"><b style="color:var(--muted)">${n}.</b><div style="flex:1;min-width:0"><div style="white-space:pre-line">${esc(x.question)}</div>
+        return `${showP ? `<div class="card" style="padding:10px 14px;margin-bottom:6px;background:var(--soft);white-space:pre-line;font-size:14.5px">${fx(x.passage)}</div>` : ''}
+        <div class="card click" data-qe="${x.id}" style="padding:12px 14px;margin-bottom:8px"><div class="row" style="align-items:flex-start;gap:10px"><b style="color:var(--muted)">${n}.</b><div style="flex:1;min-width:0"><div style="white-space:pre-line">${fx(x.question)}</div>
           ${x.section === 'listening' ? `<div class="small muted" style="margin-top:4px">🔊 ${x.audio_path ? 'অডিও ফাইল আছে' : 'জাপানি ভয়েসে পড়ে শোনানো হবে'} ${x.script ? `<button class="btn sm ghost" data-say="${x.id}" data-stop style="margin-left:6px">▶ শুনুন</button>` : ''}</div>` : ''}
-          <ol class="mqo">${o.map((op, i) => `<li class="${i === num(x.correct) ? 'ok' : ''}"><span class="ab">${ABCD[i]}</span><span>${esc(op)}</span>${i === num(x.correct) ? '<b class="tick">✓ সঠিক</b>' : ''}</li>`).join('')}</ol>
-          <div class="mqa"><b>সঠিক উত্তর: ${ABCD[num(x.correct)] || '?'}) ${esc(o[num(x.correct)] ?? '')}</b>${x.explanation ? `<span>${esc(x.explanation)}</span>` : ''}</div></div></div></div>`; }).join('') : '<div class="empty" style="padding:12px">এই ভাগে প্রশ্ন নেই</div>'}`; }).join('');
+          <ol class="mqo">${o.map((op, i) => `<li class="${i === num(x.correct) ? 'ok' : ''}"><span class="ab">${ABCD[i]}</span><span>${fx(op)}</span>${i === num(x.correct) ? '<b class="tick">✓ সঠিক</b>' : ''}</li>`).join('')}</ol>
+          <div class="mqa"><b>সঠিক উত্তর: ${ABCD[num(x.correct)] || '?'}) ${fx(o[num(x.correct)] ?? '')}</b>${x.explanation ? `<span>${esc(x.explanation)}</span>` : ''}</div></div></div></div>`; }).join('') : '<div class="empty" style="padding:12px">এই ভাগে প্রশ্ন নেই</div>'}`; }).join('');
   } else {
     const byStu = new Map(); for (const a of done) { const arr = byStu.get(a.student_id) || []; arr.push(a); byStu.set(a.student_id, arr); }
     const rows = [...byStu.entries()].map(([sid, arr]) => { const best = arr.reduce((m, a) => num(a.score) > num(m.score) ? a : m, arr[0]); const last = arr.reduce((m, a) => (a.submitted_at || '') > (m.submitted_at || '') ? a : m, arr[0]); return { s: byId(S.students, sid), sid, n: arr.length, best, last }; }).sort((a, b) => num(b.best.score) - num(a.best.score));
