@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png?v=3">
 <link rel="manifest" href="manifest.webmanifest">
 <script>try{if(localStorage.getItem("sakura_st_theme")==="dark")document.documentElement.dataset.theme="dark";var m=document.querySelector("meta[name=theme-color]");if(m)m.content="#0D1322"}catch(e){}</script>
-<script src="i18n.js?v=4"></script>
+<script src="i18n.js?v=5"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="সাকুরা ছাত্র">
 <title>ছাত্রদের সাইট · সাকুরা জাপানিজ ইনস্টিটিউট</title>
@@ -658,6 +658,10 @@
 
   .hlang{all:unset;cursor:pointer;height:34px;min-width:34px;padding:0 9px;box-sizing:border-box;border-radius:11px;display:grid;place-items:center;font:700 12.5px/1 Inter,system-ui,sans-serif;letter-spacing:.04em;color:#fff;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28)}
   .hlang:hover{background:rgba(255,255,255,.2)}.hlang:focus-visible{box-shadow:0 0 0 3px rgba(233,182,62,.6)}
+
+  .mat.locked{opacity:.78}.mat.locked .ic{background:var(--soft)!important;color:var(--muted)!important;font-size:18px}
+  .mat.locked .lockt{color:#B07D0C;font-weight:600;margin-top:2px}
+  html[data-theme=dark] .mat.locked .lockt{color:#FFB36B}
 </style>
 </head>
 <body>
@@ -669,6 +673,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=68"></script>
+<script src="student.js?v=69"></script>
 </body>
 </html>

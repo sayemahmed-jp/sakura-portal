@@ -259,7 +259,7 @@ const Preview = {
       .filter(t => t.questions > 0).sort((a, b) => (lvRank(a.level) - lvRank(b.level)) || (num(a.sort_order) - num(b.sort_order)));
     const counts = {}; materials.forEach(m => { counts[m.level] = (counts[m.level] || 0) + 1; });
     const role = prof ? prof.role : '';
-    PREVIEW = { attempts: {}, n: 0 };
+    PREVIEW = { attempts: {}, n: 0, director: role === 'admin' };
     return { linked: true, preview: true, institute: d.institute, levels: ['N5', 'N4', 'N3'], counts, materials, mocks, history: [], fee: {},
       student: { name_bn: prof ? prof.name : (user.email || ''), admission_no: role === 'admin' ? 'পরিচালক · প্রিভিউ' : role === 'deputy' ? 'উপ-পরিচালক · প্রিভিউ' : role === 'teacher' ? 'শিক্ষক · প্রিভিউ' : 'স্টাফ · প্রিভিউ' } };
   },
@@ -283,6 +283,7 @@ const Preview = {
       for (const q of a.qs) { const v = a.answers[q.id]; const ok = v != null && Number(v) === Number(q.correct); if (v != null) answered++; if (ok) score++;
         const s = sections[q.section] || (sections[q.section] = { score: 0, total: 0 }); s.total++; if (ok) s.score++; }
       const total = a.qs.length; const late = Date.now() > Date.parse(a.deadline) + 30000;
+      try { const dn = new Set(JSON.parse(localStorage.getItem('sakura_preview_done') || '[]')); dn.add(a.t.id); localStorage.setItem('sakura_preview_done', JSON.stringify([...dn])); } catch (_) {}
       a.result = { attempt_id: aid, preview: true, test: { id: a.t.id, title: a.t.title, level: a.t.level, pass_pct: a.t.pass_pct }, started_at: a.started_at, submitted_at: new Date().toISOString(),
         score, total, answered, sections, end_reason: late && reason !== 'left' ? 'timeout' : reason, passed: total > 0 && score * 100 >= a.t.pass_pct * total, show_answers: true,
         questions: a.qs.map(q => ({ id: q.id, section: q.section, passage: q.passage, question: q.question, options: q.options, script: q.script, correct: q.correct, explanation: q.explanation, mine: a.answers[q.id] ?? null })) };
@@ -2032,7 +2033,7 @@ function renderHome(d, user) {
 // ------------------------------------------------------------------ online mock tests
 const SEC = { vocab: 'শব্দ ও কানজি', grammar: 'ব্যাকরণ', reading: 'পড়া (読解)', listening: 'শোনা (聴解)' };
 const ABCD = ['ক', 'খ', 'গ', 'ঘ'];
-const MOCK_ERR = { limit: 'এই টেস্ট যতবার দেওয়া যায়, তা শেষ হয়ে গেছে।', locked: 'পুরো কোর্স ফি পরিশোধ হলে মক টেস্ট দেওয়া যাবে।', not_found: 'টেস্টটি এখন পাওয়া যাচ্ছে না।', busy: 'অল্প সময়ে অনেকবার শুরু করা হয়েছে, কিছুক্ষণ পরে চেষ্টা করুন।', not_linked: 'আবার লগইন করুন।' };
+const MOCK_ERR = { in_order: 'আগের টেস্টটা আগে শেষ করুন — একটা শেষ করলে পরেরটা খুলবে।', limit: 'এই টেস্ট যতবার দেওয়া যায়, তা শেষ হয়ে গেছে।', locked: 'পুরো কোর্স ফি পরিশোধ হলে মক টেস্ট দেওয়া যাবে।', not_found: 'টেস্টটি এখন পাওয়া যাচ্ছে না।', busy: 'অল্প সময়ে অনেকবার শুরু করা হয়েছে, কিছুক্ষণ পরে চেষ্টা করুন।', not_linked: 'আবার লগইন করুন।' };
 const mockErr = (e) => { const m = errMsg(e); const k = Object.keys(MOCK_ERR).find(x => m.includes(x)); return k ? MOCK_ERR[k] : m; };
 const optsOf = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
 const fmtClock = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -2062,7 +2063,21 @@ function mockCat(t) {
   const x = String(t.title || '');
   return /মক টেস্ট/.test(x) ? 'full' : /কানজি/.test(x) ? 'kanji' : /ব্যাকরণ/.test(x) ? 'grammar' : /শোনা/.test(x) ? 'listening' : 'other';
 }
+// tests open one at a time: in each section (and level) a test opens after the one above it has been finished once.
+// The director can open any test; other staff in preview follow the same order as students (their preview finishes are remembered on this device).
+let MOCK_LOCKS = {};
+function mockLocks(list) {
+  const out = {}; if (PREVIEW && PREVIEW.director) return out;
+  let pdone = new Set(); try { pdone = new Set(JSON.parse(localStorage.getItem('sakura_preview_done') || '[]')); } catch (_) {}
+  const last = {};
+  for (const t of list) { if (t.hidden) continue; const k = mockCat(t) + '|' + t.level; const prev = last[k];
+    if (prev && !(prev.attempts > 0 || (PREVIEW && pdone.has(prev.id)))) out[t.id] = prev.title;
+    last[k] = t; }
+  return out;
+}
 function mockRow(t) {
+  const lockedBy = MOCK_LOCKS[t.id];
+  if (lockedBy) return `<div class="mat locked"><div class="ic">🔒</div><div class="bd"><b>${esc(t.title)}</b><div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট</div><div class="small lockt">${window.SK_LANG === 'en' ? `Finish “${esc(lockedBy)}” first` : `আগে “${esc(lockedBy)}” শেষ করুন`}</div></div></div>`;
   const p = t.best != null && t.questions ? Math.round(t.best * 100 / t.questions) : null; const left = t.max_attempts ? t.max_attempts - t.attempts : null;
   return `<div class="mat"><div class="ic">${esc(t.level)}</div><div class="bd"><b>${esc(t.title)}</b>${t.hidden ? ' <span class="hidtag">লুকানো</span>' : ''}<div class="small muted">${t.questions}টি প্রশ্ন · ${t.duration_min} মিনিট · পাস ${t.pass_pct}%${left != null ? ` · আর ${Math.max(0, left)} বার দেওয়া যাবে` : ''}</div>
       ${t.attempts ? `<div class="small" style="margin-top:2px">দিয়েছেন ${t.attempts} বার · সেরা <b style="color:${p >= t.pass_pct ? 'var(--green)' : 'var(--red)'}">${t.best}/${t.questions} (${p}%)</b></div>` : ''}</div>
@@ -2070,6 +2085,7 @@ function mockRow(t) {
 }
 function mockListHtml(list) {
   if (!list.length) return '<div class="card"><div class="empty">আপনার লেভেলের জন্য এখনো কোনো মক টেস্ট চালু করা হয়নি।</div></div>';
+  MOCK_LOCKS = mockLocks(list);
   const cats = MOCK_CAT_ORDER.filter(c => list.some(t => mockCat(t) === c));
   const cur = cats.includes(MOCK_CAT_TAB) ? MOCK_CAT_TAB : '';
   const shown = cur ? cats.filter(c => c === cur) : cats;
@@ -2092,6 +2108,7 @@ let EXAM = null;
 const END_REASON = { submit: 'নিজে জমা দিয়েছেন', timeout: 'সময় শেষ হয়ে জমা হয়েছে', left: 'পরীক্ষার পাতা ছেড়ে যাওয়ায় জমা হয়েছে' };
 const EXAM_RULES = 'পরীক্ষা শুরু হলে:\n• অন্য অ্যাপ বা ট্যাবে গেলে, ফোন লক করলে, বা পাতা বন্ধ/রিফ্রেশ করলে পরীক্ষা সঙ্গে সঙ্গে জমা হয়ে শেষ হয়ে যাবে।\n• তখন পর্যন্ত যা উত্তর দিয়েছেন, সেটাই গোনা হবে; বাকিগুলো "উত্তর দেননি" ধরা হবে।\n• ফোনে কল এলেও পরীক্ষা শেষ হয়ে যেতে পারে — চুপচাপ জায়গায় বসে দিন।\n• প্রতিবার শুরু করা একটা নতুন চেষ্টা হিসেবে গোনা হয়, আর শিক্ষক সব চেষ্টা দেখতে পান।';
 async function askStartMock(id) {
+  if (MOCK_LOCKS[id]) { toast(window.SK_LANG === 'en' ? `Finish “${MOCK_LOCKS[id]}” first — each test opens after the one before it` : `আগে “${MOCK_LOCKS[id]}” শেষ করুন — একটা শেষ করলে পরেরটা খুলবে`, true); return; }
   if (!(await confirmOverlay(PREVIEW ? EXAM_RULES + '\n\n(প্রিভিউ: ছাত্রের মতোই চলবে, তবে নম্বর কোথাও জমা হবে না।)' : EXAM_RULES, 'বুঝেছি, শুরু করুন'))) return;
   startMock(id);
 }

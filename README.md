@@ -213,6 +213,7 @@ git push -u origin main
 - **উপ-পরিচালক:** নতুন ভূমিকা — পরিচালকের মতো সব তথ্য ও কাজ (ফি, রিপোর্ট, খরচ, সেটিংস), শুধু স্টাফ যোগ করা, ভূমিকা বদলানো আর অন্যের আইডি কার্ড পরিচালকের হাতে (`supabase-migration-v40.sql`)
 - **নিজে থেকে হালনাগাদ:** পরিচালকের নাম সেটিংস আর আইডি কার্ড/লগইনে একসাথে বদলায়; শিক্ষক তালিকা আর লগইন (একই ইমেইল) নাম-ফোনে মিলে থাকে; পোর্টাল বা ছাত্রদের সাইটে ফিরে এলে নতুন তথ্য নিজে থেকে লোড হয় (`supabase-migration-v41.sql`)
 - **ইংরেজি:** ছাত্রদের সাইট বাংলা বা English-এ — লগইন পাতায় আর "আমি"-তে বদলানোর বোতাম; সব পাতা, ইন্টারভিউ, জাপান গাইড আর আজকের পড়ার অর্থ ইংরেজিতে (`student/i18n.js`, `student/i18n-en.js`); শিক্ষক/অফিসের লেখা নোটিশ ইত্যাদি যেমন লেখা তেমনই থাকে
+Mock tests open in order: each one unlocks after the one above is finished (the director can open any)
 Easy tests: 10 easy full mocks, 10 kanji and 10 grammar tests for N5 and N4, shown before the harder ones
 Student app: one-tap EN / বাং language button at the top
 On phones the portal's main menu is a floating tab bar at the bottom, like the student app
