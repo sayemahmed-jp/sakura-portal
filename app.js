@@ -1658,10 +1658,19 @@ let TN_LOADING = null;
 function loadTnotes() { if (window.TNOTES) return Promise.resolve(window.TNOTES); if (!TN_LOADING) TN_LOADING = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'teacher-notes.js?v=2'; sc.onload = () => ok(window.TNOTES); sc.onerror = () => { TN_LOADING = null; no(new Error('নোট লোড করা যায়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন')); }; document.head.appendChild(sc); }); return TN_LOADING; }
 const TN_BN = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 const tnTabs = (cur) => [['N5', 'N5'], ['N4', 'N4'], ['app', '📱 অ্যাপ নির্দেশিকা']].map(([k, l]) => `<a class="tnt ${k === cur ? 'on' : ''}" href="#/tnotes/${k}">${l}</a>`).join('');
+function tnLessonPrint(u, lv) {
+  const clock = (rows) => { let t = 0; return rows.map(r => { const a = t; t += r[0]; return [a, t, ...r]; }); };
+  return `<div style="padding:14px 4px"><div style="font-size:12px;color:#6E665A">শিক্ষকের নোট · さくら日本語 ${lv} · পাঠ ${esc(String(u.no))}</div><h2 style="margin:2px 0;font:700 22px 'Shippori Mincho B1',serif">${fx(u.title)}</h2><div>${esc(u.titleBn)} · ${TN_BN(u.classes.length)}টি ক্লাস</div>
+      <p style="background:#F6F0E4;padding:8px 10px;border-radius:6px"><b>🎯 লক্ষ্য:</b> ${esc(u.cando)}</p>${u.grammar.length ? `<b>ব্যাকরণ:</b><ol style="margin-top:2px">${u.grammar.map(g => `<li>${fx(g)}</li>`).join('')}</ol>` : ''}
+      ${(u.gx || []).map((g, i) => `<div style="border-top:1px solid #D8CDB9;padding:8px 0;break-inside:avoid"><b style="font-size:15px">${i + 1}. ${fx(g.pt)}</b><div style="font-size:13px;line-height:1.6;margin:3px 0">${fx(g.bn)}</div>${g.ex.map(e => `<div style="font-size:13px">・${fx(e[0])} <small style="color:#6E665A">${esc(e[1] || '')}</small></div>`).join('')}<div style="font-size:12.5px;margin-top:4px"><b>⚠️ সাধারণ ভুল:</b> ${fx(g.err)}<br><b>🧑‍🏫 কীভাবে পড়াবেন:</b> ${fx(g.how)}</div></div>`).join('')}
+      ${u.classes.map(c => `<h3 style="margin:14px 0 4px">${esc(c.t)}</h3><table><tr><th style="width:18%">সময়</th><th>কী করবেন</th></tr>${clock(c.rows).map(([a, b, m, what, how]) => `<tr><td>${TN_BN(m)} মি <small>(${TN_BN(a)}–${TN_BN(b)})</small></td><td><b>${fx(what)}</b>${how ? `<br><small>${esc(how)}</small>` : ''}</td></tr>`).join('')}</table>`).join('')}</div>`;
+}
 function viewTnotesApp() {
   const A = window.TNOTES.app || [];
-  mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>অ্যাপ নির্দেশিকা — ছাত্রদের অ্যাপ আর শিক্ষকের পোর্টাল কীভাবে কাজ করে, আর বইয়ের সাথে কীভাবে ব্যবহার করবেন</p></div><div class="row"><div class="tntabs">${tnTabs('app')}</div></div></div>
-  ${A.map(sec => `<div class="card tnc"><h3>${sec.ic} ${esc(sec.t)}</h3><div class="tnapp">${sec.items.map(([t, d]) => `<div><b>${esc(t)}</b><p>${esc(d)}</p></div>`).join('')}</div></div>`).join('')}`);
+  mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>অ্যাপ নির্দেশিকা — ছাত্রদের অ্যাপ আর শিক্ষকের পোর্টাল কীভাবে কাজ করে, আর বইয়ের সাথে কীভাবে ব্যবহার করবেন</p></div><div class="row"><div class="tntabs">${tnTabs('app')}</div><button class="btn ghost" id="tnprintapp">🖨 প্রিন্ট</button></div></div>
+  ${A.map(sec => `<div class="card tnc"><h3>${sec.ic} ${esc(sec.t)}</h3><div class="tnapp">${sec.items.map(([t, d]) => `<div><b>${esc(t)}</b><p>${esc(d)}</p></div>`).join('')}</div></div>`).join('')}`, () => {
+    $('#tnprintapp').onclick = () => printWindow('App guide for teachers', headHtml() + `<div style="padding:14px 4px"><h2 style="margin:0 0 6px;font:800 22px 'Shippori Mincho B1',serif">শিক্ষকের নোট · অ্যাপ নির্দেশিকা</h2>${A.map(sec => `<h3 style="margin:16px 0 6px">${sec.ic} ${esc(sec.t)}</h3><table>${sec.items.map(([t, d]) => `<tr><th style="width:24%">${esc(t)}</th><td>${esc(d)}</td></tr>`).join('')}</table>`).join('')}</div>`);
+  });
 }
 function viewTnotes(lv, id) {
   const isApp = lv === 'app'; lv = lv === 'N4' ? 'N4' : 'N5';
@@ -1682,12 +1691,10 @@ function viewTnotes(lv, id) {
       <p class="tngb">${fx(g.bn)}</p>${g.ex.length ? `<div class="tnex">${g.ex.map(e => `<div><span class="jp">${fx(e[0])}</span><small>${esc(e[1] || '')}</small></div>`).join('')}</div>` : ''}
       <div class="tntip"><div><b>⚠️ ছাত্রদের সাধারণ ভুল</b><p>${fx(g.err)}</p></div><div><b>🧑‍🏫 কীভাবে পড়াবেন</b><p>${fx(g.how)}</p></div></div></div>`).join('')}</div>` : ''}
     ${classes}`;
-  mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>さくら日本語 ${lv} বই · ${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p></div><div class="row"><div class="tntabs">${tabs}</div><button class="btn ghost" id="tnprint">🖨 এই পাঠ প্রিন্ট</button></div></div>
+  mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>さくら日本語 ${lv} বই · ${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p></div><div class="row"><div class="tntabs">${tabs}</div><button class="btn ghost" id="tnprint">🖨 এই পাঠ প্রিন্ট</button><button class="btn ghost" id="tnprintall">🖨 পুরো ${lv} নোট প্রিন্ট</button></div></div>
   <div class="tngrid"><nav class="card tnlist" aria-label="পাঠের তালিকা">${list}</nav><div class="tnbody">${body}</div></div>`, () => {
-    $('#tnprint').onclick = () => printWindow('Teacher notes ' + lv + ' ' + u.no, `${headHtml()}<div style="padding:14px 4px"><div style="font-size:12px;color:#6E665A">শিক্ষকের নোট · さくら日本語 ${lv} · পাঠ ${esc(String(u.no))}</div><h2 style="margin:2px 0;font:700 22px 'Shippori Mincho B1',serif">${fx(u.title)}</h2><div>${esc(u.titleBn)} · ${TN_BN(u.classes.length)}টি ক্লাস</div>
-      <p style="background:#F6F0E4;padding:8px 10px;border-radius:6px"><b>🎯 লক্ষ্য:</b> ${esc(u.cando)}</p>${u.grammar.length ? `<b>ব্যাকরণ:</b><ol style="margin-top:2px">${u.grammar.map(g => `<li>${fx(g)}</li>`).join('')}</ol>` : ''}
-      ${(u.gx || []).map((g, i) => `<div style="border-top:1px solid #D8CDB9;padding:8px 0;break-inside:avoid"><b style="font-size:15px">${i + 1}. ${fx(g.pt)}</b><div style="font-size:13px;line-height:1.6;margin:3px 0">${fx(g.bn)}</div>${g.ex.map(e => `<div style="font-size:13px">・${fx(e[0])} <small style="color:#6E665A">${esc(e[1] || '')}</small></div>`).join('')}<div style="font-size:12.5px;margin-top:4px"><b>⚠️ সাধারণ ভুল:</b> ${fx(g.err)}<br><b>🧑‍🏫 কীভাবে পড়াবেন:</b> ${fx(g.how)}</div></div>`).join('')}
-      ${u.classes.map(c => `<h3 style="margin:14px 0 4px">${esc(c.t)}</h3><table><tr><th style="width:18%">সময়</th><th>কী করবেন</th></tr>${clock(c.rows).map(([a, b, m, what, how]) => `<tr><td>${TN_BN(m)} মি <small>(${TN_BN(a)}–${TN_BN(b)})</small></td><td><b>${fx(what)}</b>${how ? `<br><small>${esc(how)}</small>` : ''}</td></tr>`).join('')}</table>`).join('')}</div>`);
+    $('#tnprint').onclick = () => printWindow('Teacher notes ' + lv + ' ' + u.no, headHtml() + tnLessonPrint(u, lv));
+    $('#tnprintall').onclick = () => printWindow('Teacher notes ' + lv, headHtml() + `<div style="padding:30px 4px"><h1 style="font:800 26px 'Shippori Mincho B1',serif;margin:0">শিক্ষকের নোট · さくら日本語 ${lv}</h1><p>${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p><ol style="columns:2;line-height:2">${L.map(x => `<li>${fx(x.title)} <small>(${esc(x.titleBn)})</small></li>`).join('')}</ol></div>` + L.map(x => `<div style="break-before:page">${tnLessonPrint(x, lv)}</div>`).join(''));
     const on = $('.tnl.on'); if (on && matchMedia('(min-width:861px)').matches) on.scrollIntoView({ block: 'nearest' });
   });
 }
