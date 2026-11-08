@@ -213,6 +213,7 @@ git push -u origin main
 - **উপ-পরিচালক:** নতুন ভূমিকা — পরিচালকের মতো সব তথ্য ও কাজ (ফি, রিপোর্ট, খরচ, সেটিংস), শুধু স্টাফ যোগ করা, ভূমিকা বদলানো আর অন্যের আইডি কার্ড পরিচালকের হাতে (`supabase-migration-v40.sql`)
 - **নিজে থেকে হালনাগাদ:** পরিচালকের নাম সেটিংস আর আইডি কার্ড/লগইনে একসাথে বদলায়; শিক্ষক তালিকা আর লগইন (একই ইমেইল) নাম-ফোনে মিলে থাকে; পোর্টাল বা ছাত্রদের সাইটে ফিরে এলে নতুন তথ্য নিজে থেকে লোড হয় (`supabase-migration-v41.sql`)
 - **ইংরেজি:** ছাত্রদের সাইট বাংলা বা English-এ — লগইন পাতায় আর "আমি"-তে বদলানোর বোতাম; সব পাতা, ইন্টারভিউ, জাপান গাইড আর আজকের পড়ার অর্থ ইংরেজিতে (`student/i18n.js`, `student/i18n-en.js`); শিক্ষক/অফিসের লেখা নোটিশ ইত্যাদি যেমন লেখা তেমনই থাকে
+Student profile → Mock test: per-test summary and a pass certificate for each passed test
 Mock tests show furigana: reading — kanji above N5; listening — every kanji
 Mock tests open in order for students; all staff can open any test
 Mock tests open in order: each one unlocks after the one above is finished (the director can open any)

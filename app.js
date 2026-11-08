@@ -922,7 +922,7 @@ async function viewStudent(id, tab) {
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
-    if (tab === 'mock') bindGo();
+    if (tab === 'mock') { bindGo(); $$('[data-mcert]').forEach(b => b.onclick = () => printMockCertificate(s, b.dataset.mcert)); }
     const dos = $('#dos'); if (dos) dos.onclick = () => printDossier(s);
     if ($('#plink')) { const ic = $('#idc'); if (ic) ic.onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
@@ -3542,6 +3542,7 @@ function mockRecordHtml(s) {
     <div class="card stat"><div class="l">গড় নম্বর</div><div class="v">${m.avg}%</div></div>
     <div class="card stat green"><div class="l">সেরা নম্বর</div><div class="v">${m.best}%</div></div>
     <div class="card stat ${m.left ? 'red' : ''}"><div class="l">পাতা ছেড়ে গেছে</div><div class="v">${m.left}</div><div class="s">${m.left ? 'পরীক্ষার মাঝে অন্য অ্যাপ/ট্যাবে গিয়েছিল' : 'কোনো সন্দেহজনক কিছু নেই'}</div></div></div>
+  ${mockPerTestHtml(rows)}
   <div class="row" style="margin-bottom:10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">সব চেষ্টা</h2><span class="spacer"></span><button class="btn ghost" id="pms">মার্কশিট প্রিন্ট</button></div>
   <div class="tw"><table class="stack"><tr><th>তারিখ ও সময়</th><th>টেস্ট</th><th class="num">নম্বর</th><th>সঠিক · ভুল · বাদ</th><th class="num">সময় লেগেছে</th><th>কীভাবে শেষ</th></tr>
   ${rows.map(r => `<tr class="click" data-go="#/mock/${r.a.test_id}?t=res"><td data-l="তারিখ">${fmtDT(r.a.submitted_at)}</td><td data-l="টেস্ট"><b>${esc(r.t.title || '—')}</b> <span class="small muted">${esc(r.t.level || '')}</span></td>
@@ -3549,6 +3550,39 @@ function mockRecordHtml(s) {
     <td data-l="সঠিক · ভুল · বাদ"><span style="color:var(--green)">${r.score}</span> · <span style="color:var(--red)">${r.wrong}</span> · <span class="muted">${r.blank}</span></td>
     <td class="num" data-l="সময় লেগেছে">${r.mins == null ? '—' : r.mins + ' মিনিট'}</td><td data-l="কীভাবে শেষ">${endBadge(r.a.end_reason)}</td></tr>`).join('')}</table></div>
   <p class="small muted" style="margin-top:8px">প্রতিটা টেস্টের সেরা নম্বর "পরীক্ষা" ট্যাবেও ওঠে। "পাতা ছেড়ে গেছে" মানে পরীক্ষা চলার সময় ছাত্র অন্য অ্যাপ বা ট্যাবে গিয়েছিল, তাই পরীক্ষা নিজে থেকে জমা হয়ে গেছে।</p>`;
+}
+// one line per test: how many times taken, the best score, passed or not, and the certificate (made from the saved best attempt, so it can be printed again any time)
+function mockTestsOf(rows) {
+  const by = new Map(); for (const r of rows) { const k = r.a.test_id; const x = by.get(k) || { t: r.t, n: 0, best: null, last: null }; x.n++; if (!x.best || r.pct > x.best.pct || (r.pct === x.best.pct && r.a.submitted_at < x.best.a.submitted_at)) x.best = r; if (!x.last || r.a.submitted_at > x.last) x.last = r.a.submitted_at; by.set(k, x); }
+  const cat = { full: 1, kanji: 2, grammar: 3, listening: 4 };
+  return [...by.values()].sort((a, b) => (a.t.level || '').localeCompare(b.t.level || '') * -1 || (cat[a.t.category] || 9) - (cat[b.t.category] || 9) || num(a.t.sort_order) - num(b.t.sort_order));
+}
+function mockPerTestHtml(rows) {
+  const xs = mockTestsOf(rows); const passed = xs.filter(x => x.best.pass).length;
+  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0;font:700 17px 'Noto Serif Bengali';color:var(--navy)">টেস্ট অনুযায়ী</h2><span class="small muted">${xs.length}টি টেস্ট দিয়েছে · ${passed}টিতে পাস · ${passed}টি সার্টিফিকেট</span></div>
+  <div class="tw" style="margin-bottom:18px"><table class="stack"><tr><th>টেস্ট</th><th class="num">কতবার</th><th class="num">সেরা নম্বর</th><th>ফল</th><th>শেষ দিয়েছে</th><th></th></tr>
+  ${xs.map(x => `<tr><td data-l="টেস্ট"><b>${esc(x.t.title || '—')}</b> <span class="small muted">${esc(x.t.level || '')}</span></td><td class="num" data-l="কতবার">${x.n} বার</td>
+    <td class="num" data-l="সেরা নম্বর"><b style="color:${x.best.pass ? 'var(--green)' : 'var(--red)'}">${x.best.score}/${x.best.total}</b> <span class="small muted">${x.best.pct}%</span></td>
+    <td data-l="ফল">${x.best.pass ? badge('active', 'পাস ✓') : badge('due', 'এখনো পাস নয়')}</td><td data-l="শেষ দিয়েছে">${fmtD(x.last.slice(0, 10))}</td>
+    <td>${x.best.pass ? `<button class="btn sm gold" data-mcert="${esc(x.best.a.id)}">🎓 সার্টিফিকেট</button>` : ''}</td></tr>`).join('')}</table></div>`;
+}
+function printMockCertificate(s, aid) {
+  const a = (S.mock_attempts || []).find(x => x.id === aid); if (!a) return; const r = attemptRow(a); const st = S.settings; const t = r.t;
+  const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
+  const day = (a.submitted_at || '').slice(0, 10); const today = todayISO();
+  const CAT = { full: '総合模擬試験 / Full mock test', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
+  printWindow('Mock certificate ' + s.admission_no, `${headHtml()}
+  <div style="padding:30px 34px;font-family:'Shippori Mincho B1',serif;border:3px double #A3843A;margin:14px">
+  <div style="text-align:center;margin-bottom:22px"><div style="font-size:28px;font-weight:800;letter-spacing:6px">模擬試験 合格証</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF PASSING · JAPANESE MOCK TEST</div></div>
+  <table style="font-family:'Shippori Mincho B1','Hind Siliguri',serif"><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}${s.name_bn ? ' (' + esc(s.name_bn) + ')' : ''}</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no || '')}</td></tr>
+  <tr><th>試験 / Test</th><td>JLPT ${esc(t.level || '')} 模擬試験 · ${CAT[t.category] || ''}<br><span style="font-size:12px">${esc(t.title || '')}</span></td></tr>
+  <tr><th>受験日 / Date taken</th><td>${jd(day)} (${fmtD(day)})</td></tr>
+  <tr><th>得点 / Score</th><td><b style="font-size:18px">${r.score} / ${r.total} (${r.pct}%)</b> &nbsp; 合格点 / Pass mark ${num(t.pass_pct || 60)}%</td></tr></table>
+  <p style="margin-top:22px;font-size:14px">上記の者は、当学院の日本語模擬試験に合格したことを証明します。<br><span style="font-size:12px;color:#6E665A">This is to certify that the above-named student has passed the Japanese mock test of our institute.</span></p>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
+  <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}</div>
+  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
+  <p style="font-size:11px;color:#6E665A;margin-top:24px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div>`);
 }
 function printMockSheet(s) {
   const rows = attemptsOf(s.id).map(attemptRow).reverse(); const m = mockSummary([...rows].reverse());
