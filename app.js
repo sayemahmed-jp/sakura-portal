@@ -83,7 +83,7 @@ const isTeacher = () => S.profile && (S.profile.role === 'teacher' || S.profile.
 const isHeadTeacher = () => S.profile && S.profile.role === 'head_teacher';
 const ROLE_NAME = { admin: 'পরিচালক', deputy: 'উপ-পরিচালক', staff: 'অফিস স্টাফ', head_teacher: 'প্রধান শিক্ষক', teacher: 'শিক্ষক' };
 // teachers see class work only — the database (migration v16) gives them nothing else
-const TEACHER_ROUTES = ['', 'scan', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
+const TEACHER_ROUTES = ['', 'scan', 'students', 'student', 'attendance', 'calendar', 'exams', 'exam', 'tnotes', 'materials', 'mocks', 'mock', 'notices', 'homework', 'questions'];
 const HEAD_TEACHER_ROUTES = TEACHER_ROUTES.concat(['feedback']);   // the head teacher also reads the students' class feedback
 const teacherRoutes = () => isHeadTeacher() ? HEAD_TEACHER_ROUTES : TEACHER_ROUTES;
 const TEACHER_ONLY_MSG = '<div class="empty">🔒 এই অংশটি অফিস আর পরিচালকের জন্য।</div>';
@@ -487,9 +487,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/tnotes', 'শিক্ষকের নোট', 'book'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/tnotes', '#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 // the most-used pages sit in a bar across the top; everything else is in the side menu, folded by topic
 const TOP_NAV = ['#/', '#/attendance', '#/students', '#/payments', '#/alerts', '#/scan'];
 const SIDE_ICON = { 'প্রতিদিনের কাজ': 'cal', 'ছাত্র ও ভর্তি': 'users', 'পড়াশোনা': 'book', 'টাকা-পয়সা': 'money', 'প্রশাসন': 'gear' };
@@ -590,6 +590,7 @@ function render() {
   if (p[0] === 'alerts') return viewAlerts(q);
   if (p[0] === 'teachers') return viewTeachers(q);
   if (p[0] === 'teacher') return viewTeacher(p[1], q);
+  if (p[0] === 'tnotes') return viewTnotes(p[1], p[2]);
   if (p[0] === 'japan') return viewJapan(q);
   if (p[0] === 'school') return viewSchool(p[1]);
   if (p[0] === 'reports') return viewReports();
@@ -1651,6 +1652,34 @@ function viewTeachers(q) {
   });
 }
 
+
+// ------------------------------------------------------------------ teachers' notes: for every lesson of the さくら日本語 N5/N4 books — the goal and a 120-minute plan for each class
+let TN_LOADING = null;
+function loadTnotes() { if (window.TNOTES) return Promise.resolve(window.TNOTES); if (!TN_LOADING) TN_LOADING = new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = 'teacher-notes.js?v=1'; sc.onload = () => ok(window.TNOTES); sc.onerror = () => { TN_LOADING = null; no(new Error('নোট লোড করা যায়নি — ইন্টারনেট দেখে আবার চেষ্টা করুন')); }; document.head.appendChild(sc); }); return TN_LOADING; }
+const TN_BN = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+function viewTnotes(lv, id) {
+  lv = lv === 'N4' ? 'N4' : 'N5';
+  if (!window.TNOTES) { mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1></div></div><div class="card"><div class="empty">লোড হচ্ছে…</div></div>`); loadTnotes().then(() => { if (location.hash.startsWith('#/tnotes')) viewTnotes(lv, id); }).catch(e => toast(e.message, true)); return; }
+  const L = window.TNOTES[lv]; const u = L.find(x => x.id === id) || L[0];
+  const all = L.reduce((a, x) => a + x.classes.length, 0);
+  const tabs = ['N5', 'N4'].map(l => `<a class="tnt ${l === lv ? 'on' : ''}" href="#/tnotes/${l}">${l}</a>`).join('');
+  const list = L.map(x => `<a class="tnl ${x.id === u.id ? 'on' : ''}" href="#/tnotes/${lv}/${x.id}"><span class="tnn">${esc(String(x.no))}</span><span class="tnx"><b>${fx(x.title)}</b><small>${esc(x.titleBn)} · ${TN_BN(x.classes.length)}টি ক্লাস</small></span></a>`).join('');
+  const clock = (rows) => { let t = 0; return rows.map(r => { const a = t; t += r[0]; return [a, t, ...r]; }); };
+  const classes = u.classes.map((c, i) => `<div class="card tnc"><h3>${esc(c.t)}</h3><div class="tw"><table class="tnt2"><tr><th style="width:92px">সময়</th><th>কী করবেন</th></tr>
+    ${clock(c.rows).map(([a, b, m, what, how]) => `<tr class="${what === 'বিরতি' ? 'brk' : ''}"><td><b>${TN_BN(m)} মিনিট</b><small>${TN_BN(a)}–${TN_BN(b)}</small></td><td><b>${fx(what)}</b>${how ? `<div class="small muted">${esc(how)}</div>` : ''}</td></tr>`).join('')}</table></div></div>`).join('');
+  const body = `<div class="card tnh"><div class="tnh1"><div><div class="small muted">পাঠ ${esc(String(u.no))}</div><h2 class="tnttl">${fx(u.title)}</h2><div>${esc(u.titleBn)}</div></div><div class="tnbadge">${TN_BN(u.classes.length)}টি ক্লাস<br><small>${TN_BN(u.classes.length * 2)} ঘণ্টা</small></div></div>
+    <div class="tngoal"><b>🎯 পাঠের লক্ষ্য</b><p>${esc(u.cando)}</p></div>
+    ${u.grammar.length ? `<div class="tnsec"><b>এই পাঠের ব্যাকরণ</b><ol>${u.grammar.map(g => `<li>${fx(g)}</li>`).join('')}</ol></div>` : ''}
+    <div class="tnmeta"><span>📖 নতুন শব্দ: <b>${TN_BN(u.vocab)}টি</b></span><span>✍️ অনুশীলনী: <b>${TN_BN(u.ex)}টি</b></span>${u.kanji.length ? `<span>漢 কানজি: <b class="jp">${esc(u.kanji.join(' '))}</b></span>` : ''}</div></div>
+    ${classes}`;
+  mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>さくら日本語 ${lv} বই · ${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p></div><div class="row"><div class="tntabs">${tabs}</div><button class="btn ghost" id="tnprint">🖨 এই পাঠ প্রিন্ট</button></div></div>
+  <div class="tngrid"><nav class="card tnlist" aria-label="পাঠের তালিকা">${list}</nav><div class="tnbody">${body}</div></div>`, () => {
+    $('#tnprint').onclick = () => printWindow('Teacher notes ' + lv + ' ' + u.no, `${headHtml()}<div style="padding:14px 4px"><div style="font-size:12px;color:#6E665A">শিক্ষকের নোট · さくら日本語 ${lv} · পাঠ ${esc(String(u.no))}</div><h2 style="margin:2px 0;font:700 22px 'Shippori Mincho B1',serif">${fx(u.title)}</h2><div>${esc(u.titleBn)} · ${TN_BN(u.classes.length)}টি ক্লাস</div>
+      <p style="background:#F6F0E4;padding:8px 10px;border-radius:6px"><b>🎯 লক্ষ্য:</b> ${esc(u.cando)}</p>${u.grammar.length ? `<b>ব্যাকরণ:</b><ol style="margin-top:2px">${u.grammar.map(g => `<li>${fx(g)}</li>`).join('')}</ol>` : ''}
+      ${u.classes.map(c => `<h3 style="margin:14px 0 4px">${esc(c.t)}</h3><table><tr><th style="width:18%">সময়</th><th>কী করবেন</th></tr>${clock(c.rows).map(([a, b, m, what, how]) => `<tr><td>${TN_BN(m)} মি <small>(${TN_BN(a)}–${TN_BN(b)})</small></td><td><b>${fx(what)}</b>${how ? `<br><small>${esc(how)}</small>` : ''}</td></tr>`).join('')}</table>`).join('')}</div>`);
+    const on = $('.tnl.on'); if (on && matchMedia('(min-width:861px)').matches) on.scrollIntoView({ block: 'nearest' });
+  });
+}
 function viewTeacher(id, q) {
   const t = byId(S.teachers, id);
   if (!t) return mount('#/teachers', '<div class="empty">শিক্ষক পাওয়া যায়নি</div>');
