@@ -694,6 +694,29 @@
     .hfit .greet{display:none}
     .hfit .wcard{width:min(100%,max(254px,calc((100dvh - 546px) * 1.585)));margin-left:auto;margin-right:auto}
   }
+
+  /* v76 — the menu can be made small: phone → a little round button with the current page at the right edge; computer → icons only */
+  .bmin{all:unset;box-sizing:border-box;flex:none;align-self:center;width:34px;height:34px;margin:0 2px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--muted);background:rgba(20,67,47,.07);position:relative;z-index:1;transition:transform .3s}
+  .bmin:hover{background:rgba(20,67,47,.14)}.bmin:focus-visible{box-shadow:0 0 0 3px rgba(233,182,62,.6)}
+  html[data-theme=dark] .bmin{background:rgba(255,255,255,.08);color:#C9D1E3}
+  html.bmini .bmin svg{transform:rotate(180deg)}
+  .bnav{transition:left .35s cubic-bezier(.4,0,.2,1),width .35s cubic-bezier(.4,0,.2,1)}
+  @media (max-width:999px){
+    html.bmini .bnav{left:auto!important;right:10px;gap:2px}
+    html.bmini .bnav button[data-sec]:not(.on){display:none}
+    html.bmini .bnav button[data-sec].on{flex:none;width:58px}
+    html.bmini .bnav button[data-sec].on .nl{display:none}
+    html.bmini .bnav .ndot{display:none}
+  }
+  @media (min-width:1000px){
+    .bmin{align-self:flex-end;margin:6px 4px 0}
+    .bmin svg{transform:rotate(180deg)}
+    html.bmini .bmin svg{transform:none}
+    html.bmini .shell2{grid-template-columns:76px minmax(0,1fr)}
+    html.bmini .bnav .nl{display:none}
+    html.bmini .bnav button[data-sec]{justify-content:center}
+    html.bmini .bmin{align-self:center}
+  }
 </style>
 </head>
 <body>
@@ -705,6 +728,6 @@
 <script src="kana-strokes.js"></script>
 <script src="interview.js"></script>
 <script src="japan-guide.js"></script>
-<script src="student.js?v=73"></script>
+<script src="student.js?v=74"></script>
 </body>
 </html>

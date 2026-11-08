@@ -1802,6 +1802,7 @@ function matRow(m) {
 let NAVSEC = 'home';
 // the menu's black pill slides from the last tab to the new one, and the page fades in out of a blur
 let ST_PILL = null, ST_LASTSEC = '';
+try { if (localStorage.getItem('sakura_st_bmini')) document.documentElement.classList.add('bmini'); } catch (_) {}
 function stPill() {
   const nav = $('.bnav'); if (!nav) return; const pill = document.createElement('span'); pill.className = 'bpill'; pill.setAttribute('aria-hidden', 'true'); nav.prepend(pill);
   const on = $('.bnav button.on'); if (!on) { pill.style.opacity = 0; return; }
@@ -1969,10 +1970,11 @@ function renderHome(d, user) {
       ${d.preview ? '' : fold('fun', '🏅', 'ব্যাজ ও বন্ধু', row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক'))}
       ${fold('set', '⚙️', 'সেটিংস', `<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>${langSwitchHtml()}</div><div class="card acct langrow"><span class="ri">🌙</span><span style="flex:1"><b>রং</b></span>${stThemeHtml()}</div>${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center">লগআউট</button>`)}`; }
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
-    return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}</nav>`;
+    return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}<button type="button" class="bmin" id="bmin" aria-label="মেনু ছোট / বড় করুন" title="মেনু ছোট / বড় করুন"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></nav>`;
   $('#app').innerHTML = `<div class="st app2 ${d.blocked ? '' : 'hasnav'}">${head}<div class="shell2">${nav}<main class="smain">${body}${foot}</main></div></div>`;
   stPill(); const sm = $('.smain'); if (sm && ST_LASTSEC && ST_LASTSEC !== NAVSEC && !matchMedia('(prefers-reduced-motion: reduce)').matches) { sm.classList.add('enter'); setTimeout(() => sm.classList.remove('enter'), 1000); } ST_LASTSEC = NAVSEC;
-  $$('[data-sec]').forEach(b => b.onclick = () => { NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
+  const bm = $('#bmin'); if (bm) bm.onclick = () => { const on = !document.documentElement.classList.contains('bmini'); document.documentElement.classList.toggle('bmini', on); try { localStorage.setItem('sakura_st_bmini', on ? '1' : ''); } catch (_) {} };
+  $$('[data-sec]').forEach(b => b.onclick = () => { if (document.documentElement.classList.contains('bmini') && matchMedia('(max-width:999px)').matches && b.classList.contains('on')) { document.documentElement.classList.remove('bmini'); try { localStorage.setItem('sakura_st_bmini', ''); } catch (_) {} return; } NAVSEC = b.dataset.sec; MK = NAVSEC === 'test' ? MK : null; renderHome(d, user); scrollTo(0, 0); });
   const jp = $('#jpgo'); if (jp) jp.onclick = () => { ME_TAB = 'jp'; renderMe(d, user); };
   const ibg = $('#ibgo'); if (ibg) ibg.onclick = () => renderInbox(d, user);
   const idg = $('#idgo'); if (idg) idg.onclick = () => renderMyId(d, user);
