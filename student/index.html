@@ -662,6 +662,26 @@
   .mat.locked{opacity:.78}.mat.locked .ic{background:var(--soft)!important;color:var(--muted)!important;font-size:18px}
   .mat.locked .lockt{color:#B07D0C;font-weight:600;margin-top:2px}
   html[data-theme=dark] .mat.locked .lockt{color:#FFB36B}
+
+  /* v74 — "আজকের কাজ" card: green like the rest of the day look, bigger and brighter text so it reads well on phones */
+  html:not([data-theme=dark]) .st .today{background:linear-gradient(150deg,#17503A 0%,#0F3727 70%,#0B2A1E 100%)!important;box-shadow:0 14px 30px -18px rgba(10,50,30,.7)}
+  .st .today .thead b{font-size:19px;color:#fff}
+  .st .today .thead span{font-size:13.5px;color:#F6D27A;font-weight:600}
+  .st .today .ring .rb{stroke:rgba(255,255,255,.28)}
+  .st .today .ring em{font-size:16px;color:#fff}
+  .st .today .tjob{border-top-color:rgba(255,255,255,.16);padding:12px 8px}
+  .st .today .tt b{font-size:16px;color:#fff;line-height:1.35}
+  .st .today .tt small{font-size:13.5px;color:#E4EEE8;line-height:1.45}
+  .st .today .tck{border-color:rgba(246,210,122,.85);color:#fff;width:30px;height:30px}
+  .st .today .tjob.ok .tck{background:#E9B63E;border-color:#E9B63E;color:#14432F}
+  .st .today .tjob.ok .tt b{color:#CFE3D8}
+  .st .today .tjob .rc{color:#F6D27A;font-size:22px}
+  .st .today .tfoot{font-size:13px;color:#F6D27A;line-height:1.45}
+  html[data-theme=dark] .st .today .tt small{color:#D5DCEB}
+  html[data-theme=dark] .st .today .thead span,html[data-theme=dark] .st .today .tfoot,html[data-theme=dark] .st .today .tjob .rc{color:#FFC08A}
+  html[data-theme=dark] .st .today .tck{border-color:rgba(255,192,138,.8)}
+  /* slides keep their own height instead of stretching a short card into an empty box */
+  @media (max-width:999px){.hs>.card,.hs>div{min-height:0!important}}
 </style>
 </head>
 <body>
