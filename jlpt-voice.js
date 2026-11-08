@@ -1,6 +1,5 @@
 // Sakura Portal · JLPT-style listening player (shared by the office portal and the student site).
-// Reads a listening script the way the real test sounds: a chime, the situation, the question,
-// then the conversation with a woman's and a man's voice and short pauses, then the question again.
+// Reads a listening script line by line: the woman's lines in a woman's voice, the man's in a man's voice, short pauses between.
 // Uses the best Japanese voice the device has (natural / online voices first).
 (function () {
   const has = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -48,13 +47,9 @@
     if (!has) return false;
     stop(); const run = RUN; const V = voices();
     const parts = parse(script); const q = kana(question || '').trim();
-    const seq = []; const narr = parts.length && parts[0].who === 'n' ? parts.shift() : null;
-    if (narr) seq.push({ who: 'n', text: narr.text, pause: 500 });
-    if (q) seq.push({ who: 'n', text: q, pause: 1100 });
-    parts.forEach((p, i) => seq.push({ who: p.who, text: p.text, pause: i === parts.length - 1 ? 900 : 380 }));
-    if (q) seq.push({ who: 'n', text: q, pause: 0 });
-    let ctx = null; try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { /* ignore */ }
-    chime(ctx);
+    // same order as before: just the script, line by line (no chime, the question is not read out) — only the voices are better
+    const seq = parts.map((p, i) => ({ who: p.who, text: p.text, pause: i === parts.length - 1 ? 0 : 380 }));
+    void q;
     let i = 0;
     const next = () => {
       if (run !== RUN) return; const s = seq[i++]; if (!s) { if (onEnd) onEnd(); return; }
@@ -66,7 +61,7 @@
       u.onend = () => setTimeout(next, s.pause); u.onerror = () => setTimeout(next, 50);
       speechSynthesis.speak(u);
     };
-    setTimeout(next, 900);
+    next();
     return V.any;
   }
   window.JLPTVoice = { play, stop, voices, parse, kana };
