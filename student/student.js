@@ -2034,7 +2034,7 @@ function renderHome(d, user) {
 
 // ------------------------------------------------------------------ online mock tests
 const SEC = { vocab: 'শব্দ ও কানজি', grammar: 'ব্যাকরণ', reading: 'পড়া (読解)', listening: 'শোনা (聴解)' };
-const ABCD = ['ক', 'খ', 'গ', 'ঘ'];
+const ABCD = window.SK_LANG === 'en' ? ['A', 'B', 'C', 'D'] : ['ক', 'খ', 'গ', 'ঘ']; // answer labels: ক খ গ ঘ in Bangla, A B C D in English
 const MOCK_ERR = { in_order: 'আগের টেস্টটা আগে শেষ করুন — একটা শেষ করলে পরেরটা খুলবে।', limit: 'এই টেস্ট যতবার দেওয়া যায়, তা শেষ হয়ে গেছে।', locked: 'পুরো কোর্স ফি পরিশোধ হলে মক টেস্ট দেওয়া যাবে।', not_found: 'টেস্টটি এখন পাওয়া যাচ্ছে না।', busy: 'অল্প সময়ে অনেকবার শুরু করা হয়েছে, কিছুক্ষণ পরে চেষ্টা করুন।', not_linked: 'আবার লগইন করুন।' };
 const mockErr = (e) => { const m = errMsg(e); const k = Object.keys(MOCK_ERR).find(x => m.includes(x)); return k ? MOCK_ERR[k] : m; };
 const optsOf = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();

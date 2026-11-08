@@ -3146,7 +3146,7 @@ function materialModal(m, presetLevel) {
 // ------------------------------------------------------------------ online mock tests (v15 database)
 const MOCK_SEC = { vocab: 'শব্দ ও কানজি', grammar: 'ব্যাকরণ', reading: 'পড়া (読解)', listening: 'শোনা (聴解)' };
 const MOCK_SEC_ORDER = ['vocab', 'grammar', 'reading', 'listening'];
-const ABCD = ['ক', 'খ', 'গ', 'ঘ'];
+const ABCD = window.SK_LANG === 'en' ? ['A', 'B', 'C', 'D'] : ['ক', 'খ', 'গ', 'ঘ']; // answer labels: ক খ গ ঘ in Bangla, A B C D in English
 const mockQs = (tid) => (S.mock_questions || []).filter(q => q.test_id === tid).sort((a, b) => (MOCK_SEC_ORDER.indexOf(a.section) - MOCK_SEC_ORDER.indexOf(b.section)) || (num(a.sort_order) - num(b.sort_order)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
 const mockDone = (tid) => (S.mock_attempts || []).filter(a => a.test_id === tid && a.submitted_at);
 const mockOpts = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
