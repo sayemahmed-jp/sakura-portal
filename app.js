@@ -3286,7 +3286,7 @@ function viewMock(id, q) {
     };
     $$('[data-qadd]').forEach(b => b.onclick = () => mockQuestionModal(t, null, b.dataset.qadd));
     $$('[data-qe]').forEach(c => c.onclick = () => mockQuestionModal(t, byId(S.mock_questions, c.dataset.qe)));
-    $$('[data-say]').forEach(b => b.onclick = (e) => { e.stopPropagation(); speakJa(byId(S.mock_questions, b.dataset.say).script); });
+    $$('[data-say]').forEach(b => b.onclick = (e) => { e.stopPropagation(); { const q = byId(S.mock_questions, b.dataset.say); if (window.JLPTVoice) { if (!window.JLPTVoice.play(q.script, q.question)) toast('এই ডিভাইসে জাপানি ভয়েস পাওয়া যায়নি — শব্দ না এলে ফোনের Text-to-Speech-এ জাপানি যোগ করুন'); } else speakJa(q.script); } });
     $$('[data-reset]').forEach(b => b.onclick = async (e) => {
       e.stopPropagation(); const sid = b.dataset.reset; const s = byId(S.students, sid);
       if (!(await confirmBox(`${s ? studentName(s) : 'এই ছাত্র'}-এর এই টেস্টের সব চেষ্টা মুছে যাবে, ছাত্র আবার নতুন করে দিতে পারবে। "পরীক্ষা ও রেজাল্ট"-এর নম্বর থেকে যাবে।`, 'হ্যাঁ, মুছে দিন'))) return;

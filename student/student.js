@@ -578,7 +578,7 @@ function bindMistakes(d, user) {
   const nx = $('#mknext'); if (nx) nx.onclick = () => { MK.i++; MK.pick = null; if (!MK.q[MK.i] && MK.q.length >= 3) API.checkin('daily').then(s => { d.streak = s; }).catch(() => {}); re(); };
   $$('[data-mkl]').forEach(b => b.onclick = async () => {
     const all = MK.mode === 'list' ? d.mistakes : MK.q; const x = all.find(z => String(z.id) === b.dataset.mkl); if (!x) return; b.disabled = true;
-    try { if (x.audio_path) { const u = await API.fileUrl(x.audio_path); let au = b.parentElement.querySelector('audio'); if (!au) { au = document.createElement('audio'); au.controls = true; au.style.cssText = 'width:100%;margin-top:6px'; b.parentElement.appendChild(au); } au.src = u; au.play().catch(() => {}); } else if (!speakJa(x.script)) toast('জাপানি ভয়েস পাওয়া যায়নি।', true); }
+    try { if (x.audio_path) { const u = await API.fileUrl(x.audio_path); let au = b.parentElement.querySelector('audio'); if (!au) { au = document.createElement('audio'); au.controls = true; au.style.cssText = 'width:100%;margin-top:6px'; b.parentElement.appendChild(au); } au.src = u; au.play().catch(() => {}); } else if (!listenJa(x)) toast('জাপানি ভয়েস পাওয়া যায়নি।', true); }
     catch (e) { toast(errMsg(e), true); }
     setTimeout(() => { b.disabled = false; }, 1200);
   });
@@ -2041,13 +2041,16 @@ const MOCK_ERR = { in_order: 'আগের টেস্টটা আগে শ�
 const mockErr = (e) => { const m = errMsg(e); const k = Object.keys(MOCK_ERR).find(x => m.includes(x)); return k ? MOCK_ERR[k] : m; };
 const optsOf = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
 const fmtClock = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// listening questions play JLPT-style (chime, situation, question, two voices, question again)
+function listenJa(q) { if (window.JLPTVoice) return window.JLPTVoice.play(q.script, q.question); return speakJa(q.script); }
 function speakJa(text, onEnd) { try { return speakJa0(text, onEnd); } catch (e) { console.warn(e); return false; } }
 function speakJa0(text, onEnd) {
   if (!('speechSynthesis' in window)) { toast('এই ব্রাউজারে শোনার সুবিধা নেই — Chrome ব্যবহার করুন', true); return false; }
   speechSynthesis.cancel();
   const clean = String(text || '').split('\n').map(l => l.replace(/^[^：:\s]{1,6}[：:]\s*/, '')).join('。');
   const u = new SpeechSynthesisUtterance(clean); u.lang = 'ja-JP'; u.rate = 0.9;
-  const v = speechSynthesis.getVoices().find(x => /^ja/i.test(x.lang)); if (v) u.voice = v;
+  if (window.JLPTVoice) window.JLPTVoice.stop();
+  const v = (window.JLPTVoice && window.JLPTVoice.voices().f) || speechSynthesis.getVoices().find(x => /^ja/i.test(x.lang)); if (v) u.voice = v;
   if (onEnd) u.onend = onEnd;
   speechSynthesis.speak(u); return !!v;
 }
@@ -2151,7 +2154,7 @@ function renderExam(d) {
     const q = qs.find(x => String(x.id) === b.dataset.listen); b.disabled = true;
     try {
       if (q.audio_path) { const u = await API.fileUrl(q.audio_path); let au = b.parentElement.querySelector('audio'); if (!au) { au = document.createElement('audio'); au.controls = true; au.style.cssText = 'width:100%;margin-top:6px'; b.parentElement.appendChild(au); } au.src = u; au.play().catch(() => {}); }
-      else if (!speakJa(q.script)) toast('জাপানি ভয়েস পাওয়া যায়নি। ফোনের Settings → Text-to-speech-এ জাপানি ভাষা যোগ করুন।', true);
+      else if (!listenJa(q)) toast('জাপানি ভয়েস পাওয়া যায়নি। ফোনের Settings → Text-to-speech-এ জাপানি ভাষা যোগ করুন।', true);
     } catch (e) { toast(errMsg(e), true); }
     setTimeout(() => { b.disabled = false; }, 1200);
   });
@@ -2236,7 +2239,7 @@ function renderResult(r) {
     <button class="btn" id="back2" style="width:100%;justify-content:center;margin-top:16px">‹ সব মক টেস্ট</button></div>`;
   const back = () => { HOME_TAB = 'mock'; start(); };
   $('#back').onclick = back; $('#back2').onclick = back;
-  $$('[data-say]').forEach(b => b.onclick = () => { const q = (r.questions || []).find(x => String(x.id) === b.dataset.say); speakJa(q.script); });
+  $$('[data-say]').forEach(b => b.onclick = () => { const q = (r.questions || []).find(x => String(x.id) === b.dataset.say); listenJa(q); });
   scrollTo(0, 0);
 }
 async function showReview(aid) {
