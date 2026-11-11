@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>শব্দ পরীক্ষা · Sakura</title>
+<style>
+:root{--g:#1F5A43;--line:#D9E3DC}
+body{margin:0;font:16px/1.6 system-ui,'Hind Siliguri',sans-serif;background:#F1F6F2;color:#1B2945}
+main{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}.c{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:12px 0}
+button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:14px 18px;background:var(--g);color:#fff;width:100%;margin-top:8px;cursor:pointer}
+button.alt{background:#fff;color:var(--g);border:2px solid var(--g)}
+.r{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding:5px 0;font-size:14.5px}.r b{text-align:right;overflow-wrap:anywhere}
+.ok{color:#2E7D4F}.bad{color:#C8372B}#log{font:13px ui-monospace,monospace;white-space:pre-wrap;color:#555}
+</style></head><body><main>
+<h1>🔊 শব্দ পরীক্ষা</h1><p>নিচের বোতাম চাপুন। শব্দ না এলে এই পাতার স্ক্রিনশট পাঠান।</p>
+<div class="c" id="info"></div>
+<button id="t1">১. জাপানি বাক্য শুনুন (これは ほんです)</button>
+<button id="t2" class="alt">২. ইংরেজি শুনুন (Hello)</button>
+<div class="c"><b>ফলাফল</b><div id="res">—</div><div id="log"></div></div>
+<div class="c" style="font-size:14.5px"><b>শব্দ না এলে:</b><br>• iPhone: পাশের সাইলেন্ট সুইচ বন্ধ করুন, ভলিউম বাড়ান<br>• Android: Settings › Text-to-speech › Google › জাপানি ভাষা ডাউনলোড<br>• Facebook / Messenger / WhatsApp-এর ভেতর থেকে না খুলে Chrome বা Safari-তে খুলুন</div>
+</main>
+<script>
+const $=s=>document.querySelector(s), log=m=>{$('#log').textContent+=new Date().toTimeString().slice(0,8)+' '+m+'\n'};
+const has='speechSynthesis' in window;
+function info(){const v=has?speechSynthesis.getVoices():[];const ja=v.filter(x=>/^ja/i.test(String(x.lang).replace('_','-')));
+ const ua=navigator.userAgent, app=/FBAN|FBAV|Instagram|Line\/|WhatsApp|Messenger/i.test(ua)?'অ্যাপের ভেতরের ব্রাউজার ⚠️':(navigator.standalone||matchMedia('(display-mode: standalone)').matches)?'ইনস্টল করা অ্যাপ':'সাধারণ ব্রাউজার';
+ $('#info').innerHTML=[['ডিভাইস / ব্রাউজার',(/iPhone|iPad/.test(ua)?'iPhone/iPad':/Android/.test(ua)?'Android':/Mac/.test(ua)?'Mac':'অন্যান্য')+' · '+(/CriOS|Chrome/.test(ua)?'Chrome':/Safari/.test(ua)?'Safari':/Firefox/.test(ua)?'Firefox':'?')],['কোথায় খোলা',app],['কথা বলার সুবিধা',has?'<span class=ok>আছে</span>':'<span class=bad>নেই</span>'],['মোট কণ্ঠ',v.length],['জাপানি কণ্ঠ',ja.length?'<span class=ok>'+ja.map(x=>x.name).join(', ')+'</span>':'<span class=bad>পাওয়া যায়নি</span>']].map(([a,b])=>`<div class=r><span>${a}</span><b>${b}</b></div>`).join('')}
+info(); if(has){try{speechSynthesis.addEventListener('voiceschanged',info)}catch(e){speechSynthesis.onvoiceschanged=info}}
+function test(text,lang){ if(!has){$('#res').innerHTML='<span class=bad>এই ব্রাউজারে কথা বলার সুবিধা নেই</span>';return}
+ speechSynthesis.cancel(); setTimeout(()=>{const u=new SpeechSynthesisUtterance(text);u.lang=lang;const v=speechSynthesis.getVoices().find(x=>String(x.lang).replace('_','-').toLowerCase().startsWith(lang.slice(0,2)));if(v)u.voice=v;
+ let started=false;u.onstart=()=>{started=true;log('শুরু হয়েছে ('+(v?v.name:'ডিফল্ট')+')')};u.onend=()=>log('শেষ');u.onerror=e=>log('ত্রুটি: '+e.error);
+ speechSynthesis.speak(u);log('চালানো হলো: '+text);
+ setTimeout(()=>{$('#res').innerHTML=started||speechSynthesis.speaking?'<span class=ok>✅ ব্রাউজার কথা বলছে — শব্দ না শুনলে ভলিউম / সাইলেন্ট সুইচ দেখুন</span>':'<span class=bad>❌ ব্রাউজার কথা বলেনি</span>'},1500)},60)}
+$('#t1').onclick=()=>test('これは ほんです。','ja-JP'); $('#t2').onclick=()=>test('Hello, this is a sound test.','en-US');
+</script></body></html>
