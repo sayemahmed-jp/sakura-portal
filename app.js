@@ -1688,13 +1688,14 @@ function viewTnotes(lv, id) {
     ${u.grammar.length ? `<div class="tnsec"><b>এই পাঠের ব্যাকরণ</b><ol>${u.grammar.map(g => `<li>${fx(g)}</li>`).join('')}</ol></div>` : ''}
     <div class="tnmeta"><span>📖 নতুন শব্দ: <b>${TN_BN(u.vocab)}টি</b></span><span>✍️ অনুশীলনী: <b>${TN_BN(u.ex)}টি</b></span>${u.kanji.length ? `<span>漢 কানজি: <b class="jp">${esc(u.kanji.join(' '))}</b></span>` : ''}</div></div>
     ${(u.gx || []).length ? `<div class="card tnc"><h3>📘 ব্যাকরণ — শিক্ষকের জন্য ব্যাখ্যা</h3>${u.gx.map((g, i) => `<div class="tng"><div class="tngh"><span>${TN_BN(i + 1)}</span><b>${fx(g.pt)}</b></div>
-      <p class="tngb">${fx(g.bn)}</p>${g.ex.length ? `<div class="tnex">${g.ex.map(e => `<div><span class="jp">${fx(e[0])}</span><small>${esc(e[1] || '')}</small></div>`).join('')}</div>` : ''}
+      <p class="tngb">${fx(g.bn)}</p>${g.ex.length ? `<div class="tnex">${g.ex.map(e => `<div><button class="tnsay" type="button" data-tsay="${esc(e[0])}" aria-label="শুনুন" title="শুনুন">🔊</button><span class="jp">${fx(e[0])}</span><small>${esc(e[1] || '')}</small></div>`).join('')}</div>` : ''}
       <div class="tntip"><div><b>⚠️ ছাত্রদের সাধারণ ভুল</b><p>${fx(g.err)}</p></div><div><b>🧑‍🏫 কীভাবে পড়াবেন</b><p>${fx(g.how)}</p></div></div></div>`).join('')}</div>` : ''}
     ${classes}`;
   mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>さくら日本語 ${lv} বই · ${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p></div><div class="row"><div class="tntabs">${tabs}</div><button class="btn ghost" id="tnprint">🖨 এই পাঠ প্রিন্ট</button><button class="btn ghost" id="tnprintall">🖨 পুরো ${lv} নোট প্রিন্ট</button></div></div>
   <div class="tngrid"><nav class="card tnlist" aria-label="পাঠের তালিকা">${list}</nav><div class="tnbody">${body}</div></div>`, () => {
     $('#tnprint').onclick = () => printWindow('Teacher notes ' + lv + ' ' + u.no, headHtml() + tnLessonPrint(u, lv));
     $('#tnprintall').onclick = () => printWindow('Teacher notes ' + lv, headHtml() + `<div style="padding:30px 4px"><h1 style="font:800 26px 'Shippori Mincho B1',serif;margin:0">শিক্ষকের নোট · さくら日本語 ${lv}</h1><p>${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p><ol style="columns:2;line-height:2">${L.map(x => `<li>${fx(x.title)} <small>(${esc(x.titleBn)})</small></li>`).join('')}</ol></div>` + L.map(x => `<div style="break-before:page">${tnLessonPrint(x, lv)}</div>`).join(''));
+    $$('[data-tsay]').forEach(b => b.onclick = () => sayJa(b.dataset.tsay));
     const on = $('.tnl.on'); if (on && matchMedia('(min-width:861px)').matches) on.scrollIntoView({ block: 'nearest' });
   });
 }
@@ -3197,6 +3198,14 @@ const ABCD = window.SK_LANG === 'en' ? ['A', 'B', 'C', 'D'] : ['ক', 'খ', '�
 const mockQs = (tid) => (S.mock_questions || []).filter(q => q.test_id === tid).sort((a, b) => (MOCK_SEC_ORDER.indexOf(a.section) - MOCK_SEC_ORDER.indexOf(b.section)) || (num(a.sort_order) - num(b.sort_order)) || String(a.created_at || '').localeCompare(String(b.created_at || '')));
 const mockDone = (tid) => (S.mock_attempts || []).filter(a => a.test_id === tid && a.submitted_at);
 const mockOpts = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
+// one Japanese sentence aloud (teacher notes); says what to check when no sound comes out
+const NOVOICE = 'এই ডিভাইসে জাপানি ভয়েস পাওয়া যায়নি — শব্দ না এলে ফোনের Text-to-Speech-এ জাপানি যোগ করুন';
+function sayJa(text) {
+  if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে কথা বলার সুবিধা নেই — Chrome বা Safari ব্যবহার করুন', true);
+  const ok = window.JLPTVoice ? window.JLPTVoice.play(text, '') : (speakJa(text), true);
+  if (!ok) return toast(NOVOICE, true);
+  setTimeout(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) toast('শব্দ আসেনি? ভলিউম বাড়ান, iPhone-এর সাইলেন্ট সুইচ বন্ধ করুন, তারপর আবার 🔊 চাপুন'); }, 1500);
+}
 function speakJa(text) { // reads a listening script aloud with the device's Japanese voice
   if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে কথা বলার সুবিধা নেই', true);
   speechSynthesis.cancel();
@@ -3333,7 +3342,7 @@ function viewMock(id, q) {
     };
     $$('[data-qadd]').forEach(b => b.onclick = () => mockQuestionModal(t, null, b.dataset.qadd));
     $$('[data-qe]').forEach(c => c.onclick = () => mockQuestionModal(t, byId(S.mock_questions, c.dataset.qe)));
-    $$('[data-say]').forEach(b => b.onclick = (e) => { e.stopPropagation(); { const q = byId(S.mock_questions, b.dataset.say); if (window.JLPTVoice) { if (!window.JLPTVoice.play(q.script, q.question)) toast('এই ডিভাইসে জাপানি ভয়েস পাওয়া যায়নি — শব্দ না এলে ফোনের Text-to-Speech-এ জাপানি যোগ করুন'); } else speakJa(q.script); } });
+    $$('[data-say]').forEach(b => b.onclick = (e) => { e.stopPropagation(); { const q = byId(S.mock_questions, b.dataset.say); if (window.JLPTVoice) { if (!window.JLPTVoice.play(q.script, q.question)) toast(NOVOICE, true); else setTimeout(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) toast('শব্দ আসেনি? ভলিউম বাড়ান, iPhone-এর সাইলেন্ট সুইচ বন্ধ করুন, তারপর আবার চাপুন'); }, 1500); } else speakJa(q.script); } });
     $$('[data-reset]').forEach(b => b.onclick = async (e) => {
       e.stopPropagation(); const sid = b.dataset.reset; const s = byId(S.students, sid);
       if (!(await confirmBox(`${s ? studentName(s) : 'এই ছাত্র'}-এর এই টেস্টের সব চেষ্টা মুছে যাবে, ছাত্র আবার নতুন করে দিতে পারবে। "পরীক্ষা ও রেজাল্ট"-এর নম্বর থেকে যাবে।`, 'হ্যাঁ, মুছে দিন'))) return;
