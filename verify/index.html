@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>証明書の確認 · Certificate Verification · Sakura Japanese Institute</title>
+<meta name="description" content="Check that a certificate issued by Sakura Japanese Institute (さくら日本語学院) is genuine. さくら日本語学院が発行した証明書の真偽を確認できます。">
+<link rel="icon" type="image/png" href="../icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700&family=Shippori+Mincho+B1:wght@700;800&display=swap">
+<style>
+:root{--navy:#1B2945;--gold:#A3843A;--green:#2E7D4F;--red:#C8372B;--line:#E2D9C8;--bg:#F6F2EA;--muted:#6E665A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#26231E;font:16px/1.6 'Hind Siliguri',system-ui,'Hiragino Sans','Noto Sans JP',sans-serif}
+header{background:var(--navy);color:#fff;border-bottom:4px solid var(--gold)}
+.hin{max-width:640px;margin:0 auto;padding:14px 16px;display:flex;gap:12px;align-items:center}
+.km{width:46px;height:46px;border-radius:50%;background:#FBF8F1;border:2px solid #C9A95C;display:grid;place-items:center;flex:none}
+.hin b{display:block;font:800 18px 'Shippori Mincho B1',serif}.hin small{color:#E2C987;letter-spacing:2px;font-size:12px}
+main{max-width:640px;margin:0 auto;padding:20px 16px 48px}
+h1{font:800 22px 'Shippori Mincho B1',serif;margin:0 0 2px;color:var(--navy)}
+.sub{color:var(--muted);font-size:14px;margin:0 0 16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin:0 0 14px;box-shadow:0 8px 20px -14px rgba(27,41,69,.35)}
+label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:0 0 4px}
+input{width:100%;font:600 18px ui-monospace,monospace;letter-spacing:1px;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;margin:0 0 12px;text-transform:uppercase;background:#FFFDF8}
+input:focus{outline:none;border-color:var(--navy)}
+button{width:100%;font:700 16px inherit;font-family:inherit;padding:13px;border:0;border-radius:10px;background:var(--navy);color:#fff;cursor:pointer}
+.res{border-width:2px}.res.ok{border-color:var(--green)}.res.bad{border-color:var(--red)}.res.warn{border-color:#C9921E}
+.st{display:flex;gap:12px;align-items:center;margin:0 0 12px}.st .ic{font-size:34px;line-height:1}
+.st b{display:block;font-size:19px}.ok .st b{color:var(--green)}.bad .st b{color:var(--red)}.warn .st b{color:#9A6A00}
+.st span{font-size:13.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14.5px}th,td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}th{width:42%;color:var(--muted);font-weight:600}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.lang{font-size:12.5px;color:var(--muted)}
+footer{text-align:center;font-size:12.5px;color:var(--muted);padding:0 16px 30px}
+footer a{color:var(--navy)}
+</style>
+</head>
+<body>
+<header><div class="hin"><span class="km"><svg width="80%" height="80%" viewBox="-25 -25 50 50"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E"><path d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/><path transform="rotate(72)" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/><path transform="rotate(144)" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/><path transform="rotate(216)" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/><path transform="rotate(288)" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/></g><circle r="2.6" fill="#FBF8F1"/></svg></span>
+<div><b>Sakura Japanese Institute</b><small>さくら日本語学院 · সাকুরা জাপানিজ ইনস্টিটিউট</small></div></div></header>
+<main>
+<h1>証明書の確認 · Certificate Verification</h1>
+<p class="sub">証明書に記載された番号と確認コードを入力してください。<br>Enter the certificate number and verification code printed on the certificate.<br><span class="lang">সার্টিফিকেটে লেখা নম্বর আর কোড দিন।</span></p>
+<form class="card" id="f">
+<label for="n">証明書番号 / Certificate No.</label><input id="n" placeholder="SJI-2026-00001" autocomplete="off" required>
+<label for="k">確認コード / Verification code</label><input id="k" placeholder="A1B2C3D4E5" autocomplete="off" required>
+<button>確認する / Verify</button>
+</form>
+<div id="out"></div>
+</main>
+<footer>Sakura Japanese Institute · Narayanganj, Bangladesh · <a href="mailto:info@sakura.institute">info@sakura.institute</a></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="../config.js"></script>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const jd = (iso) => iso ? `${iso.slice(0, 4)}年${+iso.slice(5, 7)}月${+iso.slice(8, 10)}日 (${iso})` : '—';
+const KIND = { hours: ['日本語学習時間証明書', 'Certificate of Japanese Language Study Hours'], transcript: ['成績証明書', 'Academic Transcript'], mock: ['模擬試験 合格証', 'Certificate of Passing · Mock Test'] };
+const CAT = { full: '総合 / Full', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
+const CFG = window.SAKURA_CONFIG || {};
+const sb = window.supabase && CFG.SUPABASE_URL ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: false } }) : null;
+function detailRows(r) {
+  const d = r.details || {}; const rows = [];
+  if (r.kind === 'hours') {
+    rows.push(['総学習時間 / Total study hours', `<b>${esc(d.hours)} 時間 (hours)</b>`]);
+    if (d.from) rows.push(['学習期間 / Period of study', `${esc(d.from)} 〜 ${esc(d.to)}`]);
+    if (d.pct != null) rows.push(['出席率 / Attendance', esc(d.pct) + '%']);
+    if (d.levels) rows.push(['内訳 / Breakdown', Object.entries(d.levels).map(([l, h]) => `${esc(l)}: ${esc(h)} 時間`).join('<br>')]);
+  } else if (r.kind === 'transcript') {
+    rows.push(['総学習時間 / Study hours', `${esc(d.hours)} 時間`]);
+    if (d.pct != null) rows.push(['出席率 / Attendance', esc(d.pct) + '%']);
+    rows.push(['試験数 / Examinations', `${esc(d.exams)} (合格 / passed ${esc(d.passed)})`]);
+    if (d.avg != null) rows.push(['平均 / Average score', esc(d.avg) + '%']);
+  } else if (r.kind === 'mock') {
+    rows.push(['試験 / Test', `JLPT ${esc(d.level)} 模擬試験 · ${esc(CAT[d.category] || '')}<br><span style="font-size:13px">${esc(d.test)}</span>`]);
+    rows.push(['得点 / Score', `<b>${esc(d.score)} / ${esc(d.total)} (${esc(d.pct)}%)</b>`]);
+    if (d.date) rows.push(['受験日 / Date taken', jd(d.date)]);
+  }
+  return rows;
+}
+async function check(n, k) {
+  const out = $('#out'); out.innerHTML = '<div class="card">確認中… / Checking…</div>';
+  if (!sb) { out.innerHTML = '<div class="card res bad">Service unavailable. Please try again later.</div>'; return; }
+  try {
+    const { data, error } = await sb.rpc('verify_certificate', { p_no: n, p_code: k });
+    if (error) throw error;
+    if (!data || !data.found) {
+      out.innerHTML = `<div class="card res bad"><div class="st"><span class="ic">❌</span><div><b>確認できません / Not found</b><span>この番号とコードの証明書は登録されていません。入力をご確認ください。<br>No certificate matches this number and code. Please check what you typed.<br>এই নম্বর আর কোডের কোনো সার্টিফিকেট পাওয়া যায়নি।</span></div></div>
+      <p class="note">ご不明な点は info@sakura.institute までお問い合わせください。 / Questions: info@sakura.institute</p></div>`; return;
+    }
+    const k2 = KIND[data.kind] || [data.kind, ''];
+    const rows = [['証明書 / Certificate', `${esc(k2[0])}<br><span style="font-size:13px">${esc(k2[1])}</span>`], ['証明書番号 / No.', `<b style="font-family:ui-monospace,monospace">${esc(data.cert_no)}</b>`], ['氏名 / Name', `<b>${esc(data.name_en)}</b>`], ['学籍番号 / Student No.', esc(data.student_no || '—')], ...detailRows(data), ['発行日 / Date of issue', jd(data.issued_on)], ['発行機関 / Issued by', `${esc(data.institute_ja || 'さくら日本語学院')}<br>${esc(data.institute_en || 'Sakura Japanese Institute')}`]];
+    const head = data.revoked
+      ? `<div class="st"><span class="ic">⚠️</span><div><b>この証明書は取り消されています / This certificate has been cancelled</b><span>${esc(data.revoked_reason || '')}<br>এই সার্টিফিকেটটি বাতিল করা হয়েছে।</span></div></div>`
+      : `<div class="st"><span class="ic">✅</span><div><b>有効な証明書です / Genuine certificate</b><span>この証明書はさくら日本語学院が発行したものです。<br>This certificate was issued by Sakura Japanese Institute. · সার্টিফিকেটটি আসল।</span></div></div>`;
+    out.innerHTML = `<div class="card res ${data.revoked ? 'warn' : 'ok'}">${head}<table>${rows.map(([a, b]) => `<tr><th>${a}</th><td>${b}</td></tr>`).join('')}</table>
+    <p class="note">証明書の内容が上記と一致していることをご確認ください。 / Please check that the paper certificate shows the same details.</p></div>`;
+  } catch (e) {
+    out.innerHTML = `<div class="card res bad">確認中にエラーが発生しました。しばらくしてから再度お試しください。<br>Something went wrong while checking. Please try again later.</div>`;
+  }
+}
+const q = new URLSearchParams(location.search);
+if (q.get('n')) $('#n').value = q.get('n'); if (q.get('k')) $('#k').value = q.get('k');
+$('#f').onsubmit = (e) => { e.preventDefault(); const n = $('#n').value.trim().toUpperCase(), k = $('#k').value.replace(/\s/g, '').toUpperCase(); if (n && k) check(n, k); };
+if (q.get('n') && q.get('k')) check(q.get('n').trim().toUpperCase(), q.get('k').replace(/\s/g, '').toUpperCase());
+</script>
+</body>
+</html>

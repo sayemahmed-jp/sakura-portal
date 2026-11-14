@@ -919,12 +919,13 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><label class="avatar avup" id="avl" title="${isTeacher() ? '' : 'ছবি দিন / বদলান'}"><span id="av">${esc(initials(s))}</span>${isTeacher() ? '' : '<i class="avcam">📷</i><input type="file" id="avfile" accept="image/*" hidden>'}</label><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
+  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><button class="btn ghost" id="certs">🎓 সার্টিফিকেট</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
     if (tab === 'mock') { bindGo(); $$('[data-mcert]').forEach(b => b.onclick = () => printMockCertificate(s, b.dataset.mcert)); }
     const dos = $('#dos'); if (dos) dos.onclick = () => printDossier(s);
+    const certs = $('#certs'); if (certs) certs.onclick = () => certListModal(s);
     if ($('#plink')) { const ic = $('#idc'); if (ic) ic.onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }
     if (tab === 'hist') API.auditList({ student: s.id, from: '2020-01-01', to: todayISO(), limit: 300 }).then(r => { const box = $('#histbox'); if (box) box.innerHTML = r.rows.length ? `<div class="tw">${audRows(r.rows)}</div><p class="small muted" style="margin-top:8px">এই ছাত্রের তথ্য, টাকা জমা, কাগজ, আবেদন আর নম্বরে যা যা যোগ, বদল বা মোছা হয়েছে।</p>` : '<div class="empty">এখনো কোনো রেকর্ড নেই</div>'; }).catch(e => { const box = $('#histbox'); if (box) box.innerHTML = `<div class="empty">${/audit_log|does not exist|schema cache/i.test(e.message || '') ? 'কাজের রেকর্ডের টেবিল এখনো তৈরি হয়নি।' : esc(errMsg(e))}</div>`; });
     if (photo) API.fileUrl(photo.file_path).then(u => { if (u) $('#av').innerHTML = `<img alt="" src="${esc(u)}">`; }).catch(() => {});
@@ -2479,12 +2480,63 @@ function printReceipt(p) {
   <div style="font-size:11px;color:#6E665A;margin-top:8px">ফেরত নীতি: ক্লাস শুরুর অন্তত ৩ দিন আগে বাতিল করলে ৮০% ফেরত। রশিদটি যত্নে রাখুন।</div></div></div>`;
   printWindow('Receipt ' + p.receipt_no, copy('অফিস কপি') + '<div style="border-top:1.5px dashed #8A7F6C;margin:4px 0 14px"></div>' + copy('ছাত্র কপি'));
 }
-function printCertificate(s) {
+// ------------------------------------------------------------------ certificates that can be checked online (v44)
+// each print saves a number + secret code; the QR opens sakura.institute/verify where anyone with both sees it is genuine
+const VERIFY_BASE = 'https://sakura.institute/verify/';
+const CERT_KIND = { hours: 'স্টাডি-আওয়ার সার্টিফিকেট', transcript: 'রেজাল্ট সার্টিফিকেট', mock: 'মক টেস্ট পাসের সার্টিফিকেট' };
+const verifyUrl = (c) => `${VERIFY_BASE}?n=${encodeURIComponent(c.cert_no)}&k=${encodeURIComponent(c.code)}`;
+async function issueCert(kind, s, details) {
+  const name = s.name_en || s.name_bn || '';
+  if (DEMO) {
+    const n = (S.certificates || []).length + 1;
+    const c = { id: uuid(), cert_no: `SJI-${todayISO().slice(0, 4)}-${String(n).padStart(5, '0')}`, code: uuid().replace(/-/g, '').slice(0, 10).toUpperCase(), kind, student_id: s.id, name_en: name, student_no: s.admission_no || '', details, issued_on: todayISO(), revoked_at: null, revoked_reason: '' };
+    S.certificates = [...(S.certificates || []), c]; return c;
+  }
+  const { data, error } = await sb.rpc('issue_certificate', { p_kind: kind, p_student: s.id, p_name: name, p_student_no: s.admission_no || '', p_details: details });
+  if (error) throw error; return data;
+}
+// the window opens first (so pop-up blockers allow it), then the number is made and the page drawn into it
+function certWindow() { const w = window.open('', '_blank'); if (w) w.document.write('<p style="font:16px sans-serif;padding:24px">সার্টিফিকেট তৈরি হচ্ছে…</p>'); return w; }
+async function certVerifyHtml(kind, s, details) {
+  try {
+    const [c, q] = await Promise.all([issueCert(kind, s, details), loadQR().then(() => true).catch(() => false)]);   // no QR library (offline)? the number and code still print
+    return `<div style="display:flex;gap:14px;align-items:center;margin-top:20px;padding:10px 12px;border:1px solid #D8CDB9;border-radius:8px;font-family:'Hind Siliguri',sans-serif">
+    ${q ? `<div style="width:88px;height:88px;flex:none">${qrSvg(verifyUrl(c))}</div>` : ''}
+    <div style="font-size:12px;line-height:1.65">証明書番号 / Certificate No.: <b style="font:700 14px ui-monospace,monospace">${esc(c.cert_no)}</b><br>確認コード / Verification code: <b style="font:700 14px ui-monospace,monospace;letter-spacing:1px">${esc(c.code)}</b><br>
+    真偽の確認 / Verify online: <b>sakura.institute/verify</b> — QRコードを読み取るか、番号とコードを入力してください。<br><span style="color:#6E665A">Scan the QR code, or enter the number and code, to confirm this certificate is genuine.</span></div></div>`;
+  } catch (e) {
+    toast(/issue_certificate|schema cache|does not exist/i.test(e.message || '') ? 'অনলাইন যাচাইয়ের নম্বর তৈরি হয়নি — ডাটাবেসে v44 আপডেট চালানো বাকি। সার্টিফিকেট QR ছাড়া প্রিন্ট হচ্ছে।' : 'যাচাই নম্বর তৈরি হয়নি: ' + errMsg(e), true);
+    return '';
+  }
+}
+function certListModal(s) {
+  const load = DEMO ? Promise.resolve((S.certificates || []).filter(c => c.student_id === s.id).reverse()) : sb.from('certificates').select('*').eq('student_id', s.id).order('created_at', { ascending: false }).then(({ data, error }) => { if (error) throw error; return data; });
+  openModal(`<h2>🎓 জারি করা সার্টিফিকেট</h2><p class="small muted" style="margin-top:-4px">প্রতিটা প্রিন্ট করা সার্টিফিকেটের নম্বর এখানে থাকে। QR বা sakura.institute/verify দিয়ে যে কেউ যাচাই করতে পারে।</p><div id="cl"><div class="empty">লোড হচ্ছে…</div></div>`);
+  const draw = (rows) => {
+    const box = $('#cl'); if (!box) return;
+    box.innerHTML = rows.length ? `<div class="tw"><table class="stack"><tr><th>নম্বর</th><th>ধরন</th><th>তারিখ</th><th>অবস্থা</th><th></th></tr>${rows.map(c => `<tr><td data-l="নম্বর"><b style="font-family:ui-monospace,monospace">${esc(c.cert_no)}</b><div class="small muted">কোড ${esc(c.code)}</div></td><td data-l="ধরন">${esc(CERT_KIND[c.kind] || c.kind)}</td><td data-l="তারিখ">${fmtD(c.issued_on)}</td>
+      <td data-l="অবস্থা">${c.revoked_at ? badge('dropped', 'বাতিল') + (c.revoked_reason ? `<div class="small muted">${esc(c.revoked_reason)}</div>` : '') : badge('active', 'বৈধ')}</td>
+      <td><div class="row" style="gap:6px"><a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(verifyUrl(c))}">যাচাই পাতা</a>${isAdmin() && !c.revoked_at ? `<button class="btn sm ghost" data-rv="${esc(c.id)}" style="color:var(--red)">বাতিল</button>` : ''}</div></td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো সার্টিফিকেট প্রিন্ট হয়নি</div>';
+    $$('[data-rv]').forEach(b => b.onclick = async () => {
+      const why = prompt('কেন বাতিল করছেন? (যাচাই পাতায় দেখাবে, যেমন "ভুল তথ্য — নতুন সার্টিফিকেট দেওয়া হয়েছে")', ''); if (why === null) return;
+      try {
+        const patch = { revoked_at: new Date().toISOString(), revoked_reason: why.trim() };
+        if (DEMO) S.certificates = S.certificates.map(x => x.id === b.dataset.rv ? { ...x, ...patch } : x);
+        else { const { error } = await sb.from('certificates').update(patch).eq('id', b.dataset.rv); if (error) throw error; }
+        toast('সার্টিফিকেট বাতিল হয়েছে'); certListModal(s);
+      } catch (e) { toast(errMsg(e), true); }
+    });
+  };
+  load.then(draw).catch(e => { const box = $('#cl'); if (box) box.innerHTML = `<div class="empty">${/certificates|schema cache|does not exist/i.test(e.message || '') ? 'ডাটাবেসে v44 আপডেট চালানো বাকি।' : esc(errMsg(e))}</div>`; });
+}
+async function printCertificate(s) {
   const a = attOf(s.id); const st = S.settings;
   if (!a.hours) return toast('এখনো কোনো উপস্থিতির ঘণ্টা নেই', true);
   const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
   const today = todayISO();
   const rows = LEVELS.filter(l => a.byLevel[l]).map(l => `<tr><td>${l}</td><td>${esc(st.textbooks[l] || '')}</td><td style="text-align:right">${a.byLevel[l]} 時間</td></tr>`).join('');
+  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  const vb = await certVerifyHtml('hours', s, { hours: a.hours, pct: a.pct, from: a.first, to: a.last, levels: Object.fromEntries(LEVELS.filter(l => a.byLevel[l]).map(l => [l, a.byLevel[l]])) });
   printWindow('Certificate ' + s.admission_no, `${headHtml()}
   <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
   <div style="text-align:center;margin-bottom:22px"><div style="font-size:26px;font-weight:800;letter-spacing:6px">日本語学習時間証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF JAPANESE LANGUAGE STUDY HOURS</div></div>
@@ -2498,11 +2550,14 @@ function printCertificate(s) {
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
   <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  <p style="font-size:11px;color:#6E665A;margin-top:24px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div>`);
+  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div>`, w);
 }
 
-function printTranscript(s) {
+async function printTranscript(s) {
   const res = studentResults(s.id); const a = attOf(s.id); const st = S.settings; const today = todayISO();
+  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  const tk2 = res.filter(x => pctOf(x.r, x.ex) != null);
+  const vb = await certVerifyHtml('transcript', s, { hours: a.hours, pct: a.pct, exams: res.length, passed: res.filter(x => !x.r.absent && passed(x.r, x.ex)).length, avg: tk2.length ? Math.round(tk2.reduce((m, x) => m + pctOf(x.r, x.ex), 0) / tk2.length) : null });
   const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
   const typeJa = { quiz: '小テスト', test: '定期試験', mock: '模擬試験', jlpt: '日本語能力試験 (JLPT)', nat: 'NAT-TEST', speaking: '会話・面接', other: 'その他' };
   printWindow('Transcript ' + s.admission_no, `${headHtml()}
@@ -2515,7 +2570,7 @@ function printTranscript(s) {
   <p style="margin-top:20px;font-size:14px">上記の通り相違ないことを証明します。<br><span style="font-size:12px;color:#6E665A">We hereby certify that the above is a true record of the student's results at our institute.</span></p>
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
-  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div></div>`);
+  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>${vb}</div>`, w);
 }
 
 // ------------------------------------------------------------------ student ID cards (85.6 × 54 mm, front + back side by side)
@@ -3622,8 +3677,10 @@ function mockPerTestHtml(rows) {
     <td data-l="ফল">${x.best.pass ? badge('active', 'পাস ✓') : badge('due', 'এখনো পাস নয়')}</td><td data-l="শেষ দিয়েছে">${fmtD(x.last.slice(0, 10))}</td>
     <td>${x.best.pass ? `<button class="btn sm gold" data-mcert="${esc(x.best.a.id)}">🎓 সার্টিফিকেট</button>` : ''}</td></tr>`).join('')}</table></div>`;
 }
-function printMockCertificate(s, aid) {
+async function printMockCertificate(s, aid) {
   const a = (S.mock_attempts || []).find(x => x.id === aid); if (!a) return; const r = attemptRow(a); const st = S.settings; const t = r.t;
+  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
+  const vb = await certVerifyHtml('mock', s, { test: t.title || '', level: t.level || '', category: t.category || '', score: r.score, total: r.total, pct: r.pct, date: (a.submitted_at || '').slice(0, 10) });
   const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
   const day = (a.submitted_at || '').slice(0, 10); const today = todayISO();
   const CAT = { full: '総合模擬試験 / Full mock test', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
@@ -3638,7 +3695,7 @@ function printMockCertificate(s, aid) {
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}</div>
   <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  <p style="font-size:11px;color:#6E665A;margin-top:24px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div>`);
+  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div>`, w);
 }
 function printMockSheet(s) {
   const rows = attemptsOf(s.id).map(attemptRow).reverse(); const m = mockSummary([...rows].reverse());
