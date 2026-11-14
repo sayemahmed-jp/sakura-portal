@@ -2447,17 +2447,33 @@ function printWindow(title, bodyHtml, win) {
   const w = win || window.open('', '_blank');
   if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
   if (win) { try { w.document.open(); } catch { /* fresh window */ } }
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@700;800&family=Shippori+Mincho+B1:wght@500;700;800&display=swap">
   <style>@page{size:A4;margin:12mm}body{font-family:'Hind Siliguri',sans-serif;color:#26231E;margin:0}
   .hd{display:flex;align-items:center;gap:12px;background:#1B2945;color:#fff;padding:14px 18px;border-bottom:4px solid #A3843A}
   .km{width:52px;height:52px;border-radius:50%;background:#FBF8F1;border:2px solid #C9A95C;display:grid;place-items:center;flex:none}
   .t1{font:800 19px 'Shippori Mincho B1'}.t2{font-size:12px;color:#E2C987;letter-spacing:3px}.ct{margin-left:auto;text-align:right;font-size:11.5px;line-height:1.5}
   table{width:100%;border-collapse:collapse;font-size:13.5px}td,th{border:1px solid #D8CDB9;padding:7px 10px;text-align:left}th{background:#F6F0E4;width:34%;font-weight:600}
-  .print{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:8px 14px;border-radius:6px;font:inherit;cursor:pointer}@media print{.print{display:none}}</style></head>
+  .print{position:fixed;bottom:14px;right:14px;background:#1B2945;color:#fff;border:none;padding:8px 14px;border-radius:6px;font:inherit;cursor:pointer;z-index:5}@media print{.print{display:none}}
+  .sheet{width:186mm;margin:0 auto;background:#fff;overflow:hidden}
+  @media screen{body:has(.sheet){background:#E7E2D8;padding:14px 0 72px}.sheet{min-height:273mm;box-shadow:0 8px 28px rgba(27,41,69,.22)}}
+  .sheet.dense td,.sheet.dense th{padding:3px 8px;font-size:12px}.sheet.dense>div:nth-child(2){padding-top:16px!important}.sheet.dense [style*="margin-top:28px"]{margin-top:10px!important}.sheet.dense [style*="margin-top:20px"]{margin-top:10px!important}.sheet.dense .keep{margin-top:10px!important;padding:6px 10px!important}.sheet.dense .keep>div:first-child{width:72px!important;height:72px!important}.sheet tr,.sheet .keep{break-inside:avoid}
+  @media print{body{background:#fff}.sheet{box-shadow:none;width:auto}}</style></head>
   <body><button class="print" onclick="window.print()">প্রিন্ট / Print</button>${bodyHtml}</body></html>`);
   w.document.close();
+  sheetFit(w);
   setTimeout(() => { try { w.focus(); w.print(); } catch (e) { /* user can press the button */ } }, 700);
+}
+// a certificate sheet (.sheet, 186 mm = A4 inside 12 mm margins): shrunk to fit a phone or narrow window on screen,
+// and shrunk to fit one A4 page when printed (only if it would run over)
+function sheetFit(w) {
+  const d = w.document, s = d.querySelector('.sheet'); if (!s) return;
+  const MM = 96 / 25.4, printing = () => { try { return w.matchMedia('print').matches; } catch { return false; } };
+  const fit = () => { if (printing()) return; const z = Math.min(1, (d.documentElement.clientWidth - 16) / (186 * MM)); s.style.zoom = z < 1 ? String(z) : ''; };
+  const page = () => { s.style.zoom = ''; };   // paper is always printed at true size
+  fit(); w.addEventListener('resize', fit); w.addEventListener('load', fit); setTimeout(fit, 300);
+  w.addEventListener('beforeprint', page); w.addEventListener('afterprint', fit);
+  try { w.matchMedia('print').addEventListener('change', (m) => (m.matches ? page() : fit())); } catch { /* old browsers: beforeprint is enough */ }
 }
 function headHtml() {
   const st = S.settings;
@@ -2500,7 +2516,7 @@ function certWindow() { const w = window.open('', '_blank'); if (w) w.document.w
 async function certVerifyHtml(kind, s, details) {
   try {
     const [c, q] = await Promise.all([issueCert(kind, s, details), loadQR().then(() => true).catch(() => false)]);   // no QR library (offline)? the number and code still print
-    return `<div style="display:flex;gap:14px;align-items:center;margin-top:20px;padding:10px 12px;border:1px solid #D8CDB9;border-radius:8px;font-family:'Hind Siliguri',sans-serif">
+    return `<div class="keep" style="display:flex;gap:14px;align-items:center;margin-top:20px;padding:10px 12px;border:1px solid #D8CDB9;border-radius:8px;font-family:'Hind Siliguri',sans-serif">
     ${q ? `<div style="width:88px;height:88px;flex:none">${qrSvg(verifyUrl(c))}</div>` : ''}
     <div style="font-size:12px;line-height:1.65">証明書番号 / Certificate No.: <b style="font:700 14px ui-monospace,monospace">${esc(c.cert_no)}</b><br>確認コード / Verification code: <b style="font:700 14px ui-monospace,monospace;letter-spacing:1px">${esc(c.code)}</b><br>
     真偽の確認 / Verify online: <b>sakura.institute/verify</b> — QRコードを読み取るか、番号とコードを入力してください。<br><span style="color:#6E665A">Scan the QR code, or enter the number and code, to confirm this certificate is genuine.</span></div></div>`;
@@ -2537,7 +2553,7 @@ async function printCertificate(s) {
   const rows = LEVELS.filter(l => a.byLevel[l]).map(l => `<tr><td>${l}</td><td>${esc(st.textbooks[l] || '')}</td><td style="text-align:right">${a.byLevel[l]} 時間</td></tr>`).join('');
   const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
   const vb = await certVerifyHtml('hours', s, { hours: a.hours, pct: a.pct, from: a.first, to: a.last, levels: Object.fromEntries(LEVELS.filter(l => a.byLevel[l]).map(l => [l, a.byLevel[l]])) });
-  printWindow('Certificate ' + s.admission_no, `${headHtml()}
+  printWindow('Certificate ' + s.admission_no, `<div class="sheet">${headHtml()}
   <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
   <div style="text-align:center;margin-bottom:22px"><div style="font-size:26px;font-weight:800;letter-spacing:6px">日本語学習時間証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF JAPANESE LANGUAGE STUDY HOURS</div></div>
   <table style="font-family:'Shippori Mincho B1','Hind Siliguri',serif"><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}</td></tr><tr><th>生年月日 / Date of Birth</th><td>${s.dob ? jd(s.dob) + ' (' + fmtD(s.dob) + ')' : ''}</td></tr>
@@ -2550,7 +2566,7 @@ async function printCertificate(s) {
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
   <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div>`, w);
+  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div></div>`, w);
 }
 
 async function printTranscript(s) {
@@ -2560,17 +2576,17 @@ async function printTranscript(s) {
   const vb = await certVerifyHtml('transcript', s, { hours: a.hours, pct: a.pct, exams: res.length, passed: res.filter(x => !x.r.absent && passed(x.r, x.ex)).length, avg: tk2.length ? Math.round(tk2.reduce((m, x) => m + pctOf(x.r, x.ex), 0) / tk2.length) : null });
   const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
   const typeJa = { quiz: '小テスト', test: '定期試験', mock: '模擬試験', jlpt: '日本語能力試験 (JLPT)', nat: 'NAT-TEST', speaking: '会話・面接', other: 'その他' };
-  printWindow('Transcript ' + s.admission_no, `${headHtml()}
+  printWindow('Transcript ' + s.admission_no, `<div class="sheet dense">${headHtml()}
   <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
   <div style="text-align:center;margin-bottom:20px"><div style="font-size:26px;font-weight:800;letter-spacing:8px">成績証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">ACADEMIC TRANSCRIPT</div></div>
   <table><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}</td></tr><tr><th>生年月日 / Date of Birth</th><td>${s.dob ? jd(s.dob) : ''}</td></tr><tr><th>国籍 / Nationality</th><td>バングラデシュ / Bangladesh</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no)}</td></tr>
   <tr><th>総学習時間 / Study Hours</th><td>${a.hours} 時間 · 出席率 / Attendance ${a.pct == null ? '—' : a.pct + '%'}</td></tr></table>
   <table style="margin-top:14px"><tr><th style="width:auto">日付 / Date</th><th style="width:auto">試験 / Examination</th><th style="width:auto">レベル</th><th style="width:auto;text-align:right">得点 / Score</th><th style="width:auto;text-align:right">%</th><th style="width:auto">合否 / Result</th></tr>
-  ${res.map(({ r, ex }) => `<tr><td>${fmtD(ex.exam_date)}</td><td>${esc(typeJa[ex.type] || '')}<br><span style="font-size:12px">${esc(ex.title)}</span></td><td>${esc(ex.level)}</td><td style="text-align:right">${r.absent ? '欠席' : num(r.marks) + ' / ' + num(ex.max_marks)}</td><td style="text-align:right">${pctOf(r, ex) == null ? '—' : pctOf(r, ex) + '%'}</td><td>${r.absent ? '欠席 / Absent' : passed(r, ex) ? '合格 / Pass' : '不合格 / Fail'}</td></tr>`).join('')}</table>
+  ${res.map(({ r, ex }) => `<tr><td>${fmtD(ex.exam_date)}</td><td>${esc(typeJa[ex.type] || '')} · <span style="font-size:12px">${esc(ex.title)}</span></td><td>${esc(ex.level)}</td><td style="text-align:right">${r.absent ? '欠席' : num(r.marks) + ' / ' + num(ex.max_marks)}</td><td style="text-align:right">${pctOf(r, ex) == null ? '—' : pctOf(r, ex) + '%'}</td><td>${r.absent ? '欠席 / Absent' : passed(r, ex) ? '合格 / Pass' : '不合格 / Fail'}</td></tr>`).join('')}</table>
   <p style="margin-top:20px;font-size:14px">上記の通り相違ないことを証明します。<br><span style="font-size:12px;color:#6E665A">We hereby certify that the above is a true record of the student's results at our institute.</span></p>
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
-  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>${vb}</div>`, w);
+  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>${vb}</div></div>`, w);
 }
 
 // ------------------------------------------------------------------ student ID cards (85.6 × 54 mm, front + back side by side)
@@ -3684,7 +3700,7 @@ async function printMockCertificate(s, aid) {
   const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
   const day = (a.submitted_at || '').slice(0, 10); const today = todayISO();
   const CAT = { full: '総合模擬試験 / Full mock test', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
-  printWindow('Mock certificate ' + s.admission_no, `${headHtml()}
+  printWindow('Mock certificate ' + s.admission_no, `<div class="sheet">${headHtml()}
   <div style="padding:30px 34px;font-family:'Shippori Mincho B1',serif;border:3px double #A3843A;margin:14px">
   <div style="text-align:center;margin-bottom:22px"><div style="font-size:28px;font-weight:800;letter-spacing:6px">模擬試験 合格証</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF PASSING · JAPANESE MOCK TEST</div></div>
   <table style="font-family:'Shippori Mincho B1','Hind Siliguri',serif"><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}${s.name_bn ? ' (' + esc(s.name_bn) + ')' : ''}</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no || '')}</td></tr>
@@ -3695,7 +3711,7 @@ async function printMockCertificate(s, aid) {
   <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
   <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}</div>
   <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div>`, w);
+  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div></div>`, w);
 }
 function printMockSheet(s) {
   const rows = attemptsOf(s.id).map(attemptRow).reverse(); const m = mockSummary([...rows].reverse());
