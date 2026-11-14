@@ -54,7 +54,8 @@ footer a{color:var(--navy)}
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const jd = (iso) => iso ? `${iso.slice(0, 4)}年${+iso.slice(5, 7)}月${+iso.slice(8, 10)}日 (${iso})` : '—';
-const KIND = { hours: ['日本語学習時間証明書', 'Certificate of Japanese Language Study Hours'], transcript: ['成績証明書', 'Academic Transcript'], mock: ['模擬試験 合格証', 'Certificate of Passing · Mock Test'] };
+const KIND = { hours: ['日本語学習時間証明書', 'Certificate of Japanese Language Study Hours'], transcript: ['成績証明書', 'Academic Transcript'], mock: ['模擬試験 合格証', 'Certificate of Passing · Mock Test'],
+  enrol: ['在籍証明書', 'Certificate of Enrollment'], complete: ['修了証明書', 'Certificate of Completion'], attend: ['出席証明書', 'Certificate of Attendance'], recommend: ['推薦状', 'Letter of Recommendation'] };
 const CAT = { full: '総合 / Full', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
 const CFG = window.SAKURA_CONFIG || {};
 const sb = window.supabase && CFG.SUPABASE_URL ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: false } }) : null;
@@ -68,8 +69,18 @@ function detailRows(r) {
   } else if (r.kind === 'transcript') {
     rows.push(['総学習時間 / Study hours', `${esc(d.hours)} 時間`]);
     if (d.pct != null) rows.push(['出席率 / Attendance', esc(d.pct) + '%']);
-    rows.push(['試験数 / Examinations', `${esc(d.exams)} (合格 / passed ${esc(d.passed)})`]);
-    if (d.avg != null) rows.push(['平均 / Average score', esc(d.avg) + '%']);
+    const ex = Array.isArray(d.exams) ? d.exams : [];
+    if (ex.length) rows.push(['試験 / Examinations', ex.map(x => `${esc(x.date)} · ${esc(x.title)} (${esc(x.level)}): ${x.absent ? '欠席 / Absent' : `${esc(x.marks)}/${esc(x.max)} · ${x.pass ? '合格 / Pass' : '不合格 / Fail'}`}`).join('<br>')]);
+  } else if (r.kind === 'enrol') {
+    rows.push(['課程 / Course', esc(d.course)], ['在籍期間 / Enrolled since', `${esc(d.since)} 〜 ${d.until ? esc(d.until) + ' (予定 / expected)' : '現在 / present'}`], ['現在のレベル / Level', esc(d.level)], ['学習時間 / Hours', `${esc(d.hours)} 時間 · ${d.pct == null ? '—' : esc(d.pct) + '%'}`], ['在籍状況 / Status', `<b>${esc(d.status)}</b>`]);
+  } else if (r.kind === 'complete') {
+    rows.push(['課程 / Course', `<b>${esc(d.course)}</b>`], ['学習期間 / Period', `${esc(d.from)} 〜 ${esc(d.to)}`], ['総学習時間 / Hours', `${esc(d.hours)} 時間`], ['修了日 / Completed on', esc(d.completed_on)], ['結果 / Result', `<b>${esc(d.result)}</b>`]);
+  } else if (r.kind === 'attend') {
+    rows.push(['総出席率 / Overall attendance', `<b>${d.pct == null ? '—' : esc(d.pct) + '%'}</b> (${esc(d.came)} / ${esc(d.total)}) · ${esc(d.hours)} 時間`]);
+    const ms = Array.isArray(d.months) ? d.months : [];
+    if (ms.length) rows.push(['月別 / Monthly', ms.map(m => `${esc(m.m)}: ${esc(m.came)}/${esc(m.total)}`).join('<br>')]);
+  } else if (r.kind === 'recommend') {
+    rows.push(['目的 / Purpose', esc(d.purpose)]);
   } else if (r.kind === 'mock') {
     rows.push(['試験 / Test', `JLPT ${esc(d.level)} 模擬試験 · ${esc(CAT[d.category] || '')}<br><span style="font-size:13px">${esc(d.test)}</span>`]);
     rows.push(['得点 / Score', `<b>${esc(d.score)} / ${esc(d.total)} (${esc(d.pct)}%)</b>`]);
@@ -88,7 +99,7 @@ async function check(n, k) {
       <p class="note">ご不明な点は info@sakura.institute までお問い合わせください。 / Questions: info@sakura.institute</p></div>`; return;
     }
     const k2 = KIND[data.kind] || [data.kind, ''];
-    const rows = [['証明書 / Certificate', `${esc(k2[0])}<br><span style="font-size:13px">${esc(k2[1])}</span>`], ['証明書番号 / No.', `<b style="font-family:ui-monospace,monospace">${esc(data.cert_no)}</b>`], ['氏名 / Name', `<b>${esc(data.name_en)}</b>`], ['学籍番号 / Student No.', esc(data.student_no || '—')], ...detailRows(data), ['発行日 / Date of issue', jd(data.issued_on)], ['発行機関 / Issued by', `${esc(data.institute_ja || 'さくら日本語学院')}<br>${esc(data.institute_en || 'Sakura Japanese Institute')}`]];
+    const rows = [['証明書 / Certificate', `${esc(k2[0])}<br><span style="font-size:13px">${esc(k2[1])}</span>`], ['証明書番号 / No.', `<b style="font-family:ui-monospace,monospace">${esc(data.cert_no)}</b>`], ['氏名 / Name', `<b>${esc(data.name_en)}</b>`], ['学籍番号 / Student No.', esc(data.student_no || '—')], ...detailRows(data), ['発行日 / Date of issue', jd(data.issued_on)], ...(data.version > 1 && data.updated_on ? [['最終更新 / Last updated', `${jd(data.updated_on)}<br><span style="font-size:12px">記録の更新に合わせて最新の内容を表示しています。 / Shows the latest record.</span>`]] : []), ['発行機関 / Issued by', `${esc(data.institute_ja || 'さくら日本語学院')}<br>${esc(data.institute_en || 'Sakura Japanese Institute')}`]];
     const head = data.revoked
       ? `<div class="st"><span class="ic">⚠️</span><div><b>この証明書は取り消されています / This certificate has been cancelled</b><span>${esc(data.revoked_reason || '')}<br>এই সার্টিফিকেটটি বাতিল করা হয়েছে।</span></div></div>`
       : `<div class="st"><span class="ic">✅</span><div><b>有効な証明書です / Genuine certificate</b><span>この証明書はさくら日本語学院が発行したものです。<br>This certificate was issued by Sakura Japanese Institute. · সার্টিফিকেটটি আসল।</span></div></div>`;

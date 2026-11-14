@@ -162,8 +162,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="78%" height="78%" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="#26231E" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="#26231E" stroke-width=".8"/><g fill="#26231E">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="#FBF8F1"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback', 'staff_cards'];
-const OPTIONAL_TABLES = ['staff_cards', 'class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback', 'staff_cards', 'certificates'];
+const OPTIONAL_TABLES = ['certificates', 'staff_cards', 'class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -2496,98 +2496,7 @@ function printReceipt(p) {
   <div style="font-size:11px;color:#6E665A;margin-top:8px">ফেরত নীতি: ক্লাস শুরুর অন্তত ৩ দিন আগে বাতিল করলে ৮০% ফেরত। রশিদটি যত্নে রাখুন।</div></div></div>`;
   printWindow('Receipt ' + p.receipt_no, copy('অফিস কপি') + '<div style="border-top:1.5px dashed #8A7F6C;margin:4px 0 14px"></div>' + copy('ছাত্র কপি'));
 }
-// ------------------------------------------------------------------ certificates that can be checked online (v44)
-// each print saves a number + secret code; the QR opens sakura.institute/verify where anyone with both sees it is genuine
-const VERIFY_BASE = 'https://sakura.institute/verify/';
-const CERT_KIND = { hours: 'স্টাডি-আওয়ার সার্টিফিকেট', transcript: 'রেজাল্ট সার্টিফিকেট', mock: 'মক টেস্ট পাসের সার্টিফিকেট' };
-const verifyUrl = (c) => `${VERIFY_BASE}?n=${encodeURIComponent(c.cert_no)}&k=${encodeURIComponent(c.code)}`;
-async function issueCert(kind, s, details) {
-  const name = s.name_en || s.name_bn || '';
-  if (DEMO) {
-    const n = (S.certificates || []).length + 1;
-    const c = { id: uuid(), cert_no: `SJI-${todayISO().slice(0, 4)}-${String(n).padStart(5, '0')}`, code: uuid().replace(/-/g, '').slice(0, 10).toUpperCase(), kind, student_id: s.id, name_en: name, student_no: s.admission_no || '', details, issued_on: todayISO(), revoked_at: null, revoked_reason: '' };
-    S.certificates = [...(S.certificates || []), c]; return c;
-  }
-  const { data, error } = await sb.rpc('issue_certificate', { p_kind: kind, p_student: s.id, p_name: name, p_student_no: s.admission_no || '', p_details: details });
-  if (error) throw error; return data;
-}
-// the window opens first (so pop-up blockers allow it), then the number is made and the page drawn into it
-function certWindow() { const w = window.open('', '_blank'); if (w) w.document.write('<p style="font:16px sans-serif;padding:24px">সার্টিফিকেট তৈরি হচ্ছে…</p>'); return w; }
-async function certVerifyHtml(kind, s, details) {
-  try {
-    const [c, q] = await Promise.all([issueCert(kind, s, details), loadQR().then(() => true).catch(() => false)]);   // no QR library (offline)? the number and code still print
-    return `<div class="keep" style="display:flex;gap:14px;align-items:center;margin-top:20px;padding:10px 12px;border:1px solid #D8CDB9;border-radius:8px;font-family:'Hind Siliguri',sans-serif">
-    ${q ? `<div style="width:88px;height:88px;flex:none">${qrSvg(verifyUrl(c))}</div>` : ''}
-    <div style="font-size:12px;line-height:1.65">証明書番号 / Certificate No.: <b style="font:700 14px ui-monospace,monospace">${esc(c.cert_no)}</b><br>確認コード / Verification code: <b style="font:700 14px ui-monospace,monospace;letter-spacing:1px">${esc(c.code)}</b><br>
-    真偽の確認 / Verify online: <b>sakura.institute/verify</b> — QRコードを読み取るか、番号とコードを入力してください。<br><span style="color:#6E665A">Scan the QR code, or enter the number and code, to confirm this certificate is genuine.</span></div></div>`;
-  } catch (e) {
-    toast(/issue_certificate|schema cache|does not exist/i.test(e.message || '') ? 'অনলাইন যাচাইয়ের নম্বর তৈরি হয়নি — ডাটাবেসে v44 আপডেট চালানো বাকি। সার্টিফিকেট QR ছাড়া প্রিন্ট হচ্ছে।' : 'যাচাই নম্বর তৈরি হয়নি: ' + errMsg(e), true);
-    return '';
-  }
-}
-function certListModal(s) {
-  const load = DEMO ? Promise.resolve((S.certificates || []).filter(c => c.student_id === s.id).reverse()) : sb.from('certificates').select('*').eq('student_id', s.id).order('created_at', { ascending: false }).then(({ data, error }) => { if (error) throw error; return data; });
-  openModal(`<h2>🎓 জারি করা সার্টিফিকেট</h2><p class="small muted" style="margin-top:-4px">প্রতিটা প্রিন্ট করা সার্টিফিকেটের নম্বর এখানে থাকে। QR বা sakura.institute/verify দিয়ে যে কেউ যাচাই করতে পারে।</p><div id="cl"><div class="empty">লোড হচ্ছে…</div></div>`);
-  const draw = (rows) => {
-    const box = $('#cl'); if (!box) return;
-    box.innerHTML = rows.length ? `<div class="tw"><table class="stack"><tr><th>নম্বর</th><th>ধরন</th><th>তারিখ</th><th>অবস্থা</th><th></th></tr>${rows.map(c => `<tr><td data-l="নম্বর"><b style="font-family:ui-monospace,monospace">${esc(c.cert_no)}</b><div class="small muted">কোড ${esc(c.code)}</div></td><td data-l="ধরন">${esc(CERT_KIND[c.kind] || c.kind)}</td><td data-l="তারিখ">${fmtD(c.issued_on)}</td>
-      <td data-l="অবস্থা">${c.revoked_at ? badge('dropped', 'বাতিল') + (c.revoked_reason ? `<div class="small muted">${esc(c.revoked_reason)}</div>` : '') : badge('active', 'বৈধ')}</td>
-      <td><div class="row" style="gap:6px"><a class="btn sm ghost" target="_blank" rel="noopener" href="${esc(verifyUrl(c))}">যাচাই পাতা</a>${isAdmin() && !c.revoked_at ? `<button class="btn sm ghost" data-rv="${esc(c.id)}" style="color:var(--red)">বাতিল</button>` : ''}</div></td></tr>`).join('')}</table></div>` : '<div class="empty">এখনো কোনো সার্টিফিকেট প্রিন্ট হয়নি</div>';
-    $$('[data-rv]').forEach(b => b.onclick = async () => {
-      const why = prompt('কেন বাতিল করছেন? (যাচাই পাতায় দেখাবে, যেমন "ভুল তথ্য — নতুন সার্টিফিকেট দেওয়া হয়েছে")', ''); if (why === null) return;
-      try {
-        const patch = { revoked_at: new Date().toISOString(), revoked_reason: why.trim() };
-        if (DEMO) S.certificates = S.certificates.map(x => x.id === b.dataset.rv ? { ...x, ...patch } : x);
-        else { const { error } = await sb.from('certificates').update(patch).eq('id', b.dataset.rv); if (error) throw error; }
-        toast('সার্টিফিকেট বাতিল হয়েছে'); certListModal(s);
-      } catch (e) { toast(errMsg(e), true); }
-    });
-  };
-  load.then(draw).catch(e => { const box = $('#cl'); if (box) box.innerHTML = `<div class="empty">${/certificates|schema cache|does not exist/i.test(e.message || '') ? 'ডাটাবেসে v44 আপডেট চালানো বাকি।' : esc(errMsg(e))}</div>`; });
-}
-async function printCertificate(s) {
-  const a = attOf(s.id); const st = S.settings;
-  if (!a.hours) return toast('এখনো কোনো উপস্থিতির ঘণ্টা নেই', true);
-  const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
-  const today = todayISO();
-  const rows = LEVELS.filter(l => a.byLevel[l]).map(l => `<tr><td>${l}</td><td>${esc(st.textbooks[l] || '')}</td><td style="text-align:right">${a.byLevel[l]} 時間</td></tr>`).join('');
-  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
-  const vb = await certVerifyHtml('hours', s, { hours: a.hours, pct: a.pct, from: a.first, to: a.last, levels: Object.fromEntries(LEVELS.filter(l => a.byLevel[l]).map(l => [l, a.byLevel[l]])) });
-  printWindow('Certificate ' + s.admission_no, `<div class="sheet">${headHtml()}
-  <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
-  <div style="text-align:center;margin-bottom:22px"><div style="font-size:26px;font-weight:800;letter-spacing:6px">日本語学習時間証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF JAPANESE LANGUAGE STUDY HOURS</div></div>
-  <table style="font-family:'Shippori Mincho B1','Hind Siliguri',serif"><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}</td></tr><tr><th>生年月日 / Date of Birth</th><td>${s.dob ? jd(s.dob) + ' (' + fmtD(s.dob) + ')' : ''}</td></tr>
-  <tr><th>国籍 / Nationality</th><td>バングラデシュ / Bangladesh</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no)}</td></tr>
-  <tr><th>学習期間 / Period of Study</th><td>${jd(a.first)} 〜 ${jd(a.last)}<br><span style="font-size:12px">(${fmtD(a.first)} to ${fmtD(a.last)})</span></td></tr>
-  <tr><th>総学習時間 / Total Study Hours</th><td><b style="font-size:18px">${a.hours} 時間 (hours)</b></td></tr><tr><th>出席率 / Attendance Rate</th><td>${a.pct}% (${a.came} / ${a.total})</td></tr></table>
-  <div style="margin-top:14px;font-size:13px;font-weight:700">内訳 / Breakdown</div>
-  <table style="margin-top:6px"><tr><th style="width:auto">レベル / Level</th><th style="width:auto">使用教材 / Textbook</th><th style="width:auto;text-align:right">時間 / Hours</th></tr>${rows}</table>
-  <p style="margin-top:22px;font-size:14px">上記の者は、当学院において上記の通り日本語を学習したことを証明します。<br><span style="font-size:12px;color:#6E665A">This is to certify that the above-named student has studied Japanese at our institute as stated above.</span></p>
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
-  <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
-  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">学習時間は出席記録（出席・遅刻）に基づいて算出しています。 / Hours are calculated from signed attendance records (present and late).</p></div></div>`, w);
-}
-
-async function printTranscript(s) {
-  const res = studentResults(s.id); const a = attOf(s.id); const st = S.settings; const today = todayISO();
-  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
-  const tk2 = res.filter(x => pctOf(x.r, x.ex) != null);
-  const vb = await certVerifyHtml('transcript', s, { hours: a.hours, pct: a.pct, exams: res.length, passed: res.filter(x => !x.r.absent && passed(x.r, x.ex)).length, avg: tk2.length ? Math.round(tk2.reduce((m, x) => m + pctOf(x.r, x.ex), 0) / tk2.length) : null });
-  const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
-  const typeJa = { quiz: '小テスト', test: '定期試験', mock: '模擬試験', jlpt: '日本語能力試験 (JLPT)', nat: 'NAT-TEST', speaking: '会話・面接', other: 'その他' };
-  printWindow('Transcript ' + s.admission_no, `<div class="sheet dense">${headHtml()}
-  <div style="padding:26px 30px;font-family:'Shippori Mincho B1',serif">
-  <div style="text-align:center;margin-bottom:20px"><div style="font-size:26px;font-weight:800;letter-spacing:8px">成績証明書</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">ACADEMIC TRANSCRIPT</div></div>
-  <table><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}</td></tr><tr><th>生年月日 / Date of Birth</th><td>${s.dob ? jd(s.dob) : ''}</td></tr><tr><th>国籍 / Nationality</th><td>バングラデシュ / Bangladesh</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no)}</td></tr>
-  <tr><th>総学習時間 / Study Hours</th><td>${a.hours} 時間 · 出席率 / Attendance ${a.pct == null ? '—' : a.pct + '%'}</td></tr></table>
-  <table style="margin-top:14px"><tr><th style="width:auto">日付 / Date</th><th style="width:auto">試験 / Examination</th><th style="width:auto">レベル</th><th style="width:auto;text-align:right">得点 / Score</th><th style="width:auto;text-align:right">%</th><th style="width:auto">合否 / Result</th></tr>
-  ${res.map(({ r, ex }) => `<tr><td>${fmtD(ex.exam_date)}</td><td>${esc(typeJa[ex.type] || '')} · <span style="font-size:12px">${esc(ex.title)}</span></td><td>${esc(ex.level)}</td><td style="text-align:right">${r.absent ? '欠席' : num(r.marks) + ' / ' + num(ex.max_marks)}</td><td style="text-align:right">${pctOf(r, ex) == null ? '—' : pctOf(r, ex) + '%'}</td><td>${r.absent ? '欠席 / Absent' : passed(r, ex) ? '合格 / Pass' : '不合格 / Fail'}</td></tr>`).join('')}</table>
-  <p style="margin-top:20px;font-size:14px">上記の通り相違ないことを証明します。<br><span style="font-size:12px;color:#6E665A">We hereby certify that the above is a true record of the student's results at our institute.</span></p>
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:28px;font-size:13.5px;line-height:1.8">
-  <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}<br>所在地 / Address: ${esc(st.address || '')}</div>
-  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>${vb}</div></div>`, w);
-}
+// certificates (study hours, transcript, mock pass, enrolment, completion, attendance, recommendation) live in certs.js
 
 // ------------------------------------------------------------------ student ID cards (85.6 × 54 mm, front + back side by side)
 let _qrLib = null;
@@ -2936,7 +2845,7 @@ function proofModal(x) {
 }
 
 // ------------------------------------------------------------------ certificate requests from the student site (v34)
-const REQ_KIND = { hours: 'স্টাডি-আওয়ার সার্টিফিকেট', transcript: 'পরীক্ষার ফলাফল (ট্রান্সক্রিপ্ট)', idcard: 'আইডি কার্ড', other: 'অন্য কাগজ / চিঠি' };
+const REQ_KIND = { hours: 'স্টাডি-আওয়ার সার্টিফিকেট', transcript: 'পরীক্ষার ফলাফল (ট্রান্সক্রিপ্ট)', enrol: 'অধ্যয়নরত সনদ (在籍証明書)', complete: 'কোর্স সমাপ্তি সনদ (修了証明書)', attend: 'মাসভিত্তিক হাজিরা সনদ (出席証明書)', recommend: 'সুপারিশপত্র (推薦状)', idcard: 'আইডি কার্ড', other: 'অন্য কাগজ / চিঠি' };
 const REQ_ST = { pending: ['due', 'অপেক্ষায়'], ready: ['active', 'তৈরি — নিতে আসবে'], delivered: ['completed', 'দেওয়া হয়েছে'], rejected: ['dropped', 'দেওয়া যাবে না'] };
 function viewRequests(q) {
   const tab = q.get('t') === 'done' ? 'done' : 'open';
@@ -2956,7 +2865,9 @@ function viewRequests(q) {
 }
 function requestModal(x) {
   const s = byId(S.students, x.student_id) || {}; const due = s.id ? dueOf(s) : 0;
-  const printBtn = { hours: ['স্টাডি-আওয়ার সার্টিফিকেট প্রিন্ট', () => printCertificate(s)], transcript: ['ট্রান্সক্রিপ্ট প্রিন্ট', () => printTranscript(s)], idcard: isAdmin() ? ['আইডি কার্ড প্রিন্ট', () => printIdCards([s])] : null }[x.kind];
+  const markReady = async () => { if (x.status === 'pending') try { putLocal('doc_requests', await API.update('doc_requests', x.id, { status: 'ready' })); } catch (e) { console.warn(e); } };
+  const printBtn = CERT_KIND[x.kind] && x.kind !== 'mock' ? ['সার্টিফিকেট দেখে প্রিন্ট করুন', () => { closeModal(); certOpen(x.kind, s, x.kind === 'complete' ? (s.current_level || 'N5') : null, markReady); }]
+    : { idcard: isAdmin() ? ['আইডি কার্ড প্রিন্ট', () => printIdCards([s])] : null }[x.kind];
   openModal(`<h2>${esc(REQ_KIND[x.kind] || x.kind)}</h2>
     <p style="margin:0 0 6px"><a href="#/student/${esc(s.id || '')}" id="rqst"><b>${esc(studentName(s))}</b></a> <span class="small muted">${esc(s.admission_no || '')} · আবেদন ${fmtDT(x.created_at)}</span></p>
     ${x.purpose ? `<p class="small" style="margin:0 0 4px">কেন দরকার: <b>${esc(x.purpose)}</b></p>` : ''}${x.note ? `<div class="card" style="white-space:pre-line;background:var(--soft);margin-bottom:8px">${esc(x.note)}</div>` : ''}
@@ -2966,7 +2877,7 @@ function requestModal(x) {
     <label class="f full">ছাত্রকে বার্তা (সাইটে দেখবে)<textarea name="reply" rows="3" maxlength="600" placeholder="যেমন: কাল বিকেলে অফিস থেকে নিয়ে যান / আগে বাকি ফি পরিশোধ করুন">${esc(x.reply || '')}</textarea></label>
     <div class="full row" style="justify-content:flex-end">${isAdmin() ? '<button type="button" class="btn ghost" id="rqd" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="rqc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
   $('#rqc').onclick = closeModal; const st = $('#rqst'); if (st) st.onclick = closeModal;
-  const pb = $('#rqp'); if (pb) pb.onclick = () => { printBtn[1](); const f = $('#rqf'); if (f.status.value === 'pending') f.status.value = 'ready'; };
+  const pb = $('#rqp'); if (pb) pb.onclick = () => { const f = $('#rqf'); if (f && f.status.value === 'pending') f.status.value = 'ready'; printBtn[1](); };
   $('#rqf').onsubmit = async (e) => { e.preventDefault(); const f = e.target; const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
     const d = { status: f.status.value, reply: f.reply.value.trim() }; if (d.status !== x.status) Object.assign(d, { done_by: S.profile.name || '', done_at: d.status === 'pending' ? null : new Date().toISOString() });
     try { putLocal('doc_requests', await API.update('doc_requests', x.id, d)); closeModal(); toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { btn.disabled = false; toast(errMsg(err), true); } };
@@ -3693,26 +3604,6 @@ function mockPerTestHtml(rows) {
     <td data-l="ফল">${x.best.pass ? badge('active', 'পাস ✓') : badge('due', 'এখনো পাস নয়')}</td><td data-l="শেষ দিয়েছে">${fmtD(x.last.slice(0, 10))}</td>
     <td>${x.best.pass ? `<button class="btn sm gold" data-mcert="${esc(x.best.a.id)}">🎓 সার্টিফিকেট</button>` : ''}</td></tr>`).join('')}</table></div>`;
 }
-async function printMockCertificate(s, aid) {
-  const a = (S.mock_attempts || []).find(x => x.id === aid); if (!a) return; const r = attemptRow(a); const st = S.settings; const t = r.t;
-  const w = certWindow(); if (!w) return toast('প্রিন্ট উইন্ডো খোলা যায়নি — পপ-আপ চালু করুন', true);
-  const vb = await certVerifyHtml('mock', s, { test: t.title || '', level: t.level || '', category: t.category || '', score: r.score, total: r.total, pct: r.pct, date: (a.submitted_at || '').slice(0, 10) });
-  const jd = (iso) => iso ? `${iso.slice(0, 4)}年${num(iso.slice(5, 7))}月${num(iso.slice(8, 10))}日` : '';
-  const day = (a.submitted_at || '').slice(0, 10); const today = todayISO();
-  const CAT = { full: '総合模擬試験 / Full mock test', kanji: '漢字 / Kanji', grammar: '文法 / Grammar', listening: '聴解 / Listening' };
-  printWindow('Mock certificate ' + s.admission_no, `<div class="sheet">${headHtml()}
-  <div style="padding:30px 34px;font-family:'Shippori Mincho B1',serif;border:3px double #A3843A;margin:14px">
-  <div style="text-align:center;margin-bottom:22px"><div style="font-size:28px;font-weight:800;letter-spacing:6px">模擬試験 合格証</div><div style="font-size:13px;letter-spacing:2px;color:#6E665A">CERTIFICATE OF PASSING · JAPANESE MOCK TEST</div></div>
-  <table style="font-family:'Shippori Mincho B1','Hind Siliguri',serif"><tr><th>氏名 / Name</th><td>${esc(s.name_en || '')}${s.name_bn ? ' (' + esc(s.name_bn) + ')' : ''}</td></tr><tr><th>学籍番号 / Student No.</th><td>${esc(s.admission_no || '')}</td></tr>
-  <tr><th>試験 / Test</th><td>JLPT ${esc(t.level || '')} 模擬試験 · ${CAT[t.category] || ''}<br><span style="font-size:12px">${esc(t.title || '')}</span></td></tr>
-  <tr><th>受験日 / Date taken</th><td>${jd(day)} (${fmtD(day)})</td></tr>
-  <tr><th>得点 / Score</th><td><b style="font-size:18px">${r.score} / ${r.total} (${r.pct}%)</b> &nbsp; 合格点 / Pass mark ${num(t.pass_pct || 60)}%</td></tr></table>
-  <p style="margin-top:22px;font-size:14px">上記の者は、当学院の日本語模擬試験に合格したことを証明します。<br><span style="font-size:12px;color:#6E665A">This is to certify that the above-named student has passed the Japanese mock test of our institute.</span></p>
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;font-size:13.5px;line-height:1.8">
-  <div>発行日 / Date of Issue: ${jd(today)} (${fmtD(today)})<br>${esc(st.institute_ja)} / ${esc(st.institute_en)}</div>
-  <div style="text-align:center"><div style="width:74px;height:74px;border:1.5px dashed #C8372B;border-radius:50%;margin:0 auto 6px;color:#C8372B;display:grid;place-items:center;font-size:12px">印</div>学院長 ${esc(st.director_ja)}<br>Director ${esc(st.director_en)}</div></div>
-  ${vb}<p style="font-size:11px;color:#6E665A;margin-top:14px">この証明書はオンライン模擬試験の記録に基づいています。 / Based on the student's saved online mock test record.</p></div></div>`, w);
-}
 function printMockSheet(s) {
   const rows = attemptsOf(s.id).map(attemptRow).reverse(); const m = mockSummary([...rows].reverse());
   printWindow('Mark sheet ' + (s.name_en || s.name_bn || ''), `<div style="border:1.5px solid #A3843A">${headHtml()}
@@ -3904,6 +3795,9 @@ async function fullBackup() {
     $('#bkc').onclick = () => { closeModal(); render(); };
   } catch (e) { closeModal(); toast(errMsg(e), true); }
 }
+
+// certs.js (loaded right after this file) builds on these
+Object.assign(window, { S, API, Local, DEMO, sb, uuid, todayISO, num, esc, fmtD, attOf, sessionMap, studentResults, pctOf, passed, attemptRow, LEVELS, headHtml, printWindow, loadQR, qrSvg, openModal, closeModal, toast, errMsg, badge, isAdmin, isTeacher, byId, studentName, $, $$ });
 
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
