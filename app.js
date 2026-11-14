@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS = {
   address: '',
   phone: '01711-005143',
   whatsapp: '+81 70-9222-2401',
-  email: 'sayemahmed8820@gmail.com',
+  email: 'info@sakura.institute',
   director_en: 'SAYEM AHMED',
   director_ja: 'サエム・アハメド',
   hours_per_class: 2,

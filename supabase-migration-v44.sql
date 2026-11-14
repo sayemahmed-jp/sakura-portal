@@ -58,4 +58,8 @@ $$;
 revoke all on function public.verify_certificate(text, text) from public;
 grant execute on function public.verify_certificate(text, text) to anon, authenticated;
 
+-- the institute's public email on receipts and certificates becomes info@sakura.institute
+-- (forwarded to the director's inbox). It can be changed any time in the portal: সেটিংস → ইমেইল.
+update public.settings set data = jsonb_set(coalesce(data, '{}'::jsonb), '{email}', to_jsonb('info@sakura.institute'::text)), updated_at = now() where id = 1;
+
 select 'ROWS:SAKURA_V44_OK' as result;

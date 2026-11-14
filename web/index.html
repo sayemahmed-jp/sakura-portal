@@ -196,7 +196,7 @@ footer .big{font:800 clamp(34px,7vw,72px)/1.1 'Shippori Mincho B1';color:#fff;ma
   const tk = (n) => '৳ ' + bn(Math.round(Number(n) || 0).toLocaleString('en-IN'));
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const waNum = (ph) => { let d = String(ph || '').replace(/[^\d]/g, ''); if (!d) return ''; if (d.startsWith('00')) d = d.slice(2); if (/^01\d{9}$/.test(d)) d = '88' + d; else if (/^0[789]0\d{8}$/.test(d)) d = '81' + d.slice(1); return d; };
-  const DEF = { phone: '01711-005143', whatsapp: '+81 70-9222-2401', email: 'sayemahmed8820@gmail.com', address: '', director_en: 'SAYEM AHMED', director_ja: 'サエム・アハメド', hours_per_class: 2,
+  const DEF = { phone: '01711-005143', whatsapp: '+81 70-9222-2401', email: 'info@sakura.institute', address: '', director_en: 'SAYEM AHMED', director_ja: 'サエム・アハメド', hours_per_class: 2,
     fees: { 'N5': 20000, 'N4': 20000, 'N3': 22000, 'N5+N4': 35000, 'N5+N4+N3': 45000 }, textbooks: { 'N5': 'みんなの日本語 初級I', 'N4': 'みんなの日本語 初級II', 'N3': '中級教材' } };
   const CFG = window.SAKURA_CONFIG || {}; const live = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
   const sb = live && window.supabase ? window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY, { auth: { persistSession: false } }) : null;
