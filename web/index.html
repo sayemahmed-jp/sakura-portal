@@ -19,16 +19,22 @@
   --paper:#F1F7F3; --surface:#FFFFFF; --mist:#DCEBE2; --ink:#12372B; --soft:#4E6B5F;
   --leaf:#1F7A4D; --leaf-ink:#FFFFFF; --sakura:#E2B65C; --sakura-deep:#94660F; --line:#1F7A4D;
   --wa:#1FA855; --shadow:0 18px 40px -22px rgba(18,55,43,.45);
+  --silver:linear-gradient(150deg,rgba(248,250,252,.82) 0%,rgba(222,227,233,.74) 45%,rgba(196,203,212,.70) 100%);
+  --silver-card:rgba(255,255,255,.55); --silver-line:rgba(120,132,148,.25);
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --paper:#0E1A30; --surface:#16243F; --mist:#24365A; --ink:#EAF0FA; --soft:#A9B7CF;
   --leaf:#F59A3C; --leaf-ink:#1B1205; --sakura:#E2B65C; --sakura-deep:#EBC679; --line:#F59A3C;
   --wa:#25C764; --shadow:0 18px 40px -22px rgba(0,0,0,.7);
+  --silver:linear-gradient(150deg,rgba(120,132,152,.55) 0%,rgba(72,84,106,.62) 50%,rgba(46,56,76,.70) 100%);
+  --silver-card:rgba(255,255,255,.08); --silver-line:rgba(255,255,255,.12);
 }}
 :root[data-theme="dark"]{
   --paper:#0E1A30; --surface:#16243F; --mist:#24365A; --ink:#EAF0FA; --soft:#A9B7CF;
   --leaf:#F59A3C; --leaf-ink:#1B1205; --sakura:#E2B65C; --sakura-deep:#EBC679; --line:#F59A3C;
   --wa:#25C764; --shadow:0 18px 40px -22px rgba(0,0,0,.7);
+  --silver:linear-gradient(150deg,rgba(120,132,152,.55) 0%,rgba(72,84,106,.62) 50%,rgba(46,56,76,.70) 100%);
+  --silver-card:rgba(255,255,255,.08); --silver-line:rgba(255,255,255,.12);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
@@ -68,20 +74,20 @@ section{padding:88px 0}
 
 .nav nav a.login{box-shadow:inset 0 0 0 2px var(--mist)}
 .menub{display:none;margin-left:auto;background:var(--mist);color:var(--ink);border:0;border-radius:999px;padding:9px 11px;line-height:0;font:700 15px 'Anek Bangla',sans-serif;cursor:pointer}
-.drawer{position:fixed;inset:0;z-index:40;display:none;background:color-mix(in srgb,var(--ink) 18%,transparent)}
+.drawer{position:fixed;inset:0;z-index:40;display:none;background:rgba(20,28,38,.22)}
 .drawer.open{display:block}
 .dpanel{position:absolute;inset:10px 10px auto 10px;max-height:calc(100dvh - 20px);overflow:auto;padding:14px 16px 18px;border-radius:26px;
-  background:color-mix(in srgb,var(--paper) 68%,transparent);backdrop-filter:blur(26px) saturate(1.5);-webkit-backdrop-filter:blur(26px) saturate(1.5);
-  border:1px solid color-mix(in srgb,var(--surface) 70%,transparent);box-shadow:0 30px 60px -30px rgba(10,30,22,.55);animation:dIn .32s cubic-bezier(.2,1.2,.4,1) both}
+  background:var(--silver);backdrop-filter:blur(26px) saturate(1.4);-webkit-backdrop-filter:blur(26px) saturate(1.4);
+  border:1px solid rgba(255,255,255,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 0 rgba(120,130,145,.25),0 30px 60px -28px rgba(30,38,50,.6);animation:dIn .32s cubic-bezier(.2,1.2,.4,1) both}
 @keyframes dIn{from{opacity:0;transform:translateY(-12px) scale(.98)}to{opacity:1;transform:none}}
 .dhead{display:flex;align-items:center;gap:10px;padding:2px 2px 10px}
 .dhead .kamon{width:30px;height:30px}
 .dhead b{flex:1;font-size:17px;font-variation-settings:'wdth' 85}
-.drawer .x{width:40px;height:40px;display:grid;place-items:center;background:color-mix(in srgb,var(--surface) 70%,transparent);color:var(--ink);border:0;border-radius:50%;cursor:pointer}
+.drawer .x{width:40px;height:40px;display:grid;place-items:center;background:var(--silver-card);color:var(--ink);border:0;border-radius:50%;cursor:pointer}
 .dlab{margin:12px 4px 6px;font-size:13px;font-weight:600;color:var(--soft)}
-.dlog{background:color-mix(in srgb,var(--surface) 72%,transparent);border-radius:18px;padding:4px}
-.dnav{display:flex;flex-direction:column;background:color-mix(in srgb,var(--surface) 72%,transparent);border-radius:18px;padding:4px 14px}
-.dnav a{display:flex;align-items:baseline;justify-content:space-between;gap:12px;text-decoration:none;padding:13px 2px;font-size:18px;font-weight:600;border-bottom:1px solid var(--mist)}
+.dlog{background:var(--silver-card);border-radius:18px;padding:4px}
+.dnav{display:flex;flex-direction:column;background:var(--silver-card);border-radius:18px;padding:4px 14px}
+.dnav a{display:flex;align-items:baseline;justify-content:space-between;gap:12px;text-decoration:none;padding:13px 2px;font-size:18px;font-weight:600;border-bottom:1px solid var(--silver-line)}
 .dnav a:last-child{border-bottom:0}
 .dnav small{font-size:12px;color:var(--soft);font-weight:500}
 :root[lang="ja"] .dnav small{display:none}
