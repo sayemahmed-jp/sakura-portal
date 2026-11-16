@@ -41,15 +41,36 @@
     }
     return out;
   }
-  function stop() { RUN++; if (has) speechSynthesis.cancel(); }
+  // ---- pre-made VOICEVOX clips (voice/<hash>.mp3): same voices on every phone; the device voice is only the fallback
+  const VBASE = (() => { try { return new URL('voice/', document.currentScript.src).href; } catch (_) { return 'voice/'; } })();
+  const VID = { n: 8, f: 14, m: 11 };   // 春日部つむぎ (narration), 冥鳴ひまり (woman), 玄野武宏 (man)
+  let IDX = null, AUD = null;
+  try { fetch(VBASE + 'index.json').then(r => r.ok ? r.json() : []).then(j => { IDX = new Set(j); }).catch(() => {}); } catch (_) { /* offline */ }
+  const fnv = (s, h) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
+  const hkey = (text, v) => { const s = text + '|' + v; const r = s.split('').reverse().join(''); return fnv(s, 2166136261).toString(16).padStart(8, '0') + fnv(r, 2166136261).toString(16).padStart(8, '0'); };
+  function clipPlay(parts, onEnd) {
+    if (!IDX || !parts.length) return false;
+    const keys = parts.map(p => hkey(p.text, VID[p.who] || 8)); if (!keys.every(k => IDX.has(k))) return false;
+    stop(); const run = RUN; let i = 0;
+    const next = () => { if (run !== RUN) return; const k = keys[i++]; if (!k) { AUD = null; if (onEnd) onEnd(); return; }
+      const a = new Audio(VBASE + k + '.mp3'); AUD = a; a.onended = () => setTimeout(next, i < keys.length ? 380 : 0); a.onerror = () => setTimeout(next, 50);
+      const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (i === 1 && run === RUN) { AUD = null; fallback(parts, onEnd); } }); };
+    next(); return true;
+  }
+  let fallback = () => {};
+  const clip = (text, onEnd) => clipPlay(parse(text), onEnd);
+  function stop() { RUN++; if (AUD) { try { AUD.pause(); } catch (_) { /* gone */ } AUD = null; } if (has) speechSynthesis.cancel(); }
   // play(script, question, onEnd) → false when the device has no Japanese voice
   function play(script, question, onEnd) {
+    if (clipPlay(parse(script), onEnd)) return true;
+    return devicePlay(parse(script), onEnd);
+  }
+  fallback = (parts, onEnd) => devicePlay(parts, onEnd);
+  function devicePlay(parts, onEnd) {
     if (!has) return false;
     stop(); const run = RUN; const V = voices();
-    const parts = parse(script); const q = kana(question || '').trim();
     // same order as before: just the script, line by line (no chime, the question is not read out) — only the voices are better
     const seq = parts.map((p, i) => ({ who: p.who, text: p.text, pause: i === parts.length - 1 ? 0 : 380 }));
-    void q;
     let i = 0;
     const next = () => {
       if (run !== RUN) return; const s = seq[i++]; if (!s) { if (onEnd) onEnd(); return; }
@@ -64,5 +85,5 @@
     next();
     return V.any;
   }
-  window.JLPTVoice = { play, stop, voices, parse, kana };
+  window.JLPTVoice = { play, stop, voices, parse, kana, clip, hkey };
 })();

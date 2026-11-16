@@ -1691,7 +1691,7 @@ function viewTnotes(lv, id) {
     ${(u.gx || []).length ? `<div class="card tnc"><h3>📘 ব্যাকরণ — শিক্ষকের জন্য ব্যাখ্যা</h3>${u.gx.map((g, i) => `<div class="tng"><div class="tngh"><span>${TN_BN(i + 1)}</span><b>${fx(g.pt)}</b></div>
       <p class="tngb">${fx(g.bn)}</p>${g.ex.length ? `<div class="tnex">${g.ex.map(e => `<div><button class="tnsay" type="button" data-tsay="${esc(e[0])}" aria-label="শুনুন" title="শুনুন">🔊</button><span class="jp">${fx(e[0])}</span><small>${esc(e[1] || '')}</small></div>`).join('')}</div>` : ''}
       <div class="tntip"><div><b>⚠️ ছাত্রদের সাধারণ ভুল</b><p>${fx(g.err)}</p></div><div><b>🧑‍🏫 কীভাবে পড়াবেন</b><p>${fx(g.how)}</p></div></div></div>`).join('')}</div>` : ''}
-    ${classes}`;
+    ${classes}<p class="small muted" style="text-align:center;margin:14px 0 4px">${VOICE_CREDIT}</p>`;
   mount('#/tnotes', `<div class="top"><div><h1>শিক্ষকের নোট</h1><p>さくら日本語 ${lv} বই · ${TN_BN(L.length)}টি পাঠ · মোট ${TN_BN(all)}টি ক্লাস (${TN_BN(all * 2)} ঘণ্টা) · প্রতি ক্লাস ১২০ মিনিট</p></div><div class="row"><div class="tntabs">${tabs}</div><button class="btn ghost" id="tnprint">🖨 এই পাঠ প্রিন্ট</button><button class="btn ghost" id="tnprintall">🖨 পুরো ${lv} নোট প্রিন্ট</button></div></div>
   <div class="tngrid"><nav class="card tnlist" aria-label="পাঠের তালিকা">${list}</nav><div class="tnbody">${body}</div></div>`, () => {
     $('#tnprint').onclick = () => printWindow('Teacher notes ' + lv + ' ' + u.no, headHtml() + tnLessonPrint(u, lv));
@@ -3182,13 +3182,16 @@ const mockDone = (tid) => (S.mock_attempts || []).filter(a => a.test_id === tid 
 const mockOpts = (q) => Array.isArray(q.options) ? q.options : (() => { try { return JSON.parse(q.options); } catch { return []; } })();
 // one Japanese sentence aloud (teacher notes); says what to check when no sound comes out
 const NOVOICE = 'এই ডিভাইসে জাপানি ভয়েস পাওয়া যায়নি — শব্দ না এলে ফোনের Text-to-Speech-এ জাপানি যোগ করুন';
+const VOICE_CREDIT = '🔊 音声：VOICEVOX:春日部つむぎ、VOICEVOX:冥鳴ひまり、VOICEVOX:玄野武宏';
 function sayJa(text) {
+  if (window.JLPTVoice && window.JLPTVoice.clip(text)) return;   // pre-made VOICEVOX clip
   if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে কথা বলার সুবিধা নেই — Chrome বা Safari ব্যবহার করুন', true);
   const ok = window.JLPTVoice ? window.JLPTVoice.play(text, '') : (speakJa(text), true);
   if (!ok) return toast(NOVOICE, true);
   setTimeout(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) toast('শব্দ আসেনি? ভলিউম বাড়ান, iPhone-এর সাইলেন্ট সুইচ বন্ধ করুন, তারপর আবার 🔊 চাপুন'); }, 1500);
 }
-function speakJa(text) { // reads a listening script aloud with the device's Japanese voice
+function speakJa(text) { // reads a listening script aloud (VOICEVOX clip if there is one, else the device's Japanese voice)
+  if (window.JLPTVoice && window.JLPTVoice.clip(text)) return;
   if (!('speechSynthesis' in window)) return toast('এই ব্রাউজারে কথা বলার সুবিধা নেই', true);
   speechSynthesis.cancel();
   const clean = String(text || '').split('\n').map(l => l.replace(/^[^：:\s]{1,6}[：:]\s*/, '')).join('。');

@@ -1458,8 +1458,8 @@ function renderInterview(d, user) {
   }
   $('#app').innerHTML = `<div class="st">${head}${body}</div>`;
   const re = () => renderInterview(d, user);
-  $('#ivback').onclick = () => { ivStopRec(); try { speechSynthesis.cancel(); } catch { /* none */ } renderHome(d, user); };
-  $$('[data-ivm]').forEach(b => b.onclick = () => { ivStopRec(); try { speechSynthesis.cancel(); } catch { /* none */ } IV.mode = b.dataset.ivm; re(); });
+  $('#ivback').onclick = () => { ivStopRec(); try { if (window.JLPTVoice) window.JLPTVoice.stop(); speechSynthesis.cancel(); } catch { /* none */ } renderHome(d, user); };
+  $$('[data-ivm]').forEach(b => b.onclick = () => { ivStopRec(); try { if (window.JLPTVoice) window.JLPTVoice.stop(); speechSynthesis.cancel(); } catch { /* none */ } IV.mode = b.dataset.ivm; re(); });
   $$('[data-ivc]').forEach(b => b.onclick = () => { IV.cat = b.dataset.ivc; re(); });
   $$('[data-ivo]').forEach(b => b.onclick = () => { IV.open[b.dataset.ivo] = !IV.open[b.dataset.ivo]; re(); });
   $$('[data-ivsay]').forEach(b => b.onclick = () => speakJa(D.qs[b.dataset.ivsay].q));
@@ -1477,7 +1477,7 @@ function renderInterview(d, user) {
   const ag = $('#ivagain'); if (ag) ag.onclick = () => { Object.values(M.recs).forEach(u => URL.revokeObjectURL(u)); IV.mock = null; re(); };
   const rc = $('#ivrec'); if (rc) rc.onclick = async () => {
     if (M.rec) { M.rec.stop(); return; }
-    try { speechSynthesis.cancel(); } catch { /* none */ }
+    try { if (window.JLPTVoice) window.JLPTVoice.stop(); speechSynthesis.cancel(); } catch { /* none */ }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); const chunks = []; const mr = new MediaRecorder(stream); const k = M.i;
       mr.ondataavailable = (e) => chunks.push(e.data);
@@ -1968,7 +1968,7 @@ function renderHome(d, user) {
       <div class="mlist2">${d.preview ? '' : row('ibgo', '🔔', 'নতুন খবর', 'নোটিশ, উত্তর, নম্বর, সার্টিফিকেট', ib ? BN_NUM(ib) : '') + row('idgo', '🪪', 'আমার ডিজিটাল আইডি', 'QR কোড — অফিসে দেখালে আপনার তথ্য খুলবে')}</div>
       ${d.preview ? '' : fold('money', '💳', 'ফি, হাজিরা ও কাগজপত্র', row('accgo', '💳', 'ফি ও হিসাব', 'বাকি টাকা, রশিদ, বিকাশে টাকা দেওয়া') + row('attgo', '📅', 'আমার হাজিরা', 'কোন দিন উপস্থিত ছিলেন') + row('docgo', '📄', 'সার্টিফিকেট', 'স্টাডি-আওয়ার, ফলাফল, আইডি কার্ড চাওয়া'))}
       ${d.preview ? '' : fold('fun', '🏅', 'ব্যাজ ও বন্ধু', row('bdgo', '🏅', 'আমার ব্যাজ', bd ? `${BN_NUM(bd.filter(x => x.done).length)}/${BN_NUM(bd.length)}টি পেয়েছেন` : '') + row('refgo', '🤝', 'বন্ধুকে আনুন', 'আপনার নিজের লিংক'))}
-      ${fold('set', '⚙️', 'সেটিংস', `<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>${langSwitchHtml()}</div><div class="card acct langrow"><span class="ri">🌙</span><span style="flex:1"><b>রং</b></span>${stThemeHtml()}</div>${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center">লগআউট</button>`)}`; }
+      ${fold('set', '⚙️', 'সেটিংস', `<div class="card acct langrow"><span class="ri">🌐</span><span style="flex:1"><b>ভাষা / Language</b></span>${langSwitchHtml()}</div><div class="card acct langrow"><span class="ri">🌙</span><span style="flex:1"><b>রং</b></span>${stThemeHtml()}</div>${installCardHtml(d)}<button class="btn ghost" id="lo" style="width:100%;justify-content:center">লগআউট</button><p class="small muted" style="text-align:center;margin-top:12px">🔊 音声：VOICEVOX:春日部つむぎ、VOICEVOX:冥鳴ひまり、VOICEVOX:玄野武宏</p>`)}`; }
   const nav = d.blocked ? '' : `<nav class="bnav" aria-label="মেনু">${SECS.map(([k, ic, l]) => { const n = k === 'home' ? (d.notices || []).filter(x => !ntSeen(d).includes(String(x.id))).length + (d.homework || []).filter(hwPending).length : k === 'study' ? qaUnread(d).length : 0;
     return `<button data-sec="${k}" class="${NAVSEC === k ? 'on' : ''}" ${NAVSEC === k ? 'aria-current="page"' : ''}><span class="ni">${ic}</span><span class="nl">${l}</span>${n ? '<i class="ndot"></i>' : ''}</button>`; }).join('')}<button type="button" class="bmin" id="bmin" aria-label="মেনু ছোট / বড় করুন" title="মেনু ছোট / বড় করুন"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button></nav>`;
   $('#app').innerHTML = `<div class="st app2 ${d.blocked ? '' : 'hasnav'}">${head}<div class="shell2">${nav}<main class="smain">${body}${foot}</main></div></div>`;
@@ -2045,6 +2045,7 @@ const fmtClock = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return 
 function listenJa(q) { if (window.JLPTVoice) return window.JLPTVoice.play(q.script, q.question); return speakJa(q.script); }
 function speakJa(text, onEnd) { try { return speakJa0(text, onEnd); } catch (e) { console.warn(e); return false; } }
 function speakJa0(text, onEnd) {
+  if (window.JLPTVoice && window.JLPTVoice.clip(text, onEnd)) return true;   // pre-made VOICEVOX clip
   if (!('speechSynthesis' in window)) { toast('এই ব্রাউজারে শোনার সুবিধা নেই — Chrome ব্যবহার করুন', true); return false; }
   speechSynthesis.cancel();
   const clean = String(text || '').split('\n').map(l => l.replace(/^[^：:\s]{1,6}[：:]\s*/, '')).join('。');
@@ -2161,7 +2162,7 @@ function renderExam(d) {
   // ---- leaving the page ends the exam (anti-cheating)
   let blurT = null, warnEl = null;
   const stopWatch = () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pagehide', onHide); window.removeEventListener('blur', onBlur); window.removeEventListener('focus', onFocus); clearTimeout(blurT); if (warnEl) warnEl.remove(); };
-  const endNow = (reason) => { EXAM.done = true; clearInterval(tick); clearTimeout(saveT); window.onbeforeunload = null; if ('speechSynthesis' in window) speechSynthesis.cancel(); stopWatch(); };
+  const endNow = (reason) => { EXAM.done = true; clearInterval(tick); clearTimeout(saveT); window.onbeforeunload = null; if (window.JLPTVoice) window.JLPTVoice.stop(); if ('speechSynthesis' in window) speechSynthesis.cancel(); stopWatch(); };
   const leave = () => {
     if (EXAM.done) return; endNow('left');
     API.mockLeaveBeacon(EXAM.id, answers);                 // reaches the server even if the page is closing
