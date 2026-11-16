@@ -53,7 +53,7 @@
     const keys = parts.map(p => hkey(p.text, VID[p.who] || 8)); if (!keys.every(k => IDX.has(k))) return false;
     stop(); const run = RUN; let i = 0;
     const next = () => { if (run !== RUN) return; const k = keys[i++]; if (!k) { AUD = null; if (onEnd) onEnd(); return; }
-      const a = new Audio(VBASE + k + '.mp3'); AUD = a; a.onended = () => setTimeout(next, i < keys.length ? 380 : 0); a.onerror = () => setTimeout(next, 50);
+      const a = new Audio(VBASE + k + '.mp3'); AUD = a; a.onended = () => setTimeout(next, i < keys.length ? 650 : 0); a.onerror = () => setTimeout(next, 50);
       const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (i === 1 && run === RUN) { AUD = null; fallback(parts, onEnd); } }); };
     next(); return true;
   }
