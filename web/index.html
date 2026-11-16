@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="bn">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>সাকুরা জাপানিজ ইনস্টিটিউট · Sakura Japanese Institute · নারায়ণগঞ্জ</title>
-<meta name="description" content="নারায়ণগঞ্জে জাপানি ভাষা শিক্ষা (JLPT N5–N3) আর জাপানে পড়তে যাওয়ার পূর্ণ সহায়তা। প্রথম ৩টি ক্লাস ফ্রি, সব বই কোর্স ফি-র মধ্যে।">
+<title>Sakura Japanese Institute · Japanese language school in Narayanganj</title>
+<meta name="description" content="Japanese language school in Narayanganj, Bangladesh: JLPT N5–N3 courses and full support for studying in Japan. First 3 classes free. নারায়ণগঞ্জে জাপানি ভাষা শিক্ষা (JLPT N5–N3) আর জাপানে পড়তে যাওয়ার পূর্ণ সহায়তা। প্রথম ৩টি ক্লাস ফ্রি, সব বই কোর্স ফি-র মধ্যে।">
 <meta property="og:title" content="সাকুরা জাপানিজ ইনস্টিটিউট · さくら日本語学院">
 <meta property="og:description" content="জাপানি ভাষা শিখুন (JLPT N5–N3), জাপানে পড়তে যান। প্রথম ৩টি ক্লাস ফ্রি। অনলাইনে ভর্তির আবেদন করুন।">
 <meta property="og:type" content="website">
@@ -60,20 +60,33 @@ section{padding:88px 0}
 .nav .wrap{display:flex;align-items:center;gap:12px;height:66px}
 .kamon{width:38px;height:38px;flex:none;color:var(--ink)}
 .brand{line-height:1.15;min-width:0}
-.brand b{display:block;font-size:17px;font-variation-settings:'wdth' 85}
+.brand b{display:block;font-size:17px;font-variation-settings:'wdth' 85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brand small{display:block;font-size:12px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .nav nav{margin-left:auto;display:flex;align-items:center;gap:6px;position:relative}
 .nav nav .pill{position:absolute;top:50%;height:38px;margin-top:-19px;border-radius:999px;background:var(--mist);z-index:-1;opacity:0;transition:left .32s cubic-bezier(.3,1.3,.5,1),width .32s cubic-bezier(.3,1.3,.5,1),opacity .2s}
 .nav nav a{text-decoration:none;font-weight:600;font-size:15px;padding:8px 12px;border-radius:999px}
 
 .nav nav a.login{box-shadow:inset 0 0 0 2px var(--mist)}
-.menub{display:none;margin-left:auto;background:var(--mist);color:var(--ink);border:0;border-radius:999px;padding:10px 16px;font:700 15px 'Anek Bangla',sans-serif;cursor:pointer}
+.menub{display:none;margin-left:auto;background:var(--mist);color:var(--ink);border:0;border-radius:999px;padding:9px 11px;line-height:0;font:700 15px 'Anek Bangla',sans-serif;cursor:pointer}
 .drawer{position:fixed;inset:0;z-index:40;background:var(--paper);padding:20px;display:none;flex-direction:column;gap:4px}
 .drawer.open{display:flex}
 .drawer a{font-size:24px;font-weight:700;font-variation-settings:'wdth' 85;text-decoration:none;padding:12px 4px;border-bottom:1px solid var(--mist)}
 .drawer .x{align-self:flex-end;background:var(--mist);color:var(--ink);border:0;border-radius:999px;padding:10px 16px;font:700 15px 'Anek Bangla',sans-serif;cursor:pointer}
 
 
+
+/* language switch */
+.lsw{display:inline-flex;gap:2px;padding:3px;border-radius:999px;box-shadow:inset 0 0 0 2px var(--mist)}
+.lsw button{white-space:nowrap;border:0;background:transparent;color:var(--soft);font:700 13px 'Anek Bangla','Zen Maru Gothic',sans-serif;padding:6px 10px;border-radius:999px;cursor:pointer;min-width:38px}
+.lsw button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.nav .lsw{margin-left:6px}
+.mlsw{display:none}
+:root[lang="ja"] body,:root[lang="ja"] .btn,:root[lang="ja"] .f input,:root[lang="ja"] .f select,:root[lang="ja"] .f textarea{font-family:'Zen Maru Gothic','Anek Bangla',sans-serif}
+:root[lang="ja"] h1,:root[lang="ja"] h2,:root[lang="ja"] h3{font-family:'Zen Maru Gothic',sans-serif;font-weight:900;letter-spacing:0;line-height:1.2}
+:root[lang="ja"] .hero h1{font-size:clamp(36px,4.8vw,66px)}
+:root[lang="ja"] .hero h1 span{white-space:nowrap}
+:root[lang="en"] .hero h1{font-size:clamp(42px,5.3vw,74px);line-height:1.02}
+:root[lang="en"] h1,:root[lang="en"] h2{letter-spacing:-.02em}
 /* login hub */
 .lg{position:relative}
 .nav .login{font:600 15px 'Anek Bangla',sans-serif;color:var(--ink);background:transparent;border:0;box-shadow:inset 0 0 0 2px var(--mist);border-radius:999px;padding:8px 16px;cursor:pointer}
@@ -201,7 +214,7 @@ footer .flinks a{margin-right:16px;font-weight:600}
 @keyframes fall{to{transform:translate(70px,110vh) rotate(540deg)}}
 
 @media (max-width:960px){
-  .nav nav{display:none}.menub{display:block}
+  .nav nav{display:none}.menub{display:block;margin-left:8px}.mlsw{display:inline-flex;margin-left:auto}
   .hero .wrap{grid-template-columns:1fr;gap:28px}
   .hero{padding-top:16px}
   .hero .scene{order:-1}
@@ -225,6 +238,10 @@ footer .flinks a{margin-right:16px;font-weight:600}
 @media (max-width:520px){
   body{font-size:16px}
   .brand small{display:none}
+  .brand b{font-size:15px}
+  .nav .wrap{gap:8px}
+  .kamon{width:32px;height:32px}
+  .lsw button{padding:6px 8px;min-width:0}
   .g2{grid-template-columns:1fr}
   .form{padding:20px}
   .hero .cta .btn{flex:1 1 100%}
@@ -240,115 +257,116 @@ footer .flinks a{margin-right:16px;font-weight:600}
 <body>
 <header class="nav" id="hdr"><div class="wrap">
   <span class="kamon" id="k1"></span>
-  <div class="brand"><b>সাকুরা জাপানিজ ইনস্টিটিউট</b><small><span class="ja">さくら日本語学院</span> · Sakura Japanese Institute</small></div>
-  <nav aria-label="প্রধান মেনু"><span class="pill" aria-hidden="true"></span><a href="#courses">কোর্স ও ফি</a><a href="#japan">জাপানে পড়া</a><a href="#faq">প্রশ্ন</a><div class="lg"><button class="login" id="lgb" aria-expanded="false" aria-controls="lgp">লগইন</button><div class="lgp" id="lgp" hidden><a class="lgc" href="../student/"><span class="lgi" aria-hidden="true">学</span><span><b>ছাত্রছাত্রী</b><small>নিজের ছাত্র অ্যাকাউন্টে ঢুকুন: বই, হাজিরা, ফি, মক টেস্ট</small></span></a><a class="lgc" href="../"><span class="lgi" aria-hidden="true">師</span><span><b>শিক্ষক ও অফিস স্টাফ</b><small>নিজের ইমেইল আর পাসওয়ার্ড দিয়ে পোর্টালে ঢুকুন</small></span></a></div></div><a class="btn go" href="#apply" style="min-height:42px;padding:0 18px">ভর্তির আবেদন</a></nav>
-  <button class="menub" id="mopen" aria-expanded="false" aria-controls="drawer">মেনু</button>
+  <div class="brand"><b data-t="brand">Sakura Japanese Institute</b><small data-t="brand2"><span class="ja">さくら日本語学院</span> · Narayanganj, Bangladesh</small></div>
+  <nav aria-label="Main menu" data-ta="nav_main"><span class="pill" aria-hidden="true"></span><a href="#courses"><span data-t="n_courses">Courses & fees</span></a><a href="#japan"><span data-t="n_japan">Study in Japan</span></a><a href="#faq"><span data-t="n_faq">FAQ</span></a><div class="lg"><button class="login" id="lgb" aria-expanded="false" aria-controls="lgp"><span data-t="n_login">Log in</span></button><div class="lgp" id="lgp" hidden><a class="lgc" href="../student/"><span class="lgi" aria-hidden="true">学</span><span><b><span data-t="lg_st">Students</span></b><small><span data-t="lg_st_s">Your own student account: books, attendance, fees, mock tests</span></small></span></a><a class="lgc" href="../"><span class="lgi" aria-hidden="true">師</span><span><b><span data-t="lg_sf">Teachers & office staff</span></b><small><span data-t="lg_sf_s">Sign in to the portal with your own email and password</span></small></span></a></div></div><a class="btn go" href="#apply" style="min-height:42px;padding:0 18px"><span data-t="n_apply">Apply</span></a><div class="lsw" role="group" aria-label="Language / ভাষা / 言語"><button data-l="en" aria-pressed="true">EN</button><button data-l="bn" aria-pressed="false">বাং</button><button data-l="ja" aria-pressed="false" class="ja">日本</button></div></nav>
+  <div class="lsw mlsw" role="group" aria-label="Language / ভাষা / 言語"><button data-l="en" aria-pressed="true">EN</button><button data-l="bn" aria-pressed="false">বাং</button><button data-l="ja" aria-pressed="false" class="ja">日本</button></div>
+  <button class="menub" id="mopen" aria-expanded="false" aria-controls="drawer" aria-label="Menu" data-ta="menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
 </div></header>
-<div class="drawer" id="drawer" role="dialog" aria-label="মেনু"><button class="x" id="mclose">বন্ধ করুন</button><div class="dlog"><a class="lgc" href="../student/"><span class="lgi" aria-hidden="true">学</span><span><b>ছাত্রছাত্রী</b><small>নিজের ছাত্র অ্যাকাউন্টে ঢুকুন: বই, হাজিরা, ফি, মক টেস্ট</small></span></a><a class="lgc" href="../"><span class="lgi" aria-hidden="true">師</span><span><b>শিক্ষক ও অফিস স্টাফ</b><small>নিজের ইমেইল আর পাসওয়ার্ড দিয়ে পোর্টালে ঢুকুন</small></span></a></div><a href="#listen">প্রথম ক্লাস শুনুন</a><a href="#courses">কোর্স ও ফি</a><a href="#japan">জাপানে পড়া</a><a href="#faq">প্রশ্ন ও উত্তর</a><a href="#apply">ভর্তির আবেদন</a><a href="#contact">যোগাযোগ</a></div>
+<div class="drawer" id="drawer" role="dialog" aria-label="Menu" data-ta="menu"><button class="x" id="mclose"><span data-t="close">Close</span></button><div class="dlog"><a class="lgc" href="../student/"><span class="lgi" aria-hidden="true">学</span><span><b><span data-t="lg_st">Students</span></b><small><span data-t="lg_st_s">Your own student account: books, attendance, fees, mock tests</span></small></span></a><a class="lgc" href="../"><span class="lgi" aria-hidden="true">師</span><span><b><span data-t="lg_sf">Teachers & office staff</span></b><small><span data-t="lg_sf_s">Sign in to the portal with your own email and password</span></small></span></a></div><a href="#listen"><span data-t="d_listen">Hear a first class</span></a><a href="#courses"><span data-t="n_courses">Courses & fees</span></a><a href="#japan"><span data-t="n_japan">Study in Japan</span></a><a href="#faq"><span data-t="d_faq">Questions & answers</span></a><a href="#apply"><span data-t="n_apply">Apply</span></a><a href="#contact"><span data-t="d_contact">Contact</span></a></div>
 
 <main>
 <section class="hero"><div class="petals" id="petals" aria-hidden="true"></div><div class="wrap">
   <div>
-    <h1><span class="ja">さくら日本語学院 · নারায়ণগঞ্জ</span><span>জাপানি শিখুন,</span><span>জাপানে পড়ুন।</span></h1>
-    <p class="lead">একদম হিরাগানা থেকে JLPT N3 পর্যন্ত জাপানি ভাষা, আর জাপানের ভাষা স্কুলে ভর্তি থেকে ভিসা পর্যন্ত পুরো পথে আমরা পাশে থাকি।</p>
-    <div class="cta"><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.2 1.3Z"/></svg>WhatsApp-এ কথা বলুন</a><a class="btn go" href="#apply">ভর্তির আবেদন করুন</a></div>
-    <ul class="facts"><li>প্রথম ৩টি ক্লাস ফ্রি</li><li>সব বই কোর্স ফি-র মধ্যে</li><li>সকাল ও সন্ধ্যা ব্যাচ</li></ul>
-    <div class="strip"><span>আগে থেকেই সাকুরায় আছেন?</span><a href="../student/">ছাত্র লগইন</a><a href="../">শিক্ষক ও স্টাফ লগইন</a></div>
+    <h1><span class="ja" data-t="h_place">さくら日本語学院 · Narayanganj</span><span data-t="h1a">Learn Japanese.</span><span data-t="h1b">Study in Japan.</span></h1>
+    <p class="lead"><span data-t="h_lead">Japanese from your very first hiragana up to JLPT N3, and help at every step from applying to a Japanese language school to getting your visa.</span></p>
+    <div class="cta"><a class="btn wa" id="wa1" href="#" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.2 1.3Z"/></svg><span data-t="wa_talk">Chat on WhatsApp</span></a><a class="btn go" href="#apply"><span data-t="apply_btn">Apply now</span></a></div>
+    <ul class="facts"><li><span data-t="f1">First 3 classes free</span></li><li><span data-t="f2">All books included in the fee</span></li><li><span data-t="f3">Morning and evening batches</span></li></ul>
+    <div class="strip"><span><span data-t="strip">Already with Sakura?</span></span><a href="../student/"><span data-t="st_login">Student login</span></a><a href="../"><span data-t="sf_login">Teacher & staff login</span></a></div>
   </div>
   <figure class="scene">
-    <img src="img/classroom.jpg" srcset="img/classroom-s.jpg 640w, img/classroom.jpg 1280w" sizes="(max-width:960px) 100vw, 600px" alt="অ্যানিমে ধাঁচের ছবি: সাকুরা গাছের পাশে জাপানি ক্লাসরুমে শিক্ষিকার পাশে দাঁড়িয়ে নতুন এক বাংলাদেশি ছাত্র" width="1280" height="715" fetchpriority="high">
+    <img src="img/classroom.jpg" srcset="img/classroom-s.jpg 640w, img/classroom.jpg 1280w" sizes="(max-width:960px) 100vw, 600px" alt="Anime-style illustration: a new Bangladeshi student standing beside the teacher in a Japanese classroom with cherry trees outside" data-ta="hero_alt" width="1280" height="715" fetchpriority="high">
     <figcaption class="bubble">
-      <div class="who">নতুন ছাত্র রাফি, প্রথম দিনে</div>
+      <div class="who"><span data-t="b_who">Rafi, a new student, on his first day</span></div>
       <div class="jp ja">はじめまして。ラフィです。</div>
-      <div class="bn">“প্রথম পরিচয়ে বলছি, আমি রাফি।”</div>
-      <button class="play" data-a="hajimemashite" aria-label="জাপানি উচ্চারণ শুনুন: はじめまして。ラフィです。"><i></i>শুনুন</button>
+      <div class="bn"><span data-t="b_mean">“Nice to meet you. I’m Rafi.”</span></div>
+      <button class="play" data-a="hajimemashite" aria-label="Hear the Japanese: はじめまして。ラフィです。" data-ta="listen_aria"><i></i><span data-t="listen">Listen</span></button>
     </figcaption>
   </figure>
 </div></section>
 
 <section class="listen" id="listen"><div class="wrap">
-  <div class="head"><div><h2>প্রথম ক্লাসেই শুনবেন এমন জাপানি।</h2><p class="lead">আমাদের বই আর অ্যাপের প্রতিটা বাক্যে জাপানি কণ্ঠে উচ্চারণ শোনা যায়। চাপ দিয়ে শুনে দেখুন।</p></div></div>
+  <div class="head"><div><h2><span data-t="l_h">The Japanese you’ll hear in your very first class.</span></h2><p class="lead"><span data-t="l_lead">Every sentence in our books and app can be heard in a natural Japanese voice. Tap to listen.</span></p></div></div>
   <div class="lines">
-    <div class="line"><img style="object-position:84% 30%" src="img/teacher-s.jpg" alt="অ্যানিমে ধাঁচের ছবি: হাসিমুখে ক্লাসকে শুভেচ্ছা জানাচ্ছেন শিক্ষিকা" loading="lazy" width="640" height="358">
-      <div><div class="jp ja">みなさん、おはようございます。</div><div class="ro">minasan, ohayō gozaimasu</div><div class="bn">সবাইকে সুপ্রভাত।</div><button class="play" data-a="ohayo"><i></i>শুনুন</button></div></div>
-    <div class="line"><img style="object-position:70% 30%" src="img/student-s.jpg" alt="অ্যানিমে ধাঁচের ছবি: ক্লাসের সামনে নিজের পরিচয় দিচ্ছে নতুন ছাত্র" loading="lazy" width="640" height="358">
-      <div><div class="jp ja">バングラデシュから来ました。</div><div class="ro">banguradeshu kara kimashita</div><div class="bn">বাংলাদেশ থেকে এসেছি।</div><button class="play" data-a="bangladesh"><i></i>শুনুন</button></div></div>
-    <div class="line"><img style="object-position:78% 35%" src="img/bow-s.jpg" alt="অ্যানিমে ধাঁচের ছবি: মাথা নুইয়ে অভিবাদন জানাচ্ছে ছাত্র" loading="lazy" width="640" height="358">
-      <div><div class="jp ja">どうぞ、よろしくおねがいします。</div><div class="ro">dōzo, yoroshiku onegai shimasu</div><div class="bn">সবার কাছে সহযোগিতা কামনা করছি।</div><button class="play" data-a="yoroshiku"><i></i>শুনুন</button></div></div>
+    <div class="line"><img style="object-position:84% 30%" src="img/teacher-s.jpg" alt="Anime-style illustration: the teacher greeting the class with a smile" data-ta="alt_t" loading="lazy" width="640" height="358">
+      <div><div class="jp ja">みなさん、おはようございます。</div><div class="ro">minasan, ohayō gozaimasu</div><div class="bn"><span data-t="m1">Good morning, everyone.</span></div><button class="play" data-a="ohayo"><i></i><span data-t="listen">Listen</span></button></div></div>
+    <div class="line"><img style="object-position:70% 30%" src="img/student-s.jpg" alt="Anime-style illustration: the new student introducing himself to the class" data-ta="alt_s" loading="lazy" width="640" height="358">
+      <div><div class="jp ja">バングラデシュから来ました。</div><div class="ro">banguradeshu kara kimashita</div><div class="bn"><span data-t="m2">I came from Bangladesh.</span></div><button class="play" data-a="bangladesh"><i></i><span data-t="listen">Listen</span></button></div></div>
+    <div class="line"><img style="object-position:78% 35%" src="img/bow-s.jpg" alt="Anime-style illustration: the student bowing politely" data-ta="alt_b" loading="lazy" width="640" height="358">
+      <div><div class="jp ja">どうぞ、よろしくおねがいします。</div><div class="ro">dōzo, yoroshiku onegai shimasu</div><div class="bn"><span data-t="m3">I look forward to learning with you all.</span></div><button class="play" data-a="yoroshiku"><i></i><span data-t="listen">Listen</span></button></div></div>
   </div>
 </div></section>
 
 <section class="why" id="why"><div class="wrap">
-  <h2>জাপানের পথ শুরু হয় ভালো জাপানি দিয়ে।</h2>
+  <h2><span data-t="w_h">The road to Japan starts with good Japanese.</span></h2>
   <ul>
-    <li><span class="k" aria-hidden="true">無</span><div><h3>প্রথম ৩টি ক্লাস ফ্রি</h3><p>আগে ক্লাস করে দেখুন। ভালো লাগলে তবেই ভর্তি হবেন।</p></div></li>
-    <li><span class="k" aria-hidden="true">本</span><div><h3>বই কোর্স ফি-র মধ্যে</h3><p>কোর্সের সব বই ফি-র মধ্যেই, আলাদা কিছু কিনতে হয় না।</p></div></li>
-    <li><span class="k" aria-hidden="true">日</span><div><h3>পরিচালক থাকেন জাপানে</h3><p>ডিরেক্টর থাকেন জাপানের কোবে শহরে। সেখানকার পড়াশোনা আর জীবনযাত্রা তিনি নিজে জানেন।</p></div></li>
-    <li><span class="k" aria-hidden="true">証</span><div><h3>যাচাইযোগ্য সার্টিফিকেট</h3><p>পড়ার ঘণ্টা, হাজিরা আর রেজাল্টের সার্টিফিকেট আমরাই দিই। প্রতিটায় QR কোড থাকে, জাপানের স্কুল অনলাইনে যাচাই করতে পারে।</p></div></li>
+    <li><span class="k" aria-hidden="true">無</span><div><h3><span data-t="f1">First 3 classes free</span></h3><p><span data-t="w1p">Try the classes first. Enrol only if you like them.</span></p></div></li>
+    <li><span class="k" aria-hidden="true">本</span><div><h3><span data-t="w2">Books included in the fee</span></h3><p><span data-t="w2p">Every course book is included. Nothing extra to buy.</span></p></div></li>
+    <li><span class="k" aria-hidden="true">日</span><div><h3><span data-t="w3">Our director lives in Japan</span></h3><p><span data-t="w3p">The director lives in Kobe, Japan, and knows study and daily life there first-hand.</span></p></div></li>
+    <li><span class="k" aria-hidden="true">証</span><div><h3><span data-t="w4">Certificates schools can verify</span></h3><p><span data-t="w4p">We issue study-hour, attendance and transcript certificates. Each carries a QR code that schools in Japan can check online.</span></p></div></li>
   </ul>
 </div></section>
 
 <section class="courses" id="courses"><div class="wrap">
-  <h2>আপনার লেভেল বেছে নিন।</h2>
-  <p class="lead">প্রতিদিন <span id="hpc">২</span> ঘণ্টা ক্লাস। সকাল ১০টা থেকে ১২টা, অথবা সন্ধ্যা ৬টা থেকে ৮টা।</p>
+  <h2><span data-t="c_h">Choose your level.</span></h2>
+  <p class="lead"><span data-t="c_lead">2 hours of class every day: 10am to 12pm, or 6pm to 8pm.</span></p>
   <div id="courseGrid"></div>
-  <p class="note">একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। ফি কিস্তিতেও দেওয়া যায়, বিস্তারিত জানতে যোগাযোগ করুন।</p>
+  <p class="note"><span data-t="c_note">Packages of more than one level cost less. Fees can be paid in instalments; contact us for details.</span></p>
 </div></section>
 
 <section class="japan" id="japan"><div class="wrap">
-  <h2>ভর্তি থেকে বিমানে ওঠা পর্যন্ত।</h2>
-  <p class="lead">জাপানের ভাষা স্কুলে যেতে এই ছয়টা ধাপ পার হতে হয়। প্রতিটা ধাপে আমরা সাথে থাকি।</p>
+  <h2><span data-t="j_h">From admission to boarding the plane.</span></h2>
+  <p class="lead"><span data-t="j_lead">Getting to a Japanese language school takes six steps. We are with you at every one.</span></p>
   <ol class="route">
-    <li><span class="st">১</span><div><b>কাগজ জোগাড়</b><span class="ja">書類の準備</span><span>সনদ, পাসপোর্ট, স্পনসরের কাগজ</span></div></li>
-    <li><span class="st">২</span><div><b>স্কুল বাছাই</b><span class="ja">学校選び</span><span>আপনার জন্য উপযুক্ত স্কুল</span></div></li>
-    <li><span class="st">৩</span><div><b>আবেদন জমা</b><span class="ja">出願</span><span>ফর্ম পূরণ ও অনুবাদ</span></div></li>
-    <li><span class="st">৪</span><div><b>ইন্টারভিউ</b><span class="ja">面接</span><span>আগে থেকে অনুশীলনসহ</span></div></li>
-    <li><span class="st">৫</span><div><b>COE ও ভিসা</b><span class="ja">在留資格・ビザ</span><span>ইমিগ্রেশনের অনুমতি</span></div></li>
-    <li><span class="st">৬</span><div><b>জাপানে যাত্রা</b><span class="ja">出発</span><span>যাওয়ার আগের প্রস্তুতি</span></div></li>
+    <li><span class="st">1</span><div><b><span data-t="s1">Documents</span></b><span class="ja">書類の準備</span><span><span data-t="s1p">Certificates, passport, sponsor papers</span></span></div></li>
+    <li><span class="st">2</span><div><b><span data-t="s2">Choosing a school</span></b><span class="ja">学校選び</span><span><span data-t="s2p">A school that suits you</span></span></div></li>
+    <li><span class="st">3</span><div><b><span data-t="s3">Application</span></b><span class="ja">出願</span><span><span data-t="s3p">Forms and translations</span></span></div></li>
+    <li><span class="st">4</span><div><b><span data-t="s4">Interview</span></b><span class="ja">面接</span><span><span data-t="s4p">With practice beforehand</span></span></div></li>
+    <li><span class="st">5</span><div><b><span data-t="s5">COE and visa</span></b><span class="ja">在留資格・ビザ</span><span><span data-t="s5p">Immigration approval</span></span></div></li>
+    <li><span class="st">6</span><div><b><span data-t="s6">Off to Japan</span></b><span class="ja">出発</span><span><span data-t="s6p">Getting ready to go</span></span></div></li>
   </ol>
-  <p class="note">জাপানের ভাষা স্কুলে সাধারণত বছরে চারবার ভর্তি হয়: জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবর। কোন সেশনে যেতে পারবেন, তা নির্ভর করে আপনার কাগজ আর জাপানি ভাষার মানের ওপর। অফিসে এসে বা WhatsApp-এ জেনে নিন।</p>
+  <p class="note"><span data-t="j_note">Japanese language schools usually admit students four times a year: January, April, July and October. Which intake you can join depends on your documents and your Japanese level. Ask us at the office or on WhatsApp.</span></p>
 </div></section>
 
 <section class="faq" id="faq"><div class="wrap">
-  <div><h2>যা সবাই জানতে চান।</h2><p class="lead">আরও কিছু জানার থাকলে WhatsApp-এ জিজ্ঞেস করুন।</p></div>
+  <div><h2><span data-t="q_h">What everyone asks.</span></h2><p class="lead"><span data-t="q_lead">Anything else? Ask us on WhatsApp.</span></p></div>
   <div>
-    <details><summary>একদম শুরু থেকে শিখতে পারব?</summary><p>হ্যাঁ। N5 কোর্স হিরাগানা আর কাতাকানা দিয়ে শুরু হয়। আগে কোনো জাপানি জানা লাগে না।</p></details>
-    <details><summary>ভর্তির আগে ক্লাস করে দেখা যায়?</summary><p>হ্যাঁ, প্রথম ৩টি ক্লাস ফ্রি। ভালো লাগলে তবেই ভর্তি হবেন।</p></details>
-    <details><summary>বইয়ের জন্য আলাদা টাকা লাগবে?</summary><p>না। কোর্সের সব বই ফি-র মধ্যেই।</p></details>
-    <details><summary>ফি কি কিস্তিতে দেওয়া যায়?</summary><p>হ্যাঁ। কত কিস্তিতে দেওয়া যাবে, অফিসে বা WhatsApp-এ জেনে নিন।</p></details>
-    <details><summary>ক্লাস কখন হয়?</summary><p>প্রতিদিন দুটো ব্যাচ: সকাল ১০টা থেকে ১২টা, আর সন্ধ্যা ৬টা থেকে ৮টা। যেটা সুবিধা, সেটা বেছে নিন।</p></details>
-    <details><summary>বাসায় বসে অনুশীলন করা যায়?</summary><p>হ্যাঁ। ভর্তির পর ছাত্রদের অ্যাপে বই, প্রতিদিনের শব্দ, কানা আর মক টেস্ট পাবেন। সবকিছুতে জাপানি কণ্ঠে উচ্চারণ শোনা যায়।</p></details>
-    <details><summary>জাপানে কবে যেতে পারব?</summary><p>জাপানের ভাষা স্কুলে সাধারণত জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবরে ভর্তি হয়। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে।</p></details>
+    <details><summary><span data-t="q1">Can I start from zero?</span></summary><p><span data-t="a1">Yes. The N5 course starts with hiragana and katakana. You don’t need to know any Japanese.</span></p></details>
+    <details><summary><span data-t="q2">Can I try a class before enrolling?</span></summary><p><span data-t="a2">Yes, the first 3 classes are free. Enrol only if you like them.</span></p></details>
+    <details><summary><span data-t="q3">Do I pay extra for books?</span></summary><p><span data-t="a3">No. All course books are included in the fee.</span></p></details>
+    <details><summary><span data-t="q4">Can I pay the fee in instalments?</span></summary><p><span data-t="a4">Yes. Ask at the office or on WhatsApp how many instalments are possible.</span></p></details>
+    <details><summary><span data-t="q5">When are the classes?</span></summary><p><span data-t="a5">Two batches every day: 10am to 12pm, and 6pm to 8pm. Pick whichever suits you.</span></p></details>
+    <details><summary><span data-t="q6">Can I practise at home?</span></summary><p><span data-t="a6">Yes. Once enrolled, the student app gives you the books, daily words, kana and mock tests, all with Japanese voice.</span></p></details>
+    <details><summary><span data-t="q7">When can I go to Japan?</span></summary><p><span data-t="a7">Japanese language schools usually admit students in January, April, July and October. Which intake you can join depends on your documents and Japanese level.</span></p></details>
   </div>
 </div></section>
 
 <section class="apply" id="apply"><div class="wrap">
-  <aside><h2>শুরু করুন আজই।</h2><p class="lead">ফর্মটা পূরণ করুন। ১–২ দিনের মধ্যে আমরা ফোন বা WhatsApp-এ যোগাযোগ করব।</p>
-    <img src="img/friends-s.jpg" alt="অ্যানিমে ধাঁচের ছবি: হাত নেড়ে নতুন বন্ধুকে স্বাগত জানাচ্ছে ক্লাসের ছাত্রছাত্রীরা" loading="lazy" width="640" height="358"></aside>
+  <aside><h2><span data-t="ap_h">Start today.</span></h2><p class="lead"><span data-t="ap_lead">Fill in the form and we will call or WhatsApp you within 1–2 days.</span></p>
+    <img src="img/friends-s.jpg" alt="Anime-style illustration: classmates waving to welcome a new friend" data-ta="alt_f" loading="lazy" width="640" height="358"></aside>
   <div class="form"><form id="af" novalidate><div class="g2">
-    <label class="f">আপনার নাম<input name="name" required maxlength="80" autocomplete="name"></label>
-    <label class="f">মোবাইল বা WhatsApp নম্বর<input name="phone" type="tel" required inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label>
-    <label class="f">কী শিখতে চান<select name="interest"><option value="N5">N5 কোর্স (একদম শুরু থেকে)</option><option value="N4">N4 কোর্স</option><option value="N3">N3 কোর্স</option><option value="japan">জাপানে পড়তে যাওয়া (প্রসেসিং)</option><option value="other">অন্যান্য / জানতে চাই</option></select></label>
-    <label class="f">পড়াশোনা<select name="edu"><option value="">বেছে নিন</option><option>SSC</option><option>HSC</option><option>ডিপ্লোমা</option><option>স্নাতক</option><option>স্নাতকোত্তর</option></select></label>
-    <label class="f wide">কিছু জানাতে চাইলে<textarea name="note" rows="3" maxlength="400" placeholder="যেমন: কোন ব্যাচে সুবিধা, কবে জাপানে যেতে চান"></textarea></label>
+    <label class="f"><span data-t="fl_name">Your name</span><input name="name" required maxlength="80" autocomplete="name"></label>
+    <label class="f"><span data-t="fl_phone">Mobile or WhatsApp number</span><input name="phone" type="tel" required inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label>
+    <label class="f"><span data-t="fl_int">What do you want to learn?</span><select name="interest"><option value="N5"><span data-t="o_n5">N5 course (from zero)</span></option><option value="N4"><span data-t="o_n4">N4 course</span></option><option value="N3"><span data-t="o_n3">N3 course</span></option><option value="japan"><span data-t="o_jp">Studying in Japan (processing)</span></option><option value="other"><span data-t="o_ot">Other / just asking</span></option></select></label>
+    <label class="f"><span data-t="fl_edu">Education</span><select name="edu"><option value=""><span data-t="o_pick">Choose</span></option><option>SSC</option><option>HSC</option><option><span data-t="o_dip">Diploma</span></option><option><span data-t="o_ba">Bachelor’s</span></option><option><span data-t="o_ma">Master’s</span></option></select></label>
+    <label class="f wide"><span data-t="fl_note">Anything you’d like to tell us</span><textarea name="note" rows="3" maxlength="400" placeholder="e.g. which batch suits you, when you want to go to Japan" data-tp="ph_note"></textarea></label>
   </div>
-  <p class="small muted" style="margin:12px 0 4px">আপনার নাম আর নম্বর শুধু আপনার সাথে যোগাযোগের জন্য ব্যবহার হবে।</p>
+  <p class="small muted" style="margin:12px 0 4px"><span data-t="privacy">We use your name and number only to contact you.</span></p>
   <div class="err" id="ae" role="alert"></div>
-  <button class="btn go" type="submit" style="width:100%">আবেদন পাঠান</button></form>
-  <div class="ok" id="aok" hidden><h3>আবেদন পাঠানো হয়েছে।</h3><p style="margin-top:8px">শিগগিরই আমরা যোগাযোগ করব। তাড়াতাড়ি জানতে চাইলে এখনই WhatsApp করুন।</p><a class="btn wa" id="wa3" href="#" target="_blank" rel="noopener" style="margin-top:14px">WhatsApp করুন</a></div></div>
+  <button class="btn go" type="submit" style="width:100%"><span data-t="send">Send application</span></button></form>
+  <div class="ok" id="aok" hidden><h3><span data-t="sent_h">Application sent.</span></h3><p style="margin-top:8px"><span data-t="sent_p">We will contact you soon. For a faster answer, message us on WhatsApp now.</span></p><a class="btn wa" id="wa3" href="#" target="_blank" rel="noopener" style="margin-top:14px"><span data-t="wa_msg">Message on WhatsApp</span></a></div></div>
 </div></section>
 
 <section class="contact" id="contact"><div class="wrap">
-  <div><h2>যোগাযোগ</h2><p class="lead">অফিসে আসুন, ফোন করুন, বা WhatsApp-এ লিখুন।</p>
-    <dl><dt>ফোন</dt><dd><a id="tel" href="#"></a></dd><dt>WhatsApp</dt><dd><a id="wa2" href="#" target="_blank" rel="noopener"></a></dd><dt>ইমেইল</dt><dd><a id="mail" href="#"></a></dd><dt>ঠিকানা</dt><dd id="addr">নারায়ণগঞ্জ</dd></dl></div>
-  <div class="hours"><h3>ক্লাসের সময়</h3><p>সকাল ব্যাচ: ১০টা থেকে ১২টা<br>সন্ধ্যা ব্যাচ: ৬টা থেকে ৮টা</p><h3 style="margin-top:18px">ডিরেক্টর</h3><p id="dir">SAYEM AHMED · サエム・アハメド (Kobe, Japan)</p></div>
+  <div><h2><span data-t="d_contact">Contact</span></h2><p class="lead"><span data-t="ct_lead">Visit the office, call us, or write on WhatsApp.</span></p>
+    <dl><dt><span data-t="ct_phone">Phone</span></dt><dd><a id="tel" href="#"></a></dd><dt>WhatsApp</dt><dd><a id="wa2" href="#" target="_blank" rel="noopener"></a></dd><dt><span data-t="ct_mail">Email</span></dt><dd><a id="mail" href="#"></a></dd><dt><span data-t="ct_addr">Address</span></dt><dd id="addr"><span data-t="ct_city">Narayanganj, Bangladesh</span></dd></dl></div>
+  <div class="hours"><h3><span data-t="hrs_h">Class times</span></h3><p><span data-t="hrs_p">Morning batch: 10am to 12pm<br>Evening batch: 6pm to 8pm</span></p><h3 style="margin-top:18px"><span data-t="dir_h">Director</span></h3><p id="dir">SAYEM AHMED · サエム・アハメド (Kobe, Japan)</p></div>
 </div></section>
 </main>
 
-<footer><div class="wrap"><div class="big">さくら日本語学院</div><p>সাকুরা জাপানিজ ইনস্টিটিউট, নারায়ণগঞ্জ</p>
-  <div class="flinks"><a href="../student/">ছাত্র লগইন</a><a href="../">স্টাফ পোর্টাল</a><a href="../verify/">সার্টিফিকেট যাচাই</a></div>
-  <p class="small muted">© <span id="yr"></span> সাকুরা জাপানিজ ইনস্টিটিউট · ছবিগুলো অ্যানিমে ধাঁচে আঁকা · কণ্ঠ: VOICEVOX:冥鳴ひまり、VOICEVOX:白上虎太郎</p></div></footer>
-<a class="btn wa float-wa" id="wa4" href="#" target="_blank" rel="noopener" aria-label="WhatsApp-এ কথা বলুন"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.2 1.3Z"/></svg><span>WhatsApp</span></a>
+<footer><div class="wrap"><div class="big">さくら日本語学院</div><p><span data-t="ft_place">Sakura Japanese Institute, Narayanganj</span></p>
+  <div class="flinks"><a href="../student/"><span data-t="st_login">Student login</span></a><a href="../"><span data-t="ft_staff">Staff portal</span></a><a href="../verify/"><span data-t="ft_verify">Verify a certificate</span></a></div>
+  <p class="small muted">© <span id="yr"></span> <span data-t="brand">Sakura Japanese Institute</span> · <span data-t="ft_note">Illustrations are anime-style drawings · Voices: VOICEVOX:冥鳴ひまり, VOICEVOX:白上虎太郎</span></p></div></footer>
+<a class="btn wa float-wa" id="wa4" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" data-ta="wa_talk"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.2 1.3Z"/></svg><span>WhatsApp</span></a>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="../config.js"></script>
 <script>
@@ -358,7 +376,13 @@ footer .flinks a{margin-right:16px;font-weight:600}
   const KAMON = (w) => `<svg width="${w}" height="${w}" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="currentColor" stroke-width=".8"/><g fill="currentColor">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="var(--paper)"/></svg>`;
   $('#k1').innerHTML = KAMON('100%'); $('#yr').textContent = new Date().getFullYear();
   const bn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
-  const tk = (n) => '৳ ' + bn(Math.round(Number(n) || 0).toLocaleString('en-IN'));
+  const D = {"title": ["Sakura Japanese Institute · Japanese language school in Narayanganj", "সাকুরা জাপানিজ ইনস্টিটিউট · নারায়ণগঞ্জ", "さくら日本語学院 · ナラヤンガンジの日本語学校"], "brand": ["Sakura Japanese Institute", "সাকুরা জাপানিজ ইনস্টিটিউট", "さくら日本語学院"], "brand2": ["<span class=\"ja\">さくら日本語学院</span> · Narayanganj, Bangladesh", "<span class=\"ja\">さくら日本語学院</span> · Sakura Japanese Institute", "Sakura Japanese Institute · バングラデシュ・ナラヤンガンジ"], "nav_main": ["Main menu", "প্রধান মেনু", "メインメニュー"], "n_courses": ["Courses & fees", "কোর্স ও ফি", "コースと学費"], "n_japan": ["Study in Japan", "জাপানে পড়া", "日本留学"], "n_faq": ["FAQ", "প্রশ্ন", "よくある質問"], "n_login": ["Log in", "লগইন", "ログイン"], "n_apply": ["Apply", "ভর্তির আবেদন", "入学申込"], "lg_st": ["Students", "ছাত্রছাত্রী", "学生"], "lg_st_s": ["Your own student account: books, attendance, fees, mock tests", "নিজের ছাত্র অ্যাকাউন্টে ঢুকুন: বই, হাজিরা, ফি, মক টেস্ট", "自分の学生アカウントへ：教科書・出席・学費・模擬試験"], "lg_sf": ["Teachers & office staff", "শিক্ষক ও অফিস স্টাফ", "教師・事務スタッフ"], "lg_sf_s": ["Sign in to the portal with your own email and password", "নিজের ইমেইল আর পাসওয়ার্ড দিয়ে পোর্টালে ঢুকুন", "自分のメールとパスワードでポータルへ"], "menu": ["Menu", "মেনু", "メニュー"], "close": ["Close", "বন্ধ করুন", "閉じる"], "d_listen": ["Hear a first class", "প্রথম ক্লাস শুনুন", "最初の授業を聞く"], "d_faq": ["Questions & answers", "প্রশ্ন ও উত্তর", "よくある質問"], "d_contact": ["Contact", "যোগাযোগ", "お問い合わせ"], "h_place": ["さくら日本語学院 · Narayanganj", "さくら日本語学院 · নারায়ণগঞ্জ", "さくら日本語学院 · ナラヤンガンジ"], "h1a": ["Learn Japanese.", "জাপানি শিখুন,", "日本語を学び、"], "h1b": ["Study in Japan.", "জাপানে পড়ুন।", "日本で学ぶ。"], "h_lead": ["Japanese from your very first hiragana up to JLPT N3, and help at every step from applying to a Japanese language school to getting your visa.", "একদম হিরাগানা থেকে JLPT N3 পর্যন্ত জাপানি ভাষা, আর জাপানের ভাষা স্কুলে ভর্তি থেকে ভিসা পর্যন্ত পুরো পথে আমরা পাশে থাকি।", "ひらがなの第一歩からJLPT N3まで。日本の日本語学校への出願からビザ取得まで、すべての段階をサポートします。"], "wa_talk": ["Chat on WhatsApp", "WhatsApp-এ কথা বলুন", "WhatsAppで相談"], "apply_btn": ["Apply now", "ভর্তির আবেদন করুন", "入学を申し込む"], "f1": ["First 3 classes free", "প্রথম ৩টি ক্লাস ফ্রি", "最初の3回は無料"], "f2": ["All books included in the fee", "সব বই কোর্স ফি-র মধ্যে", "教科書代は学費に含む"], "f3": ["Morning and evening batches", "সকাল ও সন্ধ্যা ব্যাচ", "朝クラス・夜クラス"], "strip": ["Already with Sakura?", "আগে থেকেই সাকুরায় আছেন?", "すでに在籍中の方"], "st_login": ["Student login", "ছাত্র লগইন", "学生ログイン"], "sf_login": ["Teacher & staff login", "শিক্ষক ও স্টাফ লগইন", "教師・スタッフログイン"], "hero_alt": ["Anime-style illustration: a new Bangladeshi student standing beside the teacher in a Japanese classroom with cherry trees outside", "অ্যানিমে ধাঁচের ছবি: সাকুরা গাছের পাশে জাপানি ক্লাসরুমে শিক্ষিকার পাশে দাঁড়িয়ে নতুন এক বাংলাদেশি ছাত্র", "アニメ風イラスト：桜の見える日本の教室で、先生の隣に立つバングラデシュからの転校生"], "b_who": ["Rafi, a new student, on his first day", "নতুন ছাত্র রাফি, প্রথম দিনে", "新入生ラフィ、初日"], "b_mean": ["“Nice to meet you. I’m Rafi.”", "“প্রথম পরিচয়ে বলছি, আমি রাফি।”", "（初めて会う人へのあいさつ）"], "listen": ["Listen", "শুনুন", "聞く"], "listen_aria": ["Hear the Japanese: はじめまして。ラフィです。", "জাপানি উচ্চারণ শুনুন: はじめまして。ラフィです。", "音声を聞く：はじめまして。ラフィです。"], "l_h": ["The Japanese you’ll hear in your very first class.", "প্রথম ক্লাসেই শুনবেন এমন জাপানি।", "最初の授業で聞く日本語。"], "l_lead": ["Every sentence in our books and app can be heard in a natural Japanese voice. Tap to listen.", "আমাদের বই আর অ্যাপের প্রতিটা বাক্যে জাপানি কণ্ঠে উচ্চারণ শোনা যায়। চাপ দিয়ে শুনে দেখুন।", "教科書とアプリのすべての文を、自然な日本語の音声で聞けます。タップして聞いてみてください。"], "alt_t": ["Anime-style illustration: the teacher greeting the class with a smile", "অ্যানিমে ধাঁচের ছবি: হাসিমুখে ক্লাসকে শুভেচ্ছা জানাচ্ছেন শিক্ষিকা", "アニメ風イラスト：笑顔でクラスにあいさつする先生"], "alt_s": ["Anime-style illustration: the new student introducing himself to the class", "অ্যানিমে ধাঁচের ছবি: ক্লাসের সামনে নিজের পরিচয় দিচ্ছে নতুন ছাত্র", "アニメ風イラスト：クラスの前で自己紹介する新入生"], "alt_b": ["Anime-style illustration: the student bowing politely", "অ্যানিমে ধাঁচের ছবি: মাথা নুইয়ে অভিবাদন জানাচ্ছে ছাত্র", "アニメ風イラスト：丁寧におじぎする学生"], "m1": ["Good morning, everyone.", "সবাইকে সুপ্রভাত।", "（先生から全員への朝のあいさつ）"], "m2": ["I came from Bangladesh.", "বাংলাদেশ থেকে এসেছি।", "（出身を伝える表現）"], "m3": ["I look forward to learning with you all.", "সবার কাছে সহযোগিতা কামনা করছি।", "（自己紹介の締めくくり）"], "w_h": ["The road to Japan starts with good Japanese.", "জাপানের পথ শুরু হয় ভালো জাপানি দিয়ে।", "日本への道は、しっかりした日本語から。"], "w1": ["First 3 classes free", "প্রথম ৩টি ক্লাস ফ্রি", "最初の3回は無料"], "w1p": ["Try the classes first. Enrol only if you like them.", "আগে ক্লাস করে দেখুন। ভালো লাগলে তবেই ভর্তি হবেন।", "まず授業を体験。気に入ったら入学してください。"], "w2": ["Books included in the fee", "বই কোর্স ফি-র মধ্যে", "教科書は学費に含む"], "w2p": ["Every course book is included. Nothing extra to buy.", "কোর্সের সব বই ফি-র মধ্যেই, আলাদা কিছু কিনতে হয় না।", "コースの教科書はすべて学費に含まれます。追加の購入は不要です。"], "w3": ["Our director lives in Japan", "পরিচালক থাকেন জাপানে", "校長は日本在住"], "w3p": ["The director lives in Kobe, Japan, and knows study and daily life there first-hand.", "ডিরেক্টর থাকেন জাপানের কোবে শহরে। সেখানকার পড়াশোনা আর জীবনযাত্রা তিনি নিজে জানেন।", "校長は神戸に住んでおり、日本での勉強や生活を自分の経験で知っています。"], "w4": ["Certificates schools can verify", "যাচাইযোগ্য সার্টিফিকেট", "確認できる証明書"], "w4p": ["We issue study-hour, attendance and transcript certificates. Each carries a QR code that schools in Japan can check online.", "পড়ার ঘণ্টা, হাজিরা আর রেজাল্টের সার্টিফিকেট আমরাই দিই। প্রতিটায় QR কোড থাকে, জাপানের স্কুল অনলাইনে যাচাই করতে পারে।", "学習時間・出席・成績の証明書を発行します。QRコード付きで、日本の学校がオンラインで確認できます。"], "c_h": ["Choose your level.", "আপনার লেভেল বেছে নিন।", "レベルを選ぶ。"], "c_lead": ["{H} hours of class every day: 10am to 12pm, or 6pm to 8pm.", "প্রতিদিন {H} ঘণ্টা ক্লাস। সকাল ১০টা থেকে ১২টা, অথবা সন্ধ্যা ৬টা থেকে ৮টা।", "毎日{H}時間の授業：午前10時〜12時、または午後6時〜8時。"], "c_note": ["Packages of more than one level cost less. Fees can be paid in instalments; contact us for details.", "একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। ফি কিস্তিতেও দেওয়া যায়, বিস্তারিত জানতে যোগাযোগ করুন।", "複数レベルのパッケージは割安です。分割払いも可能です。詳しくはお問い合わせください。"], "j_h": ["From admission to boarding the plane.", "ভর্তি থেকে বিমানে ওঠা পর্যন্ত।", "入学から出発まで。"], "j_lead": ["Getting to a Japanese language school takes six steps. We are with you at every one.", "জাপানের ভাষা স্কুলে যেতে এই ছয়টা ধাপ পার হতে হয়। প্রতিটা ধাপে আমরা সাথে থাকি।", "日本語学校への留学には6つのステップがあります。すべての段階でサポートします。"], "s1": ["Documents", "কাগজ জোগাড়", "書類の準備"], "s1p": ["Certificates, passport, sponsor papers", "সনদ, পাসপোর্ট, স্পনসরের কাগজ", "卒業証明・パスポート・経費支弁書類"], "s2": ["Choosing a school", "স্কুল বাছাই", "学校選び"], "s2p": ["A school that suits you", "আপনার জন্য উপযুক্ত স্কুল", "あなたに合った学校"], "s3": ["Application", "আবেদন জমা", "出願"], "s3p": ["Forms and translations", "ফর্ম পূরণ ও অনুবাদ", "書類作成と翻訳"], "s4": ["Interview", "ইন্টারভিউ", "面接"], "s4p": ["With practice beforehand", "আগে থেকে অনুশীলনসহ", "事前に練習"], "s5": ["COE and visa", "COE ও ভিসা", "在留資格・ビザ"], "s5p": ["Immigration approval", "ইমিগ্রেশনের অনুমতি", "入国管理局の許可"], "s6": ["Off to Japan", "জাপানে যাত্রা", "出発"], "s6p": ["Getting ready to go", "যাওয়ার আগের প্রস্তুতি", "出発前の準備"], "j_note": ["Japanese language schools usually admit students four times a year: January, April, July and October. Which intake you can join depends on your documents and your Japanese level. Ask us at the office or on WhatsApp.", "জাপানের ভাষা স্কুলে সাধারণত বছরে চারবার ভর্তি হয়: জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবর। কোন সেশনে যেতে পারবেন, তা নির্ভর করে আপনার কাগজ আর জাপানি ভাষার মানের ওপর। অফিসে এসে বা WhatsApp-এ জেনে নিন।", "日本語学校の入学時期は通常、1月・4月・7月・10月の年4回です。どの時期に入学できるかは、書類と日本語のレベルによります。事務所またはWhatsAppでお問い合わせください。"], "q_h": ["What everyone asks.", "যা সবাই জানতে চান।", "よくある質問。"], "q_lead": ["Anything else? Ask us on WhatsApp.", "আরও কিছু জানার থাকলে WhatsApp-এ জিজ্ঞেস করুন।", "その他のご質問はWhatsAppでどうぞ。"], "q1": ["Can I start from zero?", "একদম শুরু থেকে শিখতে পারব?", "まったくの初心者でも大丈夫？"], "a1": ["Yes. The N5 course starts with hiragana and katakana. You don’t need to know any Japanese.", "হ্যাঁ। N5 কোর্স হিরাগানা আর কাতাকানা দিয়ে শুরু হয়। আগে কোনো জাপানি জানা লাগে না।", "はい。N5コースはひらがな・カタカナから始めます。日本語の知識は必要ありません。"], "q2": ["Can I try a class before enrolling?", "ভর্তির আগে ক্লাস করে দেখা যায়?", "入学前に授業を体験できる？"], "a2": ["Yes, the first 3 classes are free. Enrol only if you like them.", "হ্যাঁ, প্রথম ৩টি ক্লাস ফ্রি। ভালো লাগলে তবেই ভর্তি হবেন।", "はい、最初の3回は無料です。気に入ったら入学してください。"], "q3": ["Do I pay extra for books?", "বইয়ের জন্য আলাদা টাকা লাগবে?", "教科書代は別にかかる？"], "a3": ["No. All course books are included in the fee.", "না। কোর্সের সব বই ফি-র মধ্যেই।", "いいえ。教科書はすべて学費に含まれます。"], "q4": ["Can I pay the fee in instalments?", "ফি কি কিস্তিতে দেওয়া যায়?", "学費は分割で払える？"], "a4": ["Yes. Ask at the office or on WhatsApp how many instalments are possible.", "হ্যাঁ। কত কিস্তিতে দেওয়া যাবে, অফিসে বা WhatsApp-এ জেনে নিন।", "はい。回数は事務所またはWhatsAppでご確認ください。"], "q5": ["When are the classes?", "ক্লাস কখন হয়?", "授業の時間は？"], "a5": ["Two batches every day: 10am to 12pm, and 6pm to 8pm. Pick whichever suits you.", "প্রতিদিন দুটো ব্যাচ: সকাল ১০টা থেকে ১২টা, আর সন্ধ্যা ৬টা থেকে ৮টা। যেটা সুবিধা, সেটা বেছে নিন।", "毎日2クラス：午前10時〜12時と午後6時〜8時。都合のよい方を選べます。"], "q6": ["Can I practise at home?", "বাসায় বসে অনুশীলন করা যায়?", "家でも練習できる？"], "a6": ["Yes. Once enrolled, the student app gives you the books, daily words, kana and mock tests, all with Japanese voice.", "হ্যাঁ। ভর্তির পর ছাত্রদের অ্যাপে বই, প্রতিদিনের শব্দ, কানা আর মক টেস্ট পাবেন। সবকিছুতে জাপানি কণ্ঠে উচ্চারণ শোনা যায়।", "はい。入学後は学生アプリで教科書・毎日の単語・かな・模擬試験が使え、すべて日本語の音声付きです。"], "q7": ["When can I go to Japan?", "জাপানে কবে যেতে পারব?", "いつ日本へ行ける？"], "a7": ["Japanese language schools usually admit students in January, April, July and October. Which intake you can join depends on your documents and Japanese level.", "জাপানের ভাষা স্কুলে সাধারণত জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবরে ভর্তি হয়। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে।", "日本語学校の入学は通常1月・4月・7月・10月です。どの時期に入学できるかは、書類と日本語のレベルによります。"], "ap_h": ["Start today.", "শুরু করুন আজই।", "今日から始めよう。"], "ap_lead": ["Fill in the form and we will call or WhatsApp you within 1–2 days.", "ফর্মটা পূরণ করুন। ১–২ দিনের মধ্যে আমরা ফোন বা WhatsApp-এ যোগাযোগ করব।", "フォームを送信してください。1〜2日以内に電話またはWhatsAppでご連絡します。"], "alt_f": ["Anime-style illustration: classmates waving to welcome a new friend", "অ্যানিমে ধাঁচের ছবি: হাত নেড়ে নতুন বন্ধুকে স্বাগত জানাচ্ছে ক্লাসের ছাত্রছাত্রীরা", "アニメ風イラスト：手を振って新しい仲間を迎えるクラスメート"], "fl_name": ["Your name", "আপনার নাম", "お名前"], "fl_phone": ["Mobile or WhatsApp number", "মোবাইল বা WhatsApp নম্বর", "携帯電話またはWhatsApp番号"], "fl_int": ["What do you want to learn?", "কী শিখতে চান", "希望するコース"], "o_n5": ["N5 course (from zero)", "N5 কোর্স (একদম শুরু থেকে)", "N5コース（初心者）"], "o_n4": ["N4 course", "N4 কোর্স", "N4コース"], "o_n3": ["N3 course", "N3 কোর্স", "N3コース"], "o_jp": ["Studying in Japan (processing)", "জাপানে পড়তে যাওয়া (প্রসেসিং)", "日本留学の手続き"], "o_ot": ["Other / just asking", "অন্যান্য / জানতে চাই", "その他・問い合わせ"], "fl_edu": ["Education", "পড়াশোনা", "最終学歴"], "o_pick": ["Choose", "বেছে নিন", "選択してください"], "o_dip": ["Diploma", "ডিপ্লোমা", "ディプロマ"], "o_ba": ["Bachelor’s", "স্নাতক", "学士"], "o_ma": ["Master’s", "স্নাতকোত্তর", "修士"], "fl_note": ["Anything you’d like to tell us", "কিছু জানাতে চাইলে", "その他ご要望"], "ph_note": ["e.g. which batch suits you, when you want to go to Japan", "যেমন: কোন ব্যাচে সুবিধা, কবে জাপানে যেতে চান", "例：希望のクラス時間、日本へ行きたい時期"], "privacy": ["We use your name and number only to contact you.", "আপনার নাম আর নম্বর শুধু আপনার সাথে যোগাযোগের জন্য ব্যবহার হবে।", "お名前と電話番号はご連絡のためだけに使います。"], "send": ["Send application", "আবেদন পাঠান", "申し込みを送信"], "sending": ["Sending…", "পাঠানো হচ্ছে…", "送信中…"], "sent_h": ["Application sent.", "আবেদন পাঠানো হয়েছে।", "申し込みを送信しました。"], "sent_p": ["We will contact you soon. For a faster answer, message us on WhatsApp now.", "শিগগিরই আমরা যোগাযোগ করব। তাড়াতাড়ি জানতে চাইলে এখনই WhatsApp করুন।", "まもなくご連絡します。お急ぎの場合はWhatsAppでメッセージをお送りください。"], "wa_msg": ["Message on WhatsApp", "WhatsApp করুন", "WhatsAppで連絡"], "ct_h": ["Contact", "যোগাযোগ", "お問い合わせ"], "ct_lead": ["Visit the office, call us, or write on WhatsApp.", "অফিসে আসুন, ফোন করুন, বা WhatsApp-এ লিখুন।", "事務所へのご来校、お電話、WhatsAppでどうぞ。"], "ct_phone": ["Phone", "ফোন", "電話"], "ct_mail": ["Email", "ইমেইল", "メール"], "ct_addr": ["Address", "ঠিকানা", "住所"], "ct_city": ["Narayanganj, Bangladesh", "নারায়ণগঞ্জ", "バングラデシュ・ナラヤンガンジ"], "hrs_h": ["Class times", "ক্লাসের সময়", "授業時間"], "hrs_p": ["Morning batch: 10am to 12pm<br>Evening batch: 6pm to 8pm", "সকাল ব্যাচ: ১০টা থেকে ১২টা<br>সন্ধ্যা ব্যাচ: ৬টা থেকে ৮টা", "朝クラス：午前10時〜12時<br>夜クラス：午後6時〜8時"], "dir_h": ["Director", "ডিরেক্টর", "校長"], "ft_place": ["Sakura Japanese Institute, Narayanganj", "সাকুরা জাপানিজ ইনস্টিটিউট, নারায়ণগঞ্জ", "さくら日本語学院（ナラヤンガンジ）"], "ft_staff": ["Staff portal", "স্টাফ পোর্টাল", "スタッフポータル"], "ft_verify": ["Verify a certificate", "সার্টিফিকেট যাচাই", "証明書の確認"], "ft_note": ["Illustrations are anime-style drawings · Voices: VOICEVOX:冥鳴ひまり, VOICEVOX:白上虎太郎", "ছবিগুলো অ্যানিমে ধাঁচে আঁকা · কণ্ঠ: VOICEVOX:冥鳴ひまり、VOICEVOX:白上虎太郎", "イラストはアニメ風に描いたものです · 音声：VOICEVOX:冥鳴ひまり、VOICEVOX:白上虎太郎"], "tag_save": ["Best value", "সাশ্রয়ী", "お得"], "full": ["Full course", "পুরো কোর্স", "コース全体"], "e_name": ["Please write your name", "আপনার নাম লিখুন", "お名前を入力してください"], "e_phone": ["Please enter a valid mobile number (e.g. 01712345678)", "সঠিক মোবাইল নম্বর লিখুন (যেমন 01712345678)", "正しい電話番号を入力してください（例：01712345678）"], "e_busy": ["Many applications are coming in right now. Please try again shortly, or message us on WhatsApp.", "এই মুহূর্তে অনেক আবেদন আসছে। একটু পরে আবার চেষ্টা করুন, অথবা WhatsApp করুন।", "現在申し込みが集中しています。少し後でもう一度お試しいただくか、WhatsAppでご連絡ください。"], "e_net": ["Couldn’t send. Check your internet and try again, or message us on WhatsApp.", "পাঠানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন, অথবা WhatsApp করুন।", "送信できませんでした。インターネット接続を確認して再度お試しいただくか、WhatsAppでご連絡ください。"], "wa_text": ["Hello. I would like to know about the Japanese language course.", "আসসালামু আলাইকুম। জাপানি ভাষা কোর্স সম্পর্কে জানতে চাই।", "こんにちは。日本語コースについて知りたいです。"], "lang": ["Language", "ভাষা", "言語"]};
+  const CC = {"N5": [["From zero", ["Hiragana and katakana", "Basic grammar and speaking"]], ["একদম শুরু থেকে", ["হিরাগানা, কাতাকানা", "প্রাথমিক ব্যাকরণ ও কথা বলা"]], ["初心者から", ["ひらがな・カタカナ", "基礎文法と会話"]]], "N4": [["The step after N5", ["Everyday conversation", "Kanji and grammar"]], ["N5-এর পরের ধাপ", ["দৈনন্দিন কথাবার্তা", "কাঞ্জি ও ব্যাকরণ"]], ["N5の次のステップ", ["日常会話", "漢字と文法"]]], "N3": [["Intermediate", ["Reading and listening", "Ready for study in Japan"]], ["মাঝারি স্তর", ["পড়া ও শোনার দক্ষতা", "জাপানে পড়াশোনার উপযোগী"]], ["中級", ["読解と聴解", "日本留学に必要な力"]]], "N5+N4": [["Two-level package", ["To prepare for applying to a language school in Japan", "Costs less than taking them separately"]], ["দুই লেভেলের প্যাকেজ", ["জাপানের ভাষা স্কুলে আবেদনের প্রস্তুতির জন্য", "আলাদা নেওয়ার চেয়ে কম খরচ"]], ["2レベルパッケージ", ["日本語学校への出願準備に", "個別より割安"]]], "N5+N4+N3": [["Three-level package", ["From zero up to N3", "Much cheaper than taking them separately"]], ["তিন লেভেলের প্যাকেজ", ["শুরু থেকে N3 পর্যন্ত", "আলাদা নেওয়ার চেয়ে অনেক কম খরচ"]], ["3レベルパッケージ", ["初心者からN3まで", "個別よりかなり割安"]]]};
+  const LANGS = ['en', 'bn', 'ja']; let LI = 0; let INFO = null;
+  const tr = (k) => (D[k] || [k])[LI];
+  const num = (n) => LI === 1 ? bn(n) : String(n);
+
+  const tk = (n) => { const v = Math.round(Number(n) || 0).toLocaleString('en-IN'); return LI === 2 ? v + ' タカ' : '৳ ' + num(v); };
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const waNum = (ph) => { let d = String(ph || '').replace(/[^\d]/g, ''); if (!d) return ''; if (d.startsWith('00')) d = d.slice(2); if (/^01\d{9}$/.test(d)) d = '88' + d; else if (/^0[789]0\d{8}$/.test(d)) d = '81' + d.slice(1); return d; };
   const DEF = { phone: '01711-005143', whatsapp: '+81 70-9222-2401', email: 'info@sakura.institute', address: '', director_en: 'SAYEM AHMED', director_ja: 'サエム・アハメド', hours_per_class: 2,
@@ -369,24 +393,29 @@ footer .flinks a{margin-right:16px;font-weight:600}
   const src = ref ? 'referral' : (() => { const s = new URLSearchParams(location.search).get('src'); return ['facebook', 'whatsapp', 'referral'].includes(s) ? s : 'website'; })();
 
   function paint(I) {
-    const wa = waNum(I.whatsapp || I.phone); const msg = encodeURIComponent('আসসালামু আলাইকুম। জাপানি ভাষা কোর্স সম্পর্কে জানতে চাই।');
+    INFO = I; const wa = waNum(I.whatsapp || I.phone); const msg = encodeURIComponent(tr('wa_text'));
     ['#wa1', '#wa2', '#wa3', '#wa4'].forEach(id => { const a = $(id); a.href = `https://wa.me/${wa}?text=${msg}`; });
     $('#wa2').textContent = I.whatsapp || I.phone; $('#tel').textContent = I.phone; $('#tel').href = 'tel:' + String(I.phone).replace(/[^\d+]/g, '');
     $('#mail').textContent = I.email; $('#mail').href = 'mailto:' + I.email;
     if (I.address) $('#addr').textContent = I.address;
     $('#dir').textContent = `${I.director_en} · ${I.director_ja} (Kobe, Japan)`;
-    $('#hpc').textContent = bn(I.hours_per_class || 2);
+    document.querySelectorAll('[data-t="c_lead"]').forEach(e => e.innerHTML = tr('c_lead').replace('{H}', num(I.hours_per_class || 2)));
     const F = { ...DEF.fees, ...(I.fees || {}) }; const T = { ...DEF.textbooks, ...(I.textbooks || {}) };
-    const C = [
-      ['N5', 'একদম শুরু থেকে', ['হিরাগানা, কাতাকানা', 'প্রাথমিক ব্যাকরণ ও কথা বলা', T.N5 + ' (বই সহ)'], false],
-      ['N4', 'N5-এর পরের ধাপ', ['দৈনন্দিন কথাবার্তা', 'কাঞ্জি ও ব্যাকরণ', T.N4 + ' (বই সহ)'], false],
-      ['N3', 'মাঝারি স্তর', ['পড়া ও শোনার দক্ষতা', 'জাপানে পড়াশোনার উপযোগী', T.N3 + ' (বই সহ)'], false],
-      ['N5+N4', 'দুই লেভেলের প্যাকেজ', ['জাপানের ভাষা স্কুলে আবেদনের প্রস্তুতির জন্য', 'আলাদা নেওয়ার চেয়ে কম খরচ'], true],
-      ['N5+N4+N3', 'তিন লেভেলের প্যাকেজ', ['শুরু থেকে N3 পর্যন্ত', 'আলাদা নেওয়ার চেয়ে অনেক কম খরচ'], false]
-    ];
-    $('#courseGrid').innerHTML = C.map(([lv, sub, pts, hl]) => `<div class="course ${hl ? 'hl' : ''} ${lv.includes('+') ? 'pk' : ''}">${hl ? '<span class="tag">সাশ্রয়ী</span>' : ''}<div class="lv">${esc(lv)}</div><div class="muted">${esc(sub)}</div><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul><div style="margin-top:auto"><div class="fee">${tk(F[lv])}</div><div class="small muted">পুরো কোর্স</div></div></div>`).join('');
+    const BOOK = [' (book included)', ' (বই সহ)', '（教科書込み）'][LI];
+    const C = ['N5', 'N4', 'N3', 'N5+N4', 'N5+N4+N3'].map(lv => { const [sub, pts] = CC[lv][LI]; return [lv, sub, T[lv] ? [...pts, T[lv] + BOOK] : pts, lv === 'N5+N4']; });
+    $('#courseGrid').innerHTML = C.map(([lv, sub, pts, hl]) => `<div class="course ${hl ? 'hl' : ''} ${lv.includes('+') ? 'pk' : ''}">${hl ? `<span class="tag">${tr('tag_save')}</span>` : ''}<div class="lv">${esc(lv)}</div><div class="muted">${esc(sub)}</div><ul>${pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul><div style="margin-top:auto"><div class="fee">${tk(F[lv])}</div><div class="small muted">${tr('full')}</div></div></div>`).join('');
   }
-  paint(DEF);
+  function setLang(l, save) {
+    LI = Math.max(0, LANGS.indexOf(l)); document.documentElement.lang = LANGS[LI]; document.title = tr('title');
+    document.querySelectorAll('[data-t]').forEach(e => { const k = e.dataset.t; if (k !== 'c_lead') e.innerHTML = tr(k); });
+    document.querySelectorAll('[data-ta]').forEach(e => e.setAttribute(e.tagName === 'IMG' ? 'alt' : 'aria-label', tr(e.dataset.ta)));
+    document.querySelectorAll('[data-tp]').forEach(e => e.setAttribute('placeholder', tr(e.dataset.tp)));
+    document.querySelectorAll('.lsw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.l === LANGS[LI])));
+    if (save) { try { localStorage.setItem('sakura_web_lang', LANGS[LI]); } catch (_) { /* private mode */ } }
+    paint(INFO || DEF);
+  }
+  document.querySelectorAll('.lsw button').forEach(b => b.onclick = () => setLang(b.dataset.l, true));
+  setLang((() => { const q = new URLSearchParams(location.search).get('lang'); if (LANGS.includes(q)) return q; try { const v = localStorage.getItem('sakura_web_lang'); if (LANGS.includes(v)) return v; } catch (_) { /* none */ } return 'en'; })());
 
   // header turns solid after the hero; phone menu; falling petals; fade-in on scroll
   const hdr = $('#hdr'); const onS = () => hdr.classList.toggle('solid', scrollY > 40); addEventListener('scroll', onS, { passive: true }); onS();
@@ -421,20 +450,20 @@ footer .flinks a{margin-right:16px;font-weight:600}
   $('#af').onsubmit = async (e) => {
     e.preventDefault(); const f = e.target; const err = $('#ae'); err.textContent = '';
     const name = f.name.value.trim(); const phone = f.phone.value.trim(); const digits = phone.replace(/[^\d]/g, '');
-    if (name.length < 2) { err.textContent = 'আপনার নাম লিখুন'; f.name.focus(); return; }
-    if (digits.length < 9 || digits.length > 15) { err.textContent = 'সঠিক মোবাইল নম্বর লিখুন (যেমন 01712345678)'; f.phone.focus(); return; }
+    if (name.length < 2) { err.textContent = tr('e_name'); f.name.focus(); return; }
+    if (digits.length < 9 || digits.length > 15) { err.textContent = tr('e_phone'); f.phone.focus(); return; }
     const note = [f.edu.value && ('পড়াশোনা: ' + f.edu.value), f.note.value.trim()].filter(Boolean).join(' · ');
-    const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'পাঠানো হচ্ছে…';
+    const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = tr('sending');
     try {
       let res = 'ok';
       if (sb && ref) { const { data, error } = await sb.rpc('submit_referral', { p_name: name, p_phone: phone, p_interest: f.interest.value, p_note: note, p_ref: ref }); if (error) throw error; res = data; }
       else if (sb) { const { data, error } = await sb.rpc('submit_inquiry', { p_name: name, p_phone: phone, p_interest: f.interest.value, p_note: note, p_source: src }); if (error) throw error; res = data; }
       else { const all = JSON.parse(localStorage.getItem('sakura_demo_inquiries') || '[]'); all.push({ id: 'web-' + Date.now(), created_on: new Date().toISOString().slice(0, 10), name, phone, source: src, interest: f.interest.value, status: 'new', ref, next_follow_up: new Date().toISOString().slice(0, 10), notes: 'ওয়েবসাইটের ফর্ম থেকে' + (note ? ': ' + note : ''), created_at: new Date().toISOString() }); localStorage.setItem('sakura_demo_inquiries', JSON.stringify(all)); }
-      if (res === 'bad_phone') throw new Error('সঠিক মোবাইল নম্বর লিখুন');
-      if (res === 'bad_name') throw new Error('আপনার নাম লিখুন');
-      if (res === 'busy') throw new Error('এই মুহূর্তে অনেক আবেদন আসছে। একটু পরে আবার চেষ্টা করুন, অথবা WhatsApp করুন।');
+      if (res === 'bad_phone') throw new Error(tr('e_phone'));
+      if (res === 'bad_name') throw new Error(tr('e_name'));
+      if (res === 'busy') throw new Error(tr('e_busy'));
       f.hidden = true; $('#aok').hidden = false; $('#aok').scrollIntoView({ block: 'center' });
-    } catch (ex) { err.textContent = (ex && ex.message && !/fetch|network/i.test(ex.message)) ? ex.message : 'পাঠানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন, অথবা WhatsApp করুন।'; btn.disabled = false; btn.textContent = 'আবেদন পাঠান'; }
+    } catch (ex) { err.textContent = (ex && ex.message && !/fetch|network/i.test(ex.message)) ? ex.message : tr('e_net'); btn.disabled = false; btn.textContent = tr('send'); }
   };
 })();
 </script>
