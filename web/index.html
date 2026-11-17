@@ -320,6 +320,45 @@ footer .flinks a{margin-right:16px;font-weight:600}
   .petals{display:none}
 }
 </style>
+<style>
+/* ---- gold, as polished metal with a moving glint ---- */
+:root{
+  --gold-text:linear-gradient(110deg,#6B4405 0%,#9C6A12 22%,#C8962E 38%,#F3D98A 47%,#FFF3C4 50%,#E2B65C 54%,#A8741A 68%,#7A4E06 100%);
+  --gold-face:linear-gradient(135deg,#8A5A0B 0%,#C9932E 24%,#F5DA8A 44%,#FFF5D1 50%,#E8BC56 58%,#B07A1A 78%,#7A4E06 100%);
+  --gold-edge:linear-gradient(120deg,#B07A1A,#F7DE8F 30%,#FFF6D8 45%,#C9932E 60%,#8A5A0B 85%,#E2B65C);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --gold-text:linear-gradient(110deg,#B8862B 0%,#D9AA4A 25%,#F5DA8A 42%,#FFF8DD 50%,#F0CD72 58%,#D1A043 75%,#A9781F 100%);
+}}
+:root[data-theme="dark"]{--gold-text:linear-gradient(110deg,#B8862B 0%,#D9AA4A 25%,#F5DA8A 42%,#FFF8DD 50%,#F0CD72 58%,#D1A043 75%,#A9781F 100%)}
+@keyframes glint{0%,55%{background-position:120% 0}85%,100%{background-position:-20% 0}}
+@keyframes sheen{0%,60%{transform:translateX(-120%) skewX(-20deg)}90%,100%{transform:translateX(260%) skewX(-20deg)}}
+
+/* metal text */
+.why .k,.hero h1 .ja,.japan .route .ja,.lgi{background:var(--gold-text);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:glint 7s ease-in-out infinite}
+.why li:nth-child(2) .k{animation-delay:.6s}.why li:nth-child(3) .k{animation-delay:1.2s}.why li:nth-child(4) .k{animation-delay:1.8s}
+.lgi{background-color:transparent}
+.lgi,.dpanel .lgi{background-image:var(--gold-text);background-size:250% 100%;box-shadow:inset 0 0 0 1.5px rgba(201,147,46,.55),0 2px 8px -4px rgba(122,78,6,.5)}
+.dpanel .lgi{-webkit-text-fill-color:transparent;color:transparent}
+
+/* glass + gold pill */
+.soon{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,rgba(255,246,214,.85),rgba(232,188,86,.38)) padding-box,var(--gold-edge) border-box;border:1.5px solid transparent;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 22px -12px rgba(122,78,6,.55);color:#4A3205}
+.soon::after{content:"";position:absolute;top:0;bottom:0;left:0;width:45%;z-index:-1;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:sheen 5s ease-in-out infinite}
+.soon i{background:var(--gold-face);box-shadow:0 0 0 0 rgba(176,122,26,.6)}
+
+/* gold faces: tag, last station, bullets, petals */
+.course .tag{background:var(--gold-face);color:#3E2A04;text-shadow:0 1px 0 rgba(255,255,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 4px 12px -6px rgba(122,78,6,.6);overflow:hidden;isolation:isolate}
+.course .tag::after{content:"";position:absolute;top:0;bottom:0;left:0;width:50%;z-index:-1;background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent);animation:sheen 4.5s ease-in-out infinite}
+.course.hl{border-color:transparent;background:linear-gradient(color-mix(in srgb,var(--sakura) 10%,var(--paper)),color-mix(in srgb,var(--sakura) 10%,var(--paper))) padding-box,var(--gold-edge) border-box}
+.facts li::before,.petals i{background:var(--gold-face)}
+.route li:last-child .st,.japan .route li:last-child .st{background:var(--gold-face);border-color:#F3D98A;color:#3E2A04;box-shadow:0 0 0 4px rgba(243,217,138,.25),0 0 22px rgba(243,217,138,.45)}
+.japan .route::before{background:linear-gradient(90deg,#8A5A0B,#E2B65C 20%,#FFF3C4 35%,#C9932E 50%,#F5DA8A 70%,#A8741A 90%)}
+@media (max-width:960px){.japan .route::before{background:linear-gradient(180deg,#8A5A0B,#E2B65C 20%,#FFF3C4 35%,#C9932E 50%,#F5DA8A 70%,#A8741A 90%)}}
+.japan .route .st{border-color:#D9AA4A}
+
+/* speech bubble with a gold rim */
+.bubble{border:1.5px solid transparent;background:linear-gradient(color-mix(in srgb,var(--surface) 80%,transparent),color-mix(in srgb,var(--surface) 80%,transparent)) padding-box,var(--gold-edge) border-box}
+</style>
 </head>
 <body>
 <header class="nav" id="hdr"><div class="wrap">
