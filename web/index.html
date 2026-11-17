@@ -698,6 +698,39 @@ footer::before{height:1px}
   .course{padding:22px}.course .lv{font-size:44px}
   .form::before{margin:-20px -20px 20px}
 }
+
+/* v3.1 responsive fixes: no sideways scroll on small phones, tablets */
+.wrap>*,.g2>*,.apply .wrap>*,.faq .wrap>*,.contact .wrap>*,.hero .wrap>*{min-width:0}
+.f input,.f select,.f textarea{width:100%;min-width:0}
+@media (max-width:1279px){.tate{display:none}}
+@media (max-width:420px){
+  :root[lang="ja"] .hero h1 span{white-space:normal}
+  :root[lang="ja"] .hero h1{font-size:clamp(30px,9.4vw,40px)}
+  h2{overflow-wrap:anywhere;hyphens:auto}
+  .wrap{padding:0 16px}
+  .form{padding:16px}.form::before{margin:-16px -16px 18px}
+  .hero .cta .btn{padding:0 16px}
+  .stats li{padding:14px 12px}
+}
+@media (max-width:960px) and (min-width:641px){
+  .hero .scene{max-width:640px;margin:0 auto;width:100%}
+  .lines{grid-template-columns:1fr 1fr}
+  .line{display:block}.line .ph{aspect-ratio:4/3}
+  .line>div:last-child{padding-top:12px}
+}
+
+/* v3.2: login icons readable everywhere; tablet header fits on one line */
+.lgi,.dpanel .lgi{background:transparent!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:var(--beni)!important;-webkit-text-fill-color:var(--beni)!important;box-shadow:inset 0 0 0 1px var(--beni)!important;border:0!important;border-radius:50%!important;font:800 22px/1 var(--mincho)!important;animation:none!important}
+.dpanel .lgi{--beni:#9C1F2B}
+.lgc:hover .lgi{background:var(--beni)!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+.nav nav a,.nav .login,.nav .btn{white-space:nowrap}
+@media (max-width:1180px) and (min-width:961px){
+  .brand small{display:none}
+  .nav nav{gap:2px}
+  .nav nav a{padding:8px 9px;font-size:14px}
+  .nav .lsw{margin-left:2px}.lsw button{padding:6px 8px;min-width:0}
+}
+footer .big{white-space:nowrap;font-size:clamp(26px,4vw,46px)}
 </style>
 <style>
 /* login icons: solid tile with a clear gold kanji */
