@@ -358,6 +358,17 @@ footer .flinks a{margin-right:16px;font-weight:600}
 
 /* speech bubble with a gold rim */
 .bubble{border:1.5px solid transparent;background:linear-gradient(color-mix(in srgb,var(--surface) 80%,transparent),color-mix(in srgb,var(--surface) 80%,transparent)) padding-box,var(--gold-edge) border-box}
+
+/* glinting gold rims */
+:root{--gold-rim:linear-gradient(115deg,#8A5A0B 0%,#C9932E 14%,#E2B65C 26%,#FFF7DC 33%,#E2B65C 40%,#B07A1A 52%,#8A5A0B 62%,#C9932E 74%,#FFF2C6 82%,#C9932E 90%,#8A5A0B 100%)}
+@keyframes rim{0%{background-position:0 0,0% 50%}100%{background-position:0 0,200% 50%}}
+.soon{background:linear-gradient(135deg,rgba(255,246,214,.85),rgba(232,188,86,.38)) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%;animation:rim 6s linear infinite;border-width:2px}
+.bubble{background:linear-gradient(color-mix(in srgb,var(--surface) 80%,transparent),color-mix(in srgb,var(--surface) 80%,transparent)) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%;border-width:2px;animation:pop .7s cubic-bezier(.2,1.4,.4,1) .5s both,rim 7s linear 1.2s infinite}
+.course.hl{background:linear-gradient(color-mix(in srgb,var(--sakura) 10%,var(--paper)),color-mix(in srgb,var(--sakura) 10%,var(--paper))) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%;animation:rim 6s linear infinite}
+.japan .route .st{border:5px solid transparent;background:linear-gradient(rgba(15,46,36,.85),rgba(15,46,36,.85)) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%;animation:rim 5s linear infinite}
+.japan .route li:nth-child(2) .st{animation-delay:-.8s}.japan .route li:nth-child(3) .st{animation-delay:-1.6s}.japan .route li:nth-child(4) .st{animation-delay:-2.4s}.japan .route li:nth-child(5) .st{animation-delay:-3.2s}
+.japan .route li:last-child .st{background:var(--gold-face) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%}
+.lgi{border:1.5px solid transparent;box-shadow:0 2px 8px -4px rgba(122,78,6,.5)}
 </style>
 </head>
 <body>
