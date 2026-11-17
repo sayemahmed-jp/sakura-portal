@@ -1,0 +1,11 @@
+# sakura.institute layout (Cloudflare Pages only; GitHub Pages ignores this file)
+#   /          public website (files in web/)
+#   /portal    teachers & staff portal (root index.html)
+#   /student/  student app
+/portal/   /portal          301
+/portal    /index.html      200
+/web       /                301
+/web/      /                301
+/          /web/            200
+/img/*     /web/img/:splat     200
+/audio/*   /web/audio/:splat   200
