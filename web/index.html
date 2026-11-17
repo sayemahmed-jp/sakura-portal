@@ -9,11 +9,18 @@
 <meta property="og:description" content="জাপানি ভাষা শিখুন (JLPT N5–N3), জাপানে পড়তে যান। প্রথম ৩টি ক্লাস ফ্রি। অনলাইনে ভর্তির আবেদন করুন।">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://sayemahmed-jp.github.io/sakura-portal/web/img/classroom.jpg">
-<meta name="theme-color" content="#F1F7F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1A30" media="(prefers-color-scheme: dark)">
+<meta property="og:url" content="https://sayemahmed-jp.github.io/sakura-portal/web/">
+<meta property="og:site_name" content="Sakura Japanese Institute">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://sayemahmed-jp.github.io/sakura-portal/web/">
+<link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LanguageSchool","name":"Sakura Japanese Institute","alternateName":["さくら日本語学院","সাকুরা জাপানিজ ইনস্টিটিউট"],"url":"https://sayemahmed-jp.github.io/sakura-portal/web/","image":"https://sayemahmed-jp.github.io/sakura-portal/web/img/classroom.jpg","logo":"https://sayemahmed-jp.github.io/sakura-portal/icons/icon-512.png","telephone":"+8801711005143","email":"info@sakura.institute","address":{"@type":"PostalAddress","addressLocality":"Narayanganj","addressCountry":"BD"},"description":"Japanese language school in Narayanganj, Bangladesh: JLPT N5–N3 courses and full support for studying in Japan."}</script>
+<meta name="theme-color" content="#F6F1E8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121014" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wdth,wght@75..100,400..800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wdth,wght@75..100,400..800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@600;700&family=Shippori+Mincho:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
 :root{
   --paper:#F1F7F3; --surface:#FFFFFF; --mist:#DCEBE2; --ink:#12372B; --soft:#4E6B5F;
@@ -370,6 +377,328 @@ footer .flinks a{margin-right:16px;font-weight:600}
 .japan .route li:last-child .st{background:var(--gold-face) padding-box,var(--gold-rim) border-box;background-size:100% 100%,300% 100%}
 .lgi{border:1.5px solid transparent;box-shadow:0 2px 8px -4px rgba(122,78,6,.5)}
 </style>
+<style>
+/* ===== v2: calmer, more premium polish ===== */
+:root{--r-lg:28px;--r-md:20px;--ease:cubic-bezier(.2,.8,.2,1);--deep:#0F2E24;
+  --shadow-sm:0 1px 2px rgba(18,55,43,.06),0 8px 24px -16px rgba(18,55,43,.25);
+  --shadow-lg:0 2px 4px rgba(18,55,43,.05),0 30px 60px -30px rgba(18,55,43,.45)}
+body{text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+::selection{background:color-mix(in srgb,var(--sakura) 45%,transparent)}
+
+/* 1. gold: keep the material, stop the constant motion (reads as more expensive) */
+.why .k,.hero h1 .ja,.japan .route .ja,.lgi,.course.hl,.japan .route .st,.bubble{animation:none}
+.bubble{animation:pop .7s cubic-bezier(.2,1.4,.4,1) .5s both}
+.soon{animation:none}.course .tag::after{display:none}
+.why .k,.hero h1 .ja,.japan .route .ja,.lgi{background-position:40% 0}
+
+/* 2. hero: soft light, seigaiha wave pattern, petals behind the text */
+.hero{background:
+  radial-gradient(60% 70% at 85% 30%,color-mix(in srgb,var(--sakura) 16%,transparent),transparent 70%),
+  radial-gradient(50% 60% at 0% 100%,color-mix(in srgb,var(--leaf) 10%,transparent),transparent 70%)}
+.hero::after{content:"";position:absolute;inset:auto 0 0 0;height:180px;pointer-events:none;opacity:.07;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%2312372B' stroke-width='1.2'%3E%3Ccircle cx='24' cy='24' r='22'/%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Ccircle cx='24' cy='24' r='10'/%3E%3Ccircle cx='0' cy='24' r='22'/%3E%3Ccircle cx='48' cy='24' r='22'/%3E%3C/g%3E%3C/svg%3E") repeat-x bottom/48px 24px;
+  -webkit-mask:linear-gradient(transparent,#000);mask:linear-gradient(transparent,#000)}
+.hero .wrap{position:relative;z-index:1}
+.petals{z-index:0}.petals i{opacity:.45}
+.hero h1{letter-spacing:-.025em}
+.scene img{border-radius:var(--r-lg);box-shadow:var(--shadow-lg);outline:1px solid color-mix(in srgb,var(--ink) 8%,transparent);outline-offset:-1px}
+.scene::before{content:"";position:absolute;inset:18px -18px -18px 18px;border-radius:var(--r-lg);border:1.5px solid color-mix(in srgb,var(--sakura) 55%,transparent);z-index:-1}
+.btn{transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .2s}
+.btn.go,.btn.wa{box-shadow:0 10px 24px -12px color-mix(in srgb,var(--leaf) 80%,transparent)}
+.btn.go:hover,.btn.wa:hover{transform:translateY(-2px);box-shadow:0 16px 30px -14px color-mix(in srgb,var(--leaf) 90%,transparent)}
+.btn.wa{box-shadow:0 10px 24px -12px rgba(31,168,85,.8)}
+
+/* 3. stats band */
+.stats{padding:0;margin-top:-28px;position:relative;z-index:2}
+.stats ul{list-style:none;margin:0;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-radius:var(--r-md);box-shadow:var(--shadow-lg);border:1px solid var(--mist)}
+.stats li{padding:18px 22px;border-left:1px solid var(--mist)}
+.stats li:first-child{border-left:0}
+.stats b{display:block;font:800 34px/1.05 'Anek Bangla','Zen Maru Gothic',sans-serif;font-variation-settings:'wdth' 78;color:var(--leaf);letter-spacing:-.01em}
+.stats span{display:block;margin-top:4px;font-size:14.5px;color:var(--soft);line-height:1.35}
+
+/* 4. section eyebrows */
+.eyebrow{display:inline-flex;align-items:center;gap:10px;margin:0 0 14px;font:700 13px/1 'Zen Maru Gothic',sans-serif;letter-spacing:.14em;color:var(--sakura-deep)}
+.eyebrow::before{content:"";width:28px;height:2px;border-radius:2px;background:currentColor}
+.japan .eyebrow{color:#EBC679}
+
+/* 5. listen cards: crop in on the characters so each card is distinct */
+.line{background:var(--paper);border:1px solid var(--mist);border-radius:var(--r-md);padding:12px 12px 18px;transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.line:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.line .ph{overflow:hidden;border-radius:14px;aspect-ratio:4/3}
+.line .ph img{width:100%;height:100%;border-radius:0;aspect-ratio:auto;transform:scale(1.9);transform-origin:var(--fo,70% 35%);transition:transform .6s var(--ease)}
+.line:hover .ph img{transform:scale(2)}
+.line>div:last-child{padding:0 6px}
+
+/* 6. why: cards */
+.why ul{grid-template-columns:repeat(4,1fr);gap:16px}
+.why li{grid-template-columns:1fr;align-content:start;gap:14px;padding:26px 22px;border:1px solid var(--mist);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-sm);transition:transform .25s var(--ease),box-shadow .25s var(--ease)}
+.why li:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.why .k{width:64px;height:64px;display:grid;place-items:center;border-radius:18px;font-size:32px;background:linear-gradient(145deg,color-mix(in srgb,var(--sakura) 22%,var(--surface)),color-mix(in srgb,var(--sakura) 8%,var(--surface)));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--sakura) 55%,transparent);color:var(--sakura-deep);-webkit-text-fill-color:var(--sakura-deep);-webkit-background-clip:border-box;background-clip:border-box}
+.why h3{font-size:20px}
+
+/* 7. courses */
+.course{background:var(--surface);border:1px solid var(--mist);box-shadow:var(--shadow-sm);transition:transform .25s var(--ease),box-shadow .25s var(--ease);padding:28px}
+.course:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.course .lv{font-size:48px;letter-spacing:-.02em}
+.course ul{list-style:none;padding:0}
+.course ul li{position:relative;padding-left:24px;margin:4px 0}
+.course ul li::before{content:"";position:absolute;left:2px;top:.62em;width:12px;height:7px;border-left:2.2px solid var(--leaf);border-bottom:2.2px solid var(--leaf);transform:rotate(-45deg)}
+.course .fee{margin-top:auto;padding-top:16px;border-top:1px dashed var(--mist);font-size:34px}
+.course.hl{background:linear-gradient(var(--deep),var(--deep)) padding-box,var(--gold-edge) border-box;background-size:100% 100%,100% 100%;border:2px solid transparent;color:#EEF5F0;box-shadow:0 30px 60px -30px rgba(15,46,36,.8)}
+.course.hl .muted,.course.hl ul{color:#BFD6CB}
+.course.hl .fee{color:#F3D98A;border-top-color:rgba(255,255,255,.15)}
+.course.hl ul li::before{border-color:#E2B65C}
+
+/* 8. faq as soft cards */
+.faq details{border:1px solid var(--mist);border-radius:16px;padding:2px 20px;margin-bottom:10px;background:var(--surface);transition:box-shadow .2s}
+.faq details:last-child{border-bottom:1px solid var(--mist)}
+.faq details[open]{box-shadow:var(--shadow-sm);border-color:color-mix(in srgb,var(--leaf) 35%,var(--mist))}
+.faq summary::after{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:50%;background:var(--paper);font-size:22px}
+.faq .wrap>div:first-child{position:sticky;top:96px}
+
+/* 9. form */
+.form{background:var(--surface);border:1px solid var(--mist);box-shadow:var(--shadow-lg);border-radius:var(--r-lg);padding:32px}
+.f input,.f select,.f textarea{border:1.5px solid var(--mist);background:var(--paper);transition:border-color .15s,box-shadow .15s,background .15s}
+.f input:focus,.f select:focus,.f textarea:focus{background:var(--surface);box-shadow:0 0 0 4px color-mix(in srgb,var(--leaf) 16%,transparent)}
+.apply aside img{box-shadow:var(--shadow-lg)}
+
+/* 10. contact */
+.hours{border:1px solid var(--mist);box-shadow:var(--shadow-sm);border-radius:var(--r-lg);padding:28px}
+.contact dd a{text-decoration:none;border-bottom:1.5px solid color-mix(in srgb,var(--leaf) 45%,transparent)}
+.contact dd a:hover{color:var(--leaf)}
+
+/* 11. footer: deep green, columns */
+footer{background:var(--deep);color:#DCE9E2;border-top:0;padding:64px 0 110px;position:relative;overflow:hidden}
+footer::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--gold-edge)}
+footer .fgrid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:40px;padding-bottom:36px;border-bottom:1px solid rgba(255,255,255,.12)}
+footer .big{font-size:clamp(30px,4vw,46px);color:#fff;display:flex;align-items:center;gap:14px}
+footer .big .kamon{width:46px;height:46px;color:#E2B65C}
+footer h4{margin:6px 0 14px;font:700 13px 'Zen Maru Gothic',sans-serif;letter-spacing:.14em;color:#EBC679}
+footer .col a{display:block;margin:0 0 9px;text-decoration:none;color:#DCE9E2;font-weight:500}
+footer .col a:hover{color:#fff}
+footer .muted{color:#9FBDB0}
+footer .legal{margin-top:24px}
+
+/* 12. reveal on scroll */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.rv.in{opacity:1;transform:none}
+
+/* dark mode tune-ups */
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--deep:#0A1424}}
+:root[data-theme="dark"]{--deep:#0A1424}
+
+@media (max-width:960px){
+  .stats ul{grid-template-columns:1fr 1fr}
+  .stats li:nth-child(3){border-left:0}
+  .stats li:nth-child(n+3){border-top:1px solid var(--mist)}
+  .why ul{grid-template-columns:1fr 1fr}
+  .faq .wrap>div:first-child{position:static}
+  .scene::before{display:none}
+  footer .fgrid{grid-template-columns:1fr 1fr}
+  footer .fgrid>div:first-child{grid-column:1/-1}
+}
+@media (max-width:640px){
+  .stats{margin-top:-12px}
+  .stats li{padding:14px 14px}
+  .stats b{font-size:26px}.stats span{font-size:13px}
+  .why ul{grid-template-columns:1fr;gap:12px}
+  .why li{grid-template-columns:52px 1fr;padding:18px}
+  .why .k{width:52px;height:52px;font-size:28px;border-radius:14px}
+  .line{padding:10px}
+  .line .ph{aspect-ratio:1}
+  .form{padding:20px}
+  .course{padding:22px}
+}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none}}
+</style>
+<style>
+/* ===== v3 · PREMIUM: washi paper, sumi ink, beni red, sakura, champagne gold ===== */
+:root{
+  --paper:#F6F1E8; --surface:#FFFDF8; --mist:#E6DCCB; --ink:#1A181C; --soft:#6B6258;
+  --leaf:#9C1F2B; --leaf-ink:#FFFDF8; --sakura:#E9B7BC; --sakura-deep:#A57F3C; --line:#A57F3C;
+  --deep:#141217; --beni:#9C1F2B; --champ:#C9A764;
+  --gold-edge:linear-gradient(120deg,#8E6A2C,#E9D3A0 30%,#FFF6DF 45%,#C9A764 60%,#8E6A2C 85%,#D9BE82);
+  --gold-face:linear-gradient(135deg,#8E6A2C 0%,#C9A764 30%,#F3E3BC 50%,#C9A764 70%,#8E6A2C 100%);
+  --gold-text:linear-gradient(110deg,#8E6A2C 0%,#B8924A 35%,#E2C88E 50%,#B8924A 65%,#8E6A2C 100%);
+  --gold-rim:var(--gold-edge);
+  --shadow-sm:0 1px 2px rgba(26,24,28,.05),0 10px 30px -18px rgba(26,24,28,.28);
+  --shadow-lg:0 2px 6px rgba(26,24,28,.04),0 40px 80px -40px rgba(26,24,28,.45);
+  --serif:'Cormorant Garamond','Noto Serif Bengali','Shippori Mincho',serif;
+  --sans:'Inter','Anek Bangla','Zen Kaku Gothic New',system-ui,sans-serif;
+  --mincho:'Shippori Mincho','Noto Serif Bengali',serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#121014; --surface:#1A181D; --mist:#2E2A2F; --ink:#F2ECE2; --soft:#A79D91;
+  --leaf:#E58A92; --leaf-ink:#1A0B0D; --sakura-deep:#D6B477; --line:#D6B477; --deep:#0C0A0E; --beni:#C23A46;
+  --gold-text:linear-gradient(110deg,#B8924A 0%,#E2C88E 50%,#B8924A 100%)}}
+:root[data-theme="dark"]{
+  --paper:#121014; --surface:#1A181D; --mist:#2E2A2F; --ink:#F2ECE2; --soft:#A79D91;
+  --leaf:#E58A92; --leaf-ink:#1A0B0D; --sakura-deep:#D6B477; --line:#D6B477; --deep:#0C0A0E; --beni:#C23A46;
+  --gold-text:linear-gradient(110deg,#B8924A 0%,#E2C88E 50%,#B8924A 100%)}
+
+/* type */
+body,.btn,.play,.f input,.f select,.f textarea,.nav .login,.lsw button,.menub{font-family:var(--sans)}
+body{font-size:16.5px;line-height:1.75;letter-spacing:.003em}
+.ja{font-family:var(--mincho)}
+h1,h2{font-family:var(--serif);font-weight:600;font-variation-settings:normal;letter-spacing:-.01em;line-height:1.04;text-wrap:balance}
+h2{font-size:clamp(38px,5vw,64px)}
+h3{font-family:var(--sans);font-weight:650;font-variation-settings:normal;letter-spacing:-.01em;font-size:19px;line-height:1.3}
+:root[lang="en"] h1,:root[lang="en"] h2{letter-spacing:-.015em}
+:root[lang="en"] .hero h1{font-size:clamp(54px,6.6vw,104px);line-height:.95}
+.hero h1{font-family:var(--serif);font-weight:500}
+.hero h1 span[data-t="h1b"]{font-style:italic;color:var(--beni)}
+:root[lang="bn"] h1,:root[lang="bn"] h2{font-family:'Noto Serif Bengali',serif;font-weight:700;line-height:1.25;letter-spacing:0}
+:root[lang="bn"] .hero h1{font-size:clamp(40px,5vw,72px);font-weight:700}
+:root[lang="bn"] .hero h1 span[data-t="h1b"]{font-style:normal}
+:root[lang="ja"] body,:root[lang="ja"] .btn,:root[lang="ja"] .f input,:root[lang="ja"] .f select,:root[lang="ja"] .f textarea{font-family:'Zen Kaku Gothic New','Inter',sans-serif}
+:root[lang="ja"] h1,:root[lang="ja"] h2{font-family:var(--mincho);font-weight:700;line-height:1.3;letter-spacing:.02em}
+:root[lang="ja"] h3{font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700}
+:root[lang="ja"] .hero h1 span[data-t="h1b"]{font-style:normal}
+.lead{color:var(--soft);font-size:17.5px}
+
+/* nav */
+.nav{background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(14px) saturate(1.2)}
+.nav.solid{border-bottom-color:var(--mist);box-shadow:0 10px 30px -24px rgba(26,24,28,.5)}
+.brand b{font-family:var(--serif);font-size:20px;font-weight:700;letter-spacing:.01em;font-variation-settings:normal}
+:root[lang="bn"] .brand b{font-family:'Noto Serif Bengali',serif;font-size:16px}
+.brand small{letter-spacing:.06em}
+.kamon{color:var(--beni)}
+.nav nav a{font-weight:500;letter-spacing:.01em}
+.nav nav .pill{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.lsw{box-shadow:inset 0 0 0 1px var(--mist)}
+.lsw button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.nav .login{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 25%,transparent)}
+
+/* buttons: sumi black with a hairline of gold; beni for the main CTA on hover */
+.btn{border-radius:999px;font-weight:600;letter-spacing:.02em}
+.btn.go{background:var(--ink);color:var(--paper);box-shadow:inset 0 0 0 1px rgba(201,167,100,.45),0 14px 30px -16px rgba(26,24,28,.7)}
+.btn.go:hover{background:var(--beni);color:#fff;box-shadow:0 18px 34px -16px color-mix(in srgb,var(--beni) 80%,transparent)}
+.btn.wa{background:#1F7F4C;box-shadow:0 14px 30px -16px rgba(31,127,76,.8)}
+.play{background:var(--ink);color:var(--paper);font-weight:600}
+.play i{background:color-mix(in srgb,var(--paper) 18%,transparent)}
+.play:hover{background:var(--beni);color:#fff}
+
+/* opening-soon pill: quiet champagne */
+.soon{background:linear-gradient(color-mix(in srgb,var(--surface) 80%,transparent),color-mix(in srgb,var(--surface) 80%,transparent)) padding-box,var(--gold-edge) border-box;background-size:100% 100%,100% 100%;border:1px solid transparent;color:var(--ink);font-weight:600;font-size:13.5px;letter-spacing:.04em;box-shadow:0 8px 20px -14px rgba(142,106,44,.6)}
+.soon::after{animation:sheen 6s ease-in-out infinite}
+.soon i{background:var(--beni);animation:ping 2.4s ease-out infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(156,31,43,.5)}80%,100%{box-shadow:0 0 0 10px transparent}}
+
+/* hero */
+.hero{padding:56px 0 96px;background:
+  radial-gradient(55% 65% at 88% 25%,color-mix(in srgb,var(--sakura) 30%,transparent),transparent 70%),
+  radial-gradient(40% 50% at 5% 95%,color-mix(in srgb,var(--champ) 14%,transparent),transparent 70%),var(--paper)}
+.hero::after{opacity:.09;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'%3E%3Cg fill='none' stroke='%23A57F3C' stroke-width='1'%3E%3Ccircle cx='24' cy='24' r='22'/%3E%3Ccircle cx='24' cy='24' r='16'/%3E%3Ccircle cx='24' cy='24' r='10'/%3E%3Ccircle cx='0' cy='24' r='22'/%3E%3Ccircle cx='48' cy='24' r='22'/%3E%3C/g%3E%3C/svg%3E")}
+.hero h1 .ja{font-family:var(--mincho);font-size:15px;letter-spacing:.32em;font-weight:600;margin-bottom:22px;color:var(--sakura-deep);background:none;-webkit-text-fill-color:currentColor}
+.petals i{background:linear-gradient(135deg,#FBE3E6,#E9B7BC)!important;opacity:.75;border-radius:80% 0 80% 0}
+.facts li::before{background:var(--beni)!important;width:6px;height:6px;border-radius:50%;transform:none}
+.facts{font-weight:500}
+.strip{border-top:1px solid var(--mist)}
+.strip a{background:transparent;box-shadow:inset 0 0 0 1px var(--mist);font-weight:600}
+.strip a:hover{background:var(--surface)}
+.scene::before{border:1px solid var(--champ);inset:22px -22px -22px 22px}
+.scene img{border-radius:6px 120px 6px 6px}
+.scene .hanko{position:absolute;top:-18px;left:-18px;z-index:2;width:74px;height:74px;display:grid;place-items:center;background:var(--beni);color:#FFF4EE;border-radius:12px;font:800 38px/1 var(--mincho);transform:rotate(-6deg);box-shadow:0 14px 28px -12px rgba(156,31,43,.7),inset 0 0 0 3px rgba(255,255,255,.18),inset 0 0 0 5px var(--beni),inset 0 0 0 6px rgba(255,255,255,.35)}
+.tate{position:absolute;right:-56px;top:40px;writing-mode:vertical-rl;font:600 14px/1 var(--mincho);letter-spacing:.5em;color:var(--sakura-deep);white-space:nowrap}
+.tate::before{content:"";display:inline-block;width:1px;height:60px;margin-bottom:16px;background:var(--champ)}
+.bubble{border-radius:20px 20px 20px 4px;border-width:1px;background:linear-gradient(color-mix(in srgb,var(--surface) 90%,transparent),color-mix(in srgb,var(--surface) 90%,transparent)) padding-box,var(--gold-edge) border-box;background-size:100% 100%,100% 100%}
+.bubble .jp{font-family:var(--mincho);font-weight:700}
+
+/* stats */
+.stats ul{border-radius:6px;padding:0;border:1px solid var(--mist);background:var(--surface)}
+.stats li{padding:26px 28px;border-left:1px solid var(--mist)}
+.stats b{font:600 46px/1 var(--serif);color:var(--ink);letter-spacing:-.01em}
+:root[lang="bn"] .stats b{font:700 36px/1.1 'Noto Serif Bengali',serif}
+:root[lang="ja"] .stats b{font:700 36px/1.1 var(--mincho)}
+.stats li:first-child b{color:var(--beni)}
+.stats span{margin-top:8px;font-size:14px}
+
+/* eyebrows */
+.eyebrow{font:600 12.5px/1 var(--mincho);letter-spacing:.28em;color:var(--sakura-deep)}
+.eyebrow::before{width:40px;height:1px;background:var(--champ)}
+.japan .eyebrow{color:var(--champ)}
+
+/* sections */
+section{padding:112px 0}
+.listen,.courses,.apply{background:var(--surface)}
+.why{background:var(--paper)}
+.line{background:var(--paper);border:1px solid var(--mist);border-radius:8px;padding:10px 10px 22px}
+.line .ph{border-radius:4px}
+.line .jp{font-family:var(--mincho);font-weight:700;font-size:21px}
+.why li{border-radius:8px;border:1px solid var(--mist);background:var(--surface);padding:32px 26px}
+.why .k{width:58px;height:58px;border-radius:50%;font:800 26px/1 var(--mincho);background:transparent;color:var(--beni);-webkit-text-fill-color:var(--beni);box-shadow:inset 0 0 0 1px var(--beni)}
+.why li:hover .k{background:var(--beni);color:#fff;-webkit-text-fill-color:#fff}
+.why .k{transition:background .3s,color .3s}
+
+/* courses */
+.course{border-radius:8px;border:1px solid var(--mist);background:var(--paper);box-shadow:none;padding:32px}
+.course:hover{box-shadow:var(--shadow-lg);background:var(--surface)}
+.course .lv{font:600 56px/1 var(--serif);letter-spacing:-.01em}
+.course .fee{font:600 36px/1 var(--serif);color:var(--beni);border-top:1px solid var(--mist)}
+:root[lang="bn"] .course .fee{font:700 30px/1.2 'Noto Serif Bengali',serif}
+.course ul li::before{border-color:var(--beni)}
+.course.hl{background:linear-gradient(var(--deep),var(--deep)) padding-box,var(--gold-edge) border-box;border:1px solid transparent;color:#F2ECE2}
+.course.hl .lv{color:#fff}
+.course.hl .muted,.course.hl ul{color:#B7ADA2}
+.course.hl .fee{color:#E2C88E;border-top-color:rgba(255,255,255,.12)}
+.course.hl ul li::before{border-color:#E2C88E}
+.course .tag{background:var(--gold-face);color:#2A1E08;font-size:12px;letter-spacing:.06em;border-radius:3px}
+
+/* japan band: sumi night with sakura light */
+.japan{background:var(--deep);color:#F2ECE2}
+.japan::before{opacity:.22;filter:blur(30px) saturate(.6)}
+.japan::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(50% 60% at 90% 10%,rgba(233,183,188,.16),transparent 70%)}
+.japan .lead,.japan .note,.japan .route span{color:#B7ADA2}
+.japan .route::before{height:1px;top:27px;background:linear-gradient(90deg,transparent,#C9A764 12%,#C9A764 88%,transparent)}
+.japan .route .st{border:1px solid #C9A764;background:var(--deep);color:#E2C88E;font:600 22px var(--serif);animation:none}
+.japan .route li:last-child .st{background:var(--beni);border-color:var(--beni);color:#fff;box-shadow:0 0 0 6px rgba(156,31,43,.25)}
+.japan .route .ja{color:#E2C88E;background:none;-webkit-text-fill-color:#E2C88E}
+.japan .route b{font-family:var(--sans);font-weight:600;font-size:17px}
+@media (max-width:960px){.japan .route::before{width:1px;left:34px;background:linear-gradient(180deg,transparent,#C9A764 6%,#C9A764 94%,transparent)}}
+
+/* faq, form, contact */
+.faq{background:var(--paper)}
+.faq details{border-radius:6px;background:var(--surface)}
+.faq details[open]{border-color:color-mix(in srgb,var(--beni) 30%,var(--mist))}
+.faq summary{font-weight:600;font-size:17.5px}
+.faq summary::after{color:var(--beni);background:transparent;box-shadow:inset 0 0 0 1px var(--mist)}
+.form{border-radius:10px;border:1px solid var(--mist)}
+.form::before{content:"";display:block;height:2px;margin:-32px -32px 28px;border-radius:10px 10px 0 0;background:var(--gold-edge)}
+.f{font-weight:600;font-size:14px;letter-spacing:.01em}
+.f input,.f select,.f textarea{border-radius:6px;border:1px solid var(--mist)}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--beni);box-shadow:0 0 0 4px color-mix(in srgb,var(--beni) 12%,transparent)}
+.apply aside img{border-radius:6px 80px 6px 6px}
+.contact{background:var(--paper)}
+.hours{border-radius:10px;border:1px solid var(--mist)}
+.hours h3{font-family:var(--serif);font-size:26px;font-weight:600}
+:root[lang="bn"] .hours h3{font-family:'Noto Serif Bengali',serif;font-size:20px}
+.contact dd a{border-bottom-color:color-mix(in srgb,var(--beni) 45%,transparent)}
+.contact dd a:hover{color:var(--beni)}
+
+/* footer */
+footer{background:var(--deep);color:#D9D1C5}
+footer .big{font-family:var(--mincho);font-weight:700;letter-spacing:.06em}
+footer .big .kamon{color:#E2C88E}
+footer h4{color:#C9A764;font-family:var(--mincho);letter-spacing:.24em}
+footer .col a{color:#D9D1C5}
+footer .muted{color:#8E857A}
+footer::before{height:1px}
+.float-wa{box-shadow:0 18px 40px -16px rgba(31,127,76,.8)}
+
+/* drawer (mobile menu) follows the new palette */
+.dpanel{--ink:#1A181C;--soft:#6B6258;--leaf:#9C1F2B}
+
+@media (max-width:960px){.tate{display:none}.scene .hanko{width:58px;height:58px;font-size:30px;top:-12px;left:auto;right:12px}.scene img{border-radius:6px 70px 6px 6px}}
+@media (max-width:640px){
+  section{padding:68px 0}
+  :root[lang="en"] .hero h1{font-size:clamp(46px,13vw,64px)}
+  .stats li{padding:16px}.stats b{font-size:32px}
+  :root[lang="bn"] .stats b,:root[lang="ja"] .stats b{font-size:26px}
+  .why .k{width:46px;height:46px;font-size:22px}
+  .course{padding:22px}.course .lv{font-size:44px}
+  .form::before{margin:-20px -20px 20px}
+}
+</style>
 </head>
 <body>
 <header class="nav" id="hdr"><div class="wrap">
@@ -398,7 +727,7 @@ footer .flinks a{margin-right:16px;font-weight:600}
     <ul class="facts"><li><span data-t="f1">First 3 classes free</span></li><li><span data-t="f2">All books included in the fee</span></li><li><span data-t="f3">Morning and evening batches</span></li></ul>
     <div class="strip"><span><span data-t="strip">Already with Sakura?</span></span><a href="../student/"><span data-t="st_login">Student login</span></a><a href="../"><span data-t="sf_login">Teacher & staff login</span></a></div>
   </div>
-  <figure class="scene">
+  <figure class="scene"><span class="hanko" aria-hidden="true">桜</span><span class="tate" aria-hidden="true">さくら日本語学院</span>
     <img src="img/classroom.jpg" srcset="img/classroom-s.jpg 640w, img/classroom.jpg 1280w" sizes="(max-width:960px) 100vw, 600px" alt="Anime-style illustration: a new Bangladeshi student standing beside the teacher in a Japanese classroom with cherry trees outside" data-ta="hero_alt" width="1280" height="715" fetchpriority="high">
     <figcaption class="bubble">
       <div class="who"><span data-t="b_who">Sayem, our director, on his first day in Japan</span></div>
@@ -409,21 +738,28 @@ footer .flinks a{margin-right:16px;font-weight:600}
   </figure>
 </div></section>
 
+<section class="stats" aria-label="At a glance"><div class="wrap"><ul class="rv">
+  <li><b data-t="st1n">N5→N3</b><span data-t="st1">JLPT levels, starting from zero</span></li>
+  <li><b data-t="st2n">2 hrs</b><span data-t="st2">of class every day, morning or evening</span></li>
+  <li><b data-t="st3n">4×</b><span data-t="st3">intakes a year at Japanese schools</span></li>
+  <li><b data-t="st4n">3</b><span data-t="st4">free trial classes before you enrol</span></li>
+</ul></div></section>
+
 <section class="listen" id="listen"><div class="wrap">
-  <div class="head"><div><h2><span data-t="l_h">The Japanese you’ll hear in your very first class.</span></h2><p class="lead"><span data-t="l_lead">Every sentence in our books and app can be heard in a natural Japanese voice. Tap to listen.</span></p></div></div>
-  <div class="lines">
-    <div class="line"><img style="object-position:84% 30%" src="img/teacher-s.jpg" alt="Anime-style illustration: the teacher greeting the class with a smile" data-ta="alt_t" loading="lazy" width="640" height="358">
+  <div class="head"><div><p class="eyebrow ja">01 · 最初の授業</p><h2><span data-t="l_h">The Japanese you’ll hear in your very first class.</span></h2><p class="lead"><span data-t="l_lead">Every sentence in our books and app can be heard in a natural Japanese voice. Tap to listen.</span></p></div></div>
+  <div class="lines rv">
+    <div class="line"><div class="ph" style="--fo:80% 30%"><img src="img/teacher-s.jpg" alt="Anime-style illustration: the teacher greeting the class with a smile" data-ta="alt_t" loading="lazy" width="640" height="358"></div>
       <div><div class="jp ja">みなさん、おはようございます。</div><div class="ro">minasan, ohayō gozaimasu</div><div class="bn"><span data-t="m1">Good morning, everyone.</span></div><button class="play" data-a="ohayo"><i></i><span data-t="listen">Listen</span></button></div></div>
-    <div class="line"><img style="object-position:70% 30%" src="img/student-s.jpg" alt="Anime-style illustration: the new student introducing himself to the class" data-ta="alt_s" loading="lazy" width="640" height="358">
+    <div class="line"><div class="ph" style="--fo:58% 30%"><img src="img/student-s.jpg" alt="Anime-style illustration: the new student introducing himself to the class" data-ta="alt_s" loading="lazy" width="640" height="358"></div>
       <div><div class="jp ja">バングラデシュから来ました。</div><div class="ro">banguradeshu kara kimashita</div><div class="bn"><span data-t="m2">I came from Bangladesh.</span></div><button class="play" data-a="bangladesh"><i></i><span data-t="listen">Listen</span></button></div></div>
-    <div class="line"><img style="object-position:78% 35%" src="img/bow-s.jpg" alt="Anime-style illustration: the student bowing politely" data-ta="alt_b" loading="lazy" width="640" height="358">
+    <div class="line"><div class="ph" style="--fo:62% 32%"><img src="img/bow-s.jpg" alt="Anime-style illustration: the student bowing politely" data-ta="alt_b" loading="lazy" width="640" height="358"></div>
       <div><div class="jp ja">どうぞ、よろしくおねがいします。</div><div class="ro">dōzo, yoroshiku onegai shimasu</div><div class="bn"><span data-t="m3">I look forward to learning with you all.</span></div><button class="play" data-a="yoroshiku"><i></i><span data-t="listen">Listen</span></button></div></div>
   </div>
 </div></section>
 
 <section class="why" id="why"><div class="wrap">
-  <h2><span data-t="w_h">The road to Japan starts with good Japanese.</span></h2>
-  <ul>
+  <p class="eyebrow ja">02 · さくらの強み</p><h2><span data-t="w_h">The road to Japan starts with good Japanese.</span></h2>
+  <ul class="rv">
     <li><span class="k" aria-hidden="true">無</span><div><h3><span data-t="f1">First 3 classes free</span></h3><p><span data-t="w1p">Try the classes first. Enrol only if you like them.</span></p></div></li>
     <li><span class="k" aria-hidden="true">本</span><div><h3><span data-t="w2">Books included in the fee</span></h3><p><span data-t="w2p">Every course book is included. Nothing extra to buy.</span></p></div></li>
     <li><span class="k" aria-hidden="true">日</span><div><h3><span data-t="w3">Our director lives in Japan</span></h3><p><span data-t="w3p">The director lives in Kobe, Japan, and knows study and daily life there first-hand.</span></p></div></li>
@@ -432,16 +768,16 @@ footer .flinks a{margin-right:16px;font-weight:600}
 </div></section>
 
 <section class="courses" id="courses"><div class="wrap">
-  <h2><span data-t="c_h">Choose your level.</span></h2>
+  <p class="eyebrow ja">03 · コースと学費</p><h2><span data-t="c_h">Choose your level.</span></h2>
   <p class="lead"><span data-t="c_lead">2 hours of class every day: 10am to 12pm, or 6pm to 8pm.</span></p>
-  <div id="courseGrid"></div>
+  <div id="courseGrid" class="rv"></div>
   <p class="note"><span data-t="c_note">Packages of more than one level cost less. Fees can be paid in instalments; contact us for details.</span></p>
 </div></section>
 
 <section class="japan" id="japan"><div class="wrap">
-  <h2><span data-t="j_h">From admission to boarding the plane.</span></h2>
+  <p class="eyebrow ja">04 · 日本留学</p><h2><span data-t="j_h">From admission to boarding the plane.</span></h2>
   <p class="lead"><span data-t="j_lead">Getting to a Japanese language school takes six steps. We are with you at every one.</span></p>
-  <ol class="route">
+  <ol class="route rv">
     <li><span class="st">1</span><div><b><span data-t="s1">Documents</span></b><span class="ja">書類の準備</span><span><span data-t="s1p">Certificates, passport, sponsor papers</span></span></div></li>
     <li><span class="st">2</span><div><b><span data-t="s2">Choosing a school</span></b><span class="ja">学校選び</span><span><span data-t="s2p">A school that suits you</span></span></div></li>
     <li><span class="st">3</span><div><b><span data-t="s3">Application</span></b><span class="ja">出願</span><span><span data-t="s3p">Forms and translations</span></span></div></li>
@@ -453,7 +789,7 @@ footer .flinks a{margin-right:16px;font-weight:600}
 </div></section>
 
 <section class="faq" id="faq"><div class="wrap">
-  <div><h2><span data-t="q_h">What everyone asks.</span></h2><p class="lead"><span data-t="q_lead">Anything else? Ask us on WhatsApp.</span></p></div>
+  <div><p class="eyebrow ja">05 · よくある質問</p><h2><span data-t="q_h">What everyone asks.</span></h2><p class="lead"><span data-t="q_lead">Anything else? Ask us on WhatsApp.</span></p></div>
   <div>
     <details open><summary><span data-t="q0">When do classes start?</span></summary><p><span data-t="a0">We are opening soon and will announce the first batch’s start date shortly. Pre-register and you will be the first to know.</span></p></details>
     <details><summary><span data-t="q1">Can I start from zero?</span></summary><p><span data-t="a1">Yes. The N5 course starts with hiragana and katakana. You don’t need to know any Japanese.</span></p></details>
@@ -467,9 +803,9 @@ footer .flinks a{margin-right:16px;font-weight:600}
 </div></section>
 
 <section class="apply" id="apply"><div class="wrap">
-  <aside><h2><span data-t="ap_h">Be in the first batch.</span></h2><p class="lead"><span data-t="ap_lead">We open soon. Pre-register now and we will call or WhatsApp you with the start date and admission details.</span></p>
+  <aside><p class="eyebrow ja">06 · 事前登録</p><h2><span data-t="ap_h">Be in the first batch.</span></h2><p class="lead"><span data-t="ap_lead">We open soon. Pre-register now and we will call or WhatsApp you with the start date and admission details.</span></p>
     <img src="img/friends-s.jpg" alt="Anime-style illustration: classmates waving to welcome a new friend" data-ta="alt_f" loading="lazy" width="640" height="358"></aside>
-  <div class="form"><form id="af" novalidate><div class="g2">
+  <div class="form rv"><form id="af" novalidate><div class="g2">
     <label class="f"><span data-t="fl_name">Your name</span><input name="name" required maxlength="80" autocomplete="name"></label>
     <label class="f"><span data-t="fl_phone">Mobile or WhatsApp number</span><input name="phone" type="tel" required inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"></label>
     <label class="f"><span data-t="fl_int">What do you want to learn?</span><select name="interest"><option value="N5"><span data-t="o_n5">N5 course (from zero)</span></option><option value="N4"><span data-t="o_n4">N4 course</span></option><option value="N3"><span data-t="o_n3">N3 course</span></option><option value="japan"><span data-t="o_jp">Studying in Japan (processing)</span></option><option value="other"><span data-t="o_ot">Other / just asking</span></option></select></label>
@@ -483,15 +819,19 @@ footer .flinks a{margin-right:16px;font-weight:600}
 </div></section>
 
 <section class="contact" id="contact"><div class="wrap">
-  <div><h2><span data-t="d_contact">Contact</span></h2><p class="lead"><span data-t="ct_lead">Visit the office, call us, or write on WhatsApp.</span></p>
+  <div><p class="eyebrow ja">07 · お問い合わせ</p><h2><span data-t="d_contact">Contact</span></h2><p class="lead"><span data-t="ct_lead">Visit the office, call us, or write on WhatsApp.</span></p>
     <dl><dt><span data-t="ct_phone">Phone</span></dt><dd><a id="tel" href="#"></a></dd><dt>WhatsApp</dt><dd><a id="wa2" href="#" target="_blank" rel="noopener"></a></dd><dt><span data-t="ct_mail">Email</span></dt><dd><a id="mail" href="#"></a></dd><dt><span data-t="ct_addr">Address</span></dt><dd id="addr"><span data-t="ct_city">Narayanganj, Bangladesh</span></dd></dl></div>
   <div class="hours"><h3><span data-t="hrs_h">Class times</span></h3><p><span data-t="hrs_p">Morning batch: 10am to 12pm<br>Evening batch: 6pm to 8pm</span></p><h3 style="margin-top:18px"><span data-t="dir_h">Director</span></h3><p id="dir">SAYEM AHMED · サエム・アハメド (Kobe, Japan)</p></div>
 </div></section>
 </main>
 
-<footer><div class="wrap"><div class="big">さくら日本語学院</div><p><span data-t="ft_place">Sakura Japanese Institute, Narayanganj</span></p>
-  <div class="flinks"><a href="../student/"><span data-t="st_login">Student login</span></a><a href="../"><span data-t="ft_staff">Staff portal</span></a><a href="../verify/"><span data-t="ft_verify">Verify a certificate</span></a></div>
-  <p class="small muted">© <span id="yr"></span> <span data-t="brand">Sakura Japanese Institute</span> · <span data-t="ft_note">Illustrations are anime-style drawings · Voices: VOICEVOX:冥鳴ひまり, VOICEVOX:白上虎太郎</span></p></div></footer>
+<footer><div class="wrap">
+  <div class="fgrid">
+    <div><div class="big ja"><span class="kamon" id="k3"></span>さくら日本語学院</div><p style="margin-top:10px"><span data-t="ft_place">Sakura Japanese Institute, Narayanganj</span></p><p class="small muted" style="margin-top:6px;max-width:44ch"><span data-t="ft_tag">JLPT N5–N3 classes and complete support for studying in Japan.</span></p></div>
+    <div class="col"><h4><span data-t="d_explore">Explore</span></h4><a href="#courses"><span data-t="n_courses">Courses & fees</span></a><a href="#japan"><span data-t="n_japan">Study in Japan</span></a><a href="#faq"><span data-t="n_faq">FAQ</span></a><a href="#apply"><span data-t="n_apply">Pre-register</span></a></div>
+    <div class="col"><h4><span data-t="ft_portals">Portals</span></h4><a href="../student/"><span data-t="st_login">Student login</span></a><a href="../"><span data-t="ft_staff">Staff portal</span></a><a href="../verify/"><span data-t="ft_verify">Verify a certificate</span></a></div>
+  </div>
+  <p class="small muted legal">© <span id="yr"></span> <span data-t="brand">Sakura Japanese Institute</span> · <span data-t="ft_note">Illustrations are anime-style drawings · Voices: VOICEVOX:冥鳴ひまり, VOICEVOX:白上虎太郎</span></p></div></footer>
 <a class="btn wa float-wa" id="wa4" href="#" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" data-ta="wa_talk"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9 0-1.4.7-2 1-2.3.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.2.5.1.6-.1l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.2 1.3Z"/></svg><span>WhatsApp</span></a>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="../config.js"></script>
@@ -500,9 +840,10 @@ footer .flinks a{margin-right:16px;font-weight:600}
   'use strict';
   const $ = (s) => document.querySelector(s);
   const KAMON = (w) => `<svg width="${w}" height="${w}" viewBox="-25 -25 50 50" aria-hidden="true"><circle r="23.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle r="20.6" fill="none" stroke="currentColor" stroke-width=".8"/><g fill="currentColor">${[0, 72, 144, 216, 288].map(r => `<path transform="rotate(${r})" d="M0 -3.4 C-7.4 -8 -8.6 -15.4 -4.6 -19.4 L0 -16.2 L4.6 -19.4 C8.6 -15.4 7.4 -8 0 -3.4Z"/>`).join('')}</g><circle r="2.6" fill="var(--paper)"/></svg>`;
-  $('#k1').innerHTML = KAMON('100%'); $('#k2').innerHTML = KAMON('100%'); $('#yr').textContent = new Date().getFullYear();
+  $('#k1').innerHTML = KAMON('100%'); $('#k2').innerHTML = KAMON('100%'); $('#k3').innerHTML = KAMON('100%'); $('#yr').textContent = new Date().getFullYear();
   const bn = (n) => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
   const D = {"title": ["Sakura Japanese Institute · Japanese language school in Narayanganj", "সাকুরা জাপানিজ ইনস্টিটিউট · নারায়ণগঞ্জ", "さくら日本語学院 · ナラヤンガンジの日本語学校"], "brand": ["Sakura Japanese Institute", "সাকুরা জাপানিজ ইনস্টিটিউট", "さくら日本語学院"], "brand2": ["<span class=\"ja\">さくら日本語学院</span> · Narayanganj, Bangladesh", "<span class=\"ja\">さくら日本語学院</span> · Sakura Japanese Institute", "Sakura Japanese Institute · バングラデシュ・ナラヤンガンジ"], "nav_main": ["Main menu", "প্রধান মেনু", "メインメニュー"], "n_courses": ["Courses & fees", "কোর্স ও ফি", "コースと学費"], "n_japan": ["Study in Japan", "জাপানে পড়া", "日本留学"], "n_faq": ["FAQ", "প্রশ্ন", "よくある質問"], "n_login": ["Log in", "লগইন", "ログイン"], "n_apply": ["Pre-register", "আগাম নিবন্ধন", "事前登録"], "lg_st": ["Students", "ছাত্রছাত্রী", "学生"], "lg_st_s": ["Your own student account: books, attendance, fees, mock tests", "নিজের ছাত্র অ্যাকাউন্টে ঢুকুন: বই, হাজিরা, ফি, মক টেস্ট", "自分の学生アカウントへ：教科書・出席・学費・模擬試験"], "lg_sf": ["Teachers & office staff", "শিক্ষক ও অফিস স্টাফ", "教師・事務スタッフ"], "lg_sf_s": ["Sign in to the portal with your own email and password", "নিজের ইমেইল আর পাসওয়ার্ড দিয়ে পোর্টালে ঢুকুন", "自分のメールとパスワードでポータルへ"], "menu": ["Menu", "মেনু", "メニュー"], "close": ["Close", "বন্ধ করুন", "閉じる"], "d_listen": ["Hear a first class", "প্রথম ক্লাস শুনুন", "最初の授業を聞く"], "d_faq": ["Questions & answers", "প্রশ্ন ও উত্তর", "よくある質問"], "d_contact": ["Contact", "যোগাযোগ", "お問い合わせ"], "h_place": ["さくら日本語学院 · Narayanganj", "さくら日本語学院 · নারায়ণগঞ্জ", "さくら日本語学院 · ナラヤンガンジ"], "h1a": ["Learn Japanese.", "জাপানি শিখুন,", "日本語を学び、"], "h1b": ["Study in Japan.", "জাপানে পড়ুন।", "日本で学ぶ。"], "h_lead": ["Japanese from your very first hiragana up to JLPT N3, and help at every step from applying to a Japanese language school to getting your visa.", "একদম হিরাগানা থেকে JLPT N3 পর্যন্ত জাপানি ভাষা, আর জাপানের ভাষা স্কুলে ভর্তি থেকে ভিসা পর্যন্ত পুরো পথে আমরা পাশে থাকি।", "ひらがなの第一歩からJLPT N3まで。日本の日本語学校への出願からビザ取得まで、すべての段階をサポートします。"], "wa_talk": ["Chat on WhatsApp", "WhatsApp-এ কথা বলুন", "WhatsAppで相談"], "apply_btn": ["Pre-register now", "আগাম নিবন্ধন করুন", "事前登録する"], "f1": ["First 3 classes free", "প্রথম ৩টি ক্লাস ফ্রি", "最初の3回は無料"], "f2": ["All books included in the fee", "সব বই কোর্স ফি-র মধ্যে", "教科書代は学費に含む"], "f3": ["Morning and evening batches", "সকাল ও সন্ধ্যা ব্যাচ", "朝クラス・夜クラス"], "strip": ["Already with Sakura?", "আগে থেকেই সাকুরায় আছেন?", "すでに在籍中の方"], "st_login": ["Student login", "ছাত্র লগইন", "学生ログイン"], "sf_login": ["Teacher & staff login", "শিক্ষক ও স্টাফ লগইন", "教師・スタッフログイン"], "hero_alt": ["Anime-style illustration: a new Bangladeshi student standing beside the teacher in a Japanese classroom with cherry trees outside", "অ্যানিমে ধাঁচের ছবি: সাকুরা গাছের পাশে জাপানি ক্লাসরুমে শিক্ষিকার পাশে দাঁড়িয়ে নতুন এক বাংলাদেশি ছাত্র", "アニメ風イラスト：桜の見える日本の教室で、先生の隣に立つバングラデシュからの転校生"], "b_who": ["Sayem, our director, on his first day in Japan", "পরিচালক সায়েম, জাপানে প্রথম দিনে", "校長サエム、日本での最初の日"], "b_mean": ["“Nice to meet you. I’m Sayem.”", "“প্রথম পরিচয়ে বলছি, আমি সায়েম।”", "（初めて会う人へのあいさつ）"], "listen": ["Listen", "শুনুন", "聞く"], "listen_aria": ["Hear the Japanese: はじめまして。サエムです。", "জাপানি উচ্চারণ শুনুন: はじめまして。サエムです。", "音声を聞く：はじめまして。サエムです。"], "l_h": ["The Japanese you’ll hear in your very first class.", "প্রথম ক্লাসেই শুনবেন এমন জাপানি।", "最初の授業で聞く日本語。"], "l_lead": ["Every sentence in our books and app can be heard in a natural Japanese voice. Tap to listen.", "আমাদের বই আর অ্যাপের প্রতিটা বাক্যে জাপানি কণ্ঠে উচ্চারণ শোনা যায়। চাপ দিয়ে শুনে দেখুন।", "教科書とアプリのすべての文を、自然な日本語の音声で聞けます。タップして聞いてみてください。"], "alt_t": ["Anime-style illustration: the teacher greeting the class with a smile", "অ্যানিমে ধাঁচের ছবি: হাসিমুখে ক্লাসকে শুভেচ্ছা জানাচ্ছেন শিক্ষিকা", "アニメ風イラスト：笑顔でクラスにあいさつする先生"], "alt_s": ["Anime-style illustration: the new student introducing himself to the class", "অ্যানিমে ধাঁচের ছবি: ক্লাসের সামনে নিজের পরিচয় দিচ্ছে নতুন ছাত্র", "アニメ風イラスト：クラスの前で自己紹介する新入生"], "alt_b": ["Anime-style illustration: the student bowing politely", "অ্যানিমে ধাঁচের ছবি: মাথা নুইয়ে অভিবাদন জানাচ্ছে ছাত্র", "アニメ風イラスト：丁寧におじぎする学生"], "m1": ["Good morning, everyone.", "সবাইকে সুপ্রভাত।", "（先生から全員への朝のあいさつ）"], "m2": ["I came from Bangladesh.", "বাংলাদেশ থেকে এসেছি।", "（出身を伝える表現）"], "m3": ["I look forward to learning with you all.", "সবার কাছে সহযোগিতা কামনা করছি।", "（自己紹介の締めくくり）"], "w_h": ["The road to Japan starts with good Japanese.", "জাপানের পথ শুরু হয় ভালো জাপানি দিয়ে।", "日本への道は、しっかりした日本語から。"], "w1": ["First 3 classes free", "প্রথম ৩টি ক্লাস ফ্রি", "最初の3回は無料"], "w1p": ["Try the classes first. Enrol only if you like them.", "আগে ক্লাস করে দেখুন। ভালো লাগলে তবেই ভর্তি হবেন।", "まず授業を体験。気に入ったら入学してください。"], "w2": ["Books included in the fee", "বই কোর্স ফি-র মধ্যে", "教科書は学費に含む"], "w2p": ["Every course book is included. Nothing extra to buy.", "কোর্সের সব বই ফি-র মধ্যেই, আলাদা কিছু কিনতে হয় না।", "コースの教科書はすべて学費に含まれます。追加の購入は不要です。"], "w3": ["Our director lives in Japan", "পরিচালক থাকেন জাপানে", "校長は日本在住"], "w3p": ["The director lives in Kobe, Japan, and knows study and daily life there first-hand.", "ডিরেক্টর থাকেন জাপানের কোবে শহরে। সেখানকার পড়াশোনা আর জীবনযাত্রা তিনি নিজে জানেন।", "校長は神戸に住んでおり、日本での勉強や生活を自分の経験で知っています。"], "w4": ["Certificates schools can verify", "যাচাইযোগ্য সার্টিফিকেট", "確認できる証明書"], "w4p": ["We issue study-hour, attendance and transcript certificates. Each carries a QR code that schools in Japan can check online.", "পড়ার ঘণ্টা, হাজিরা আর রেজাল্টের সার্টিফিকেট আমরাই দিই। প্রতিটায় QR কোড থাকে, জাপানের স্কুল অনলাইনে যাচাই করতে পারে।", "学習時間・出席・成績の証明書を発行します。QRコード付きで、日本の学校がオンラインで確認できます。"], "c_h": ["Choose your level.", "আপনার লেভেল বেছে নিন।", "レベルを選ぶ。"], "c_lead": ["{H} hours of class every day: 10am to 12pm, or 6pm to 8pm.", "প্রতিদিন {H} ঘণ্টা ক্লাস। সকাল ১০টা থেকে ১২টা, অথবা সন্ধ্যা ৬টা থেকে ৮টা।", "毎日{H}時間の授業：午前10時〜12時、または午後6時〜8時。"], "c_note": ["Packages of more than one level cost less. Fees can be paid in instalments; contact us for details.", "একসাথে একাধিক লেভেলের প্যাকেজ নিলে খরচ কম। ফি কিস্তিতেও দেওয়া যায়, বিস্তারিত জানতে যোগাযোগ করুন।", "複数レベルのパッケージは割安です。分割払いも可能です。詳しくはお問い合わせください。"], "j_h": ["From admission to boarding the plane.", "ভর্তি থেকে বিমানে ওঠা পর্যন্ত।", "入学から出発まで。"], "j_lead": ["Getting to a Japanese language school takes six steps. We are with you at every one.", "জাপানের ভাষা স্কুলে যেতে এই ছয়টা ধাপ পার হতে হয়। প্রতিটা ধাপে আমরা সাথে থাকি।", "日本語学校への留学には6つのステップがあります。すべての段階でサポートします。"], "s1": ["Documents", "কাগজ জোগাড়", "書類の準備"], "s1p": ["Certificates, passport, sponsor papers", "সনদ, পাসপোর্ট, স্পনসরের কাগজ", "卒業証明・パスポート・経費支弁書類"], "s2": ["Choosing a school", "স্কুল বাছাই", "学校選び"], "s2p": ["A school that suits you", "আপনার জন্য উপযুক্ত স্কুল", "あなたに合った学校"], "s3": ["Application", "আবেদন জমা", "出願"], "s3p": ["Forms and translations", "ফর্ম পূরণ ও অনুবাদ", "書類作成と翻訳"], "s4": ["Interview", "ইন্টারভিউ", "面接"], "s4p": ["With practice beforehand", "আগে থেকে অনুশীলনসহ", "事前に練習"], "s5": ["COE and visa", "COE ও ভিসা", "在留資格・ビザ"], "s5p": ["Immigration approval", "ইমিগ্রেশনের অনুমতি", "入国管理局の許可"], "s6": ["Off to Japan", "জাপানে যাত্রা", "出発"], "s6p": ["Getting ready to go", "যাওয়ার আগের প্রস্তুতি", "出発前の準備"], "j_note": ["Japanese language schools usually admit students four times a year: January, April, July and October. Which intake you can join depends on your documents and your Japanese level. Ask us at the office or on WhatsApp.", "জাপানের ভাষা স্কুলে সাধারণত বছরে চারবার ভর্তি হয়: জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবর। কোন সেশনে যেতে পারবেন, তা নির্ভর করে আপনার কাগজ আর জাপানি ভাষার মানের ওপর। অফিসে এসে বা WhatsApp-এ জেনে নিন।", "日本語学校の入学時期は通常、1月・4月・7月・10月の年4回です。どの時期に入学できるかは、書類と日本語のレベルによります。事務所またはWhatsAppでお問い合わせください。"], "q_h": ["What everyone asks.", "যা সবাই জানতে চান।", "よくある質問。"], "q_lead": ["Anything else? Ask us on WhatsApp.", "আরও কিছু জানার থাকলে WhatsApp-এ জিজ্ঞেস করুন।", "その他のご質問はWhatsAppでどうぞ。"], "q1": ["Can I start from zero?", "একদম শুরু থেকে শিখতে পারব?", "まったくの初心者でも大丈夫？"], "a1": ["Yes. The N5 course starts with hiragana and katakana. You don’t need to know any Japanese.", "হ্যাঁ। N5 কোর্স হিরাগানা আর কাতাকানা দিয়ে শুরু হয়। আগে কোনো জাপানি জানা লাগে না।", "はい。N5コースはひらがな・カタカナから始めます。日本語の知識は必要ありません。"], "q2": ["Can I try a class before enrolling?", "ভর্তির আগে ক্লাস করে দেখা যায়?", "入学前に授業を体験できる？"], "a2": ["Yes, the first 3 classes are free. Enrol only if you like them.", "হ্যাঁ, প্রথম ৩টি ক্লাস ফ্রি। ভালো লাগলে তবেই ভর্তি হবেন।", "はい、最初の3回は無料です。気に入ったら入学してください。"], "q3": ["Do I pay extra for books?", "বইয়ের জন্য আলাদা টাকা লাগবে?", "教科書代は別にかかる？"], "a3": ["No. All course books are included in the fee.", "না। কোর্সের সব বই ফি-র মধ্যেই।", "いいえ。教科書はすべて学費に含まれます。"], "q4": ["Can I pay the fee in instalments?", "ফি কি কিস্তিতে দেওয়া যায়?", "学費は分割で払える？"], "a4": ["Yes. Ask at the office or on WhatsApp how many instalments are possible.", "হ্যাঁ। কত কিস্তিতে দেওয়া যাবে, অফিসে বা WhatsApp-এ জেনে নিন।", "はい。回数は事務所またはWhatsAppでご確認ください。"], "q5": ["When are the classes?", "ক্লাস কখন হয়?", "授業の時間は？"], "a5": ["Two batches every day: 10am to 12pm, and 6pm to 8pm. Pick whichever suits you.", "প্রতিদিন দুটো ব্যাচ: সকাল ১০টা থেকে ১২টা, আর সন্ধ্যা ৬টা থেকে ৮টা। যেটা সুবিধা, সেটা বেছে নিন।", "毎日2クラス：午前10時〜12時と午後6時〜8時。都合のよい方を選べます。"], "q6": ["Can I practise at home?", "বাসায় বসে অনুশীলন করা যায়?", "家でも練習できる？"], "a6": ["Yes. Once enrolled, the student app gives you the books, daily words, kana and mock tests, all with Japanese voice.", "হ্যাঁ। ভর্তির পর ছাত্রদের অ্যাপে বই, প্রতিদিনের শব্দ, কানা আর মক টেস্ট পাবেন। সবকিছুতে জাপানি কণ্ঠে উচ্চারণ শোনা যায়।", "はい。入学後は学生アプリで教科書・毎日の単語・かな・模擬試験が使え、すべて日本語の音声付きです。"], "q7": ["When can I go to Japan?", "জাপানে কবে যেতে পারব?", "いつ日本へ行ける？"], "a7": ["Japanese language schools usually admit students in January, April, July and October. Which intake you can join depends on your documents and Japanese level.", "জাপানের ভাষা স্কুলে সাধারণত জানুয়ারি, এপ্রিল, জুলাই আর অক্টোবরে ভর্তি হয়। কোন সেশনে যেতে পারবেন, তা আপনার কাগজ আর জাপানি ভাষার মানের ওপর নির্ভর করে।", "日本語学校の入学は通常1月・4月・7月・10月です。どの時期に入学できるかは、書類と日本語のレベルによります。"], "ap_h": ["Be in the first batch.", "প্রথম ব্যাচে জায়গা নিন।", "第1期生になろう。"], "ap_lead": ["We open soon. Pre-register now and we will call or WhatsApp you with the start date and admission details.", "শীঘ্রই আমাদের ক্লাস শুরু হচ্ছে। এখনই আগাম নিবন্ধন করুন, শুরুর তারিখ আর ভর্তির বিস্তারিত জানিয়ে আমরা ফোন বা WhatsApp-এ যোগাযোগ করব।", "まもなく開校します。今すぐ事前登録いただければ、開講日と入学の詳細を電話またはWhatsAppでお知らせします。"], "alt_f": ["Anime-style illustration: classmates waving to welcome a new friend", "অ্যানিমে ধাঁচের ছবি: হাত নেড়ে নতুন বন্ধুকে স্বাগত জানাচ্ছে ক্লাসের ছাত্রছাত্রীরা", "アニメ風イラスト：手を振って新しい仲間を迎えるクラスメート"], "fl_name": ["Your name", "আপনার নাম", "お名前"], "fl_phone": ["Mobile or WhatsApp number", "মোবাইল বা WhatsApp নম্বর", "携帯電話またはWhatsApp番号"], "fl_int": ["What do you want to learn?", "কী শিখতে চান", "希望するコース"], "o_n5": ["N5 course (from zero)", "N5 কোর্স (একদম শুরু থেকে)", "N5コース（初心者）"], "o_n4": ["N4 course", "N4 কোর্স", "N4コース"], "o_n3": ["N3 course", "N3 কোর্স", "N3コース"], "o_jp": ["Studying in Japan (processing)", "জাপানে পড়তে যাওয়া (প্রসেসিং)", "日本留学の手続き"], "o_ot": ["Other / just asking", "অন্যান্য / জানতে চাই", "その他・問い合わせ"], "fl_edu": ["Education", "পড়াশোনা", "最終学歴"], "o_pick": ["Choose", "বেছে নিন", "選択してください"], "o_dip": ["Diploma", "ডিপ্লোমা", "ディプロマ"], "o_ba": ["Bachelor’s", "স্নাতক", "学士"], "o_ma": ["Master’s", "স্নাতকোত্তর", "修士"], "fl_note": ["Anything you’d like to tell us", "কিছু জানাতে চাইলে", "その他ご要望"], "ph_note": ["e.g. which batch suits you, when you want to go to Japan", "যেমন: কোন ব্যাচে সুবিধা, কবে জাপানে যেতে চান", "例：希望のクラス時間、日本へ行きたい時期"], "privacy": ["We use your name and number only to contact you.", "আপনার নাম আর নম্বর শুধু আপনার সাথে যোগাযোগের জন্য ব্যবহার হবে।", "お名前と電話番号はご連絡のためだけに使います。"], "send": ["Send pre-registration", "নিবন্ধন পাঠান", "事前登録を送信"], "sending": ["Sending…", "পাঠানো হচ্ছে…", "送信中…"], "sent_h": ["Pre-registration sent.", "নিবন্ধন পাঠানো হয়েছে।", "事前登録を受け付けました。"], "sent_p": ["We will contact you with the start date. For a faster answer, message us on WhatsApp now.", "শুরুর তারিখ জানিয়ে আমরা যোগাযোগ করব। তাড়াতাড়ি জানতে চাইলে এখনই WhatsApp করুন।", "開講日が決まり次第ご連絡します。お急ぎの場合はWhatsAppでメッセージをお送りください。"], "wa_msg": ["Message on WhatsApp", "WhatsApp করুন", "WhatsAppで連絡"], "ct_h": ["Contact", "যোগাযোগ", "お問い合わせ"], "ct_lead": ["Visit the office, call us, or write on WhatsApp.", "অফিসে আসুন, ফোন করুন, বা WhatsApp-এ লিখুন।", "事務所へのご来校、お電話、WhatsAppでどうぞ。"], "ct_phone": ["Phone", "ফোন", "電話"], "ct_mail": ["Email", "ইমেইল", "メール"], "ct_addr": ["Address", "ঠিকানা", "住所"], "ct_city": ["Narayanganj, Bangladesh", "নারায়ণগঞ্জ", "バングラデシュ・ナラヤンガンジ"], "hrs_h": ["Class times", "ক্লাসের সময়", "授業時間"], "hrs_p": ["Morning batch: 10am to 12pm<br>Evening batch: 6pm to 8pm", "সকাল ব্যাচ: ১০টা থেকে ১২টা<br>সন্ধ্যা ব্যাচ: ৬টা থেকে ৮টা", "朝クラス：午前10時〜12時<br>夜クラス：午後6時〜8時"], "dir_h": ["Director", "ডিরেক্টর", "校長"], "ft_place": ["Sakura Japanese Institute, Narayanganj", "সাকুরা জাপানিজ ইনস্টিটিউট, নারায়ণগঞ্জ", "さくら日本語学院（ナラヤンガンジ）"], "ft_staff": ["Staff portal", "স্টাফ পোর্টাল", "スタッフポータル"], "ft_verify": ["Verify a certificate", "সার্টিফিকেট যাচাই", "証明書の確認"], "ft_note": ["Illustrations are anime-style drawings · Voices: VOICEVOX:冥鳴ひまり, VOICEVOX:白上虎太郎", "ছবিগুলো অ্যানিমে ধাঁচে আঁকা · কণ্ঠ: VOICEVOX:冥鳴ひまり、VOICEVOX:白上虎太郎", "イラストはアニメ風に描いたものです · 音声：VOICEVOX:冥鳴ひまり、VOICEVOX:白上虎太郎"], "tag_save": ["Best value", "সাশ্রয়ী", "お得"], "full": ["Full course", "পুরো কোর্স", "コース全体"], "e_name": ["Please write your name", "আপনার নাম লিখুন", "お名前を入力してください"], "e_phone": ["Please enter a valid mobile number (e.g. 01712345678)", "সঠিক মোবাইল নম্বর লিখুন (যেমন 01712345678)", "正しい電話番号を入力してください（例：01712345678）"], "e_busy": ["Many applications are coming in right now. Please try again shortly, or message us on WhatsApp.", "এই মুহূর্তে অনেক আবেদন আসছে। একটু পরে আবার চেষ্টা করুন, অথবা WhatsApp করুন।", "現在申し込みが集中しています。少し後でもう一度お試しいただくか、WhatsAppでご連絡ください。"], "e_net": ["Couldn’t send. Check your internet and try again, or message us on WhatsApp.", "পাঠানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন, অথবা WhatsApp করুন।", "送信できませんでした。インターネット接続を確認して再度お試しいただくか、WhatsAppでご連絡ください。"], "wa_text": ["Hello. I would like to know about the Japanese language course.", "আসসালামু আলাইকুম। জাপানি ভাষা কোর্স সম্পর্কে জানতে চাই।", "こんにちは。日本語コースについて知りたいです。"], "lang": ["Language", "ভাষা", "言語"], "d_apply": ["Pre-register", "আগাম নিবন্ধন", "事前登録"], "soon": ["Opening soon · Pre-registration open", "শীঘ্রই শুরু · আগাম নিবন্ধন চলছে", "まもなく開校 · 事前登録受付中"], "q0": ["When do classes start?", "ক্লাস কবে শুরু হবে?", "授業はいつから始まりますか？"], "a0": ["We are opening soon and will announce the first batch’s start date shortly. Pre-register and you will be the first to know.", "আমরা শীঘ্রই শুরু করছি, প্রথম ব্যাচের তারিখ খুব তাড়াতাড়ি জানানো হবে। আগাম নিবন্ধন করলে আপনি সবার আগে জানবেন।", "まもなく開校し、第1期の開講日を近日中にお知らせします。事前登録された方に最初にお知らせします。"], "d_explore": ["Explore", "ঘুরে দেখুন", "メニュー"]};
+  Object.assign(D, {"st1n": ["N5→N3", "N5→N3", "N5→N3"], "st1": ["JLPT levels, starting from zero", "JLPT লেভেল, একদম শুরু থেকে", "JLPTレベル（ゼロから）"], "st2n": ["2 hrs", "২ ঘণ্টা", "2時間"], "st2": ["of class every day, morning or evening", "প্রতিদিন ক্লাস, সকাল বা সন্ধ্যা", "毎日の授業（朝・夜）"], "st3n": ["4×", "৪ বার", "年4回"], "st3": ["intakes a year at Japanese schools", "বছরে জাপানের স্কুলে ভর্তির সুযোগ", "日本語学校の入学時期"], "st4n": ["3", "৩টি", "3回"], "st4": ["free trial classes before you enrol", "ভর্তির আগে ফ্রি ট্রায়াল ক্লাস", "入学前の無料体験授業"], "ft_portals": ["Portals", "পোর্টাল", "ポータル"], "ft_tag": ["JLPT N5–N3 classes and complete support for studying in Japan.", "JLPT N5–N3 ক্লাস আর জাপানে পড়তে যাওয়ার পূর্ণ সহায়তা।", "JLPT N5〜N3の授業と日本留学の全面サポート。"]});
   const CC = {"N5": [["From zero", ["Hiragana and katakana", "Basic grammar and speaking"]], ["একদম শুরু থেকে", ["হিরাগানা, কাতাকানা", "প্রাথমিক ব্যাকরণ ও কথা বলা"]], ["初心者から", ["ひらがな・カタカナ", "基礎文法と会話"]]], "N4": [["The step after N5", ["Everyday conversation", "Kanji and grammar"]], ["N5-এর পরের ধাপ", ["দৈনন্দিন কথাবার্তা", "কাঞ্জি ও ব্যাকরণ"]], ["N5の次のステップ", ["日常会話", "漢字と文法"]]], "N3": [["Intermediate", ["Reading and listening", "Ready for study in Japan"]], ["মাঝারি স্তর", ["পড়া ও শোনার দক্ষতা", "জাপানে পড়াশোনার উপযোগী"]], ["中級", ["読解と聴解", "日本留学に必要な力"]]], "N5+N4": [["Two-level package", ["To prepare for applying to a language school in Japan", "Costs less than taking them separately"]], ["দুই লেভেলের প্যাকেজ", ["জাপানের ভাষা স্কুলে আবেদনের প্রস্তুতির জন্য", "আলাদা নেওয়ার চেয়ে কম খরচ"]], ["2レベルパッケージ", ["日本語学校への出願準備に", "個別より割安"]]], "N5+N4+N3": [["Three-level package", ["From zero up to N3", "Much cheaper than taking them separately"]], ["তিন লেভেলের প্যাকেজ", ["শুরু থেকে N3 পর্যন্ত", "আলাদা নেওয়ার চেয়ে অনেক কম খরচ"]], ["3レベルパッケージ", ["初心者からN3まで", "個別よりかなり割安"]]]};
   const LANGS = ['en', 'bn', 'ja']; let LI = 0; let INFO = null;
   const tr = (k) => (D[k] || [k])[LI];
@@ -546,7 +887,7 @@ footer .flinks a{margin-right:16px;font-weight:600}
   // header turns solid after the hero; phone menu; falling petals; fade-in on scroll
   const hdr = $('#hdr'); const onS = () => hdr.classList.toggle('solid', scrollY > 40); addEventListener('scroll', onS, { passive: true }); onS();
   const dr = $('#drawer'); $('#mopen').onclick = () => { dr.classList.add('open'); $('#mopen').setAttribute('aria-expanded', 'true'); $('#mclose').focus(); }; $('#mclose').onclick = () => { dr.classList.remove('open'); $('#mopen').setAttribute('aria-expanded', 'false'); }; dr.querySelectorAll('a').forEach(a => a.onclick = () => dr.classList.remove('open')); dr.onclick = (e) => { if (e.target === dr) dr.classList.remove('open'); };
-  $('#petals').innerHTML = Array.from({ length: 10 }, (_, i) => `<i style="left:${(i * 6.7 + 3) % 100}%;animation-duration:${9 + (i * 7) % 9}s;animation-delay:-${(i * 13) % 17}s;transform:scale(${.6 + (i % 4) * .2})"></i>`).join('');
+  $('#petals').innerHTML = Array.from({ length: 7 }, (_, i) => `<i style="left:${(i * 6.7 + 3) % 100}%;animation-duration:${9 + (i * 7) % 9}s;animation-delay:-${(i * 13) % 17}s;transform:scale(${.6 + (i % 4) * .2})"></i>`).join('');
   // nav: a pill slides to the link under the pointer, or to the section on screen
   const nv = document.querySelector('.nav nav'), pill = nv.querySelector('.pill'), links = [...nv.querySelectorAll('a[href^="#"]:not(.btn)')];
   const put = (a) => { if (!a) { pill.style.opacity = 0; return; } pill.style.left = a.offsetLeft + 'px'; pill.style.width = a.offsetWidth + 'px'; pill.style.opacity = 1; };
