@@ -16,7 +16,7 @@
 <link rel="icon" type="image/svg+xml" href="img/sakura-mark.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="../icons/icon-192.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"LanguageSchool","name":"Sakura Japanese Institute","alternateName":["さくら日本語学院","সাকুরা জাপানিজ ইনস্টিটিউট"],"url":"https://sakura.institute/","image":"https://sakura.institute/img/classroom.jpg","logo":"https://sakura.institute/icons/icon-512.png","telephone":"+817092222401","email":"info@sakura.institute","address":{"@type":"PostalAddress","streetAddress":"23/1 Allama Iqbal Road, 2nd Floor (opposite Golakata Mosque)","addressLocality":"Narayanganj","addressCountry":"BD"},"description":"Japanese language school in Narayanganj, Bangladesh: JLPT N5–N3 courses and full support for studying in Japan."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"LanguageSchool","name":"Sakura Japanese Institute","alternateName":["さくら日本語学院","সাকুরা জাপানিজ ইনস্টিটিউট"],"url":"https://sakura.institute/","image":"https://sakura.institute/img/classroom.jpg","logo":"https://sakura.institute/icons/icon-512.png","telephone":"+817092222401","email":"info@sakura.institute","address":{"@type":"PostalAddress","streetAddress":"23/1 Allama Iqbal Road, 2nd Floor (opposite Golakata Mosque), College Road","addressLocality":"Narayanganj","addressCountry":"BD"},"description":"Japanese language school in Narayanganj, Bangladesh: JLPT N5–N3 courses and full support for studying in Japan."}</script>
 <meta name="theme-color" content="#F6F1E8">
 <meta name="color-scheme" content="only light">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -922,7 +922,7 @@ if(gh)document.addEventListener('DOMContentLoaded',function(){document.querySele
     ['#wa1', '#wa2', '#wa3', '#wa4', '#wa5'].forEach(id => { const a = $(id); a.href = `https://wa.me/${wa}?text=${msg}`; });
     $('#wa2').textContent = I.whatsapp || I.phone; 
     $('#mail').textContent = I.email; $('#mail').href = 'mailto:' + I.email;
-    $('#addr').textContent = I.address || ['23/1 Allama Iqbal Road, 2nd Floor (opposite Golakata Mosque), Narayanganj', '২৩/১, আল্লামা ইকবাল রোড, ২য় তলা (গলাকাটা মসজিদের বিপরীতে), নারায়ণগঞ্জ', 'ナラヤンガンジ、アッラーマ・イクバル通り23/1 2階（ゴラカタ・モスク向かい）'][LI];
+    $('#addr').textContent = I.address || ['23/1 Allama Iqbal Road, 2nd Floor (opposite Golakata Mosque), College Road, Narayanganj', '২৩/১, আল্লামা ইকবাল রোড, ২য় তলা (গলাকাটা মসজিদের বিপরীতে), কলেজ রোড, নারায়ণগঞ্জ', 'ナラヤンガンジ、カレッジロード、アッラーマ・イクバル通り23/1 2階（ゴラカタ・モスク向かい）'][LI];
     $('#dir').textContent = `${I.director_en} · ${I.director_ja} (Kobe, Japan)`;
     document.querySelectorAll('[data-t="c_lead"]').forEach(e => e.innerHTML = tr('c_lead').replace('{H}', num(I.hours_per_class || 2)));
     const F = { ...DEF.fees, ...(I.fees || {}) }; const T = { ...DEF.textbooks, ...(I.textbooks || {}) };
