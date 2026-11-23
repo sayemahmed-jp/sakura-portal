@@ -794,3 +794,10 @@ html[data-theme=dark] .tntip>div:first-child{background:#3A2A14;border-color:#5A
 
 .tnsay{border:0;background:var(--card,#fff);box-shadow:0 1px 0 var(--line);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;flex:none;align-self:center}.tnsay:active{transform:scale(.92)}
 .tnex div{align-items:center}
+
+/* Hind Siliguri draws the Bengali digit one (১) small and tilted; take the Bengali digits from Noto Sans Bengali instead */
+@font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/bn-digits-400.woff2) format('woff2');unicode-range:U+09E6-09EF}
+@font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/bn-digits-500.woff2) format('woff2');unicode-range:U+09E6-09EF}
+@font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/bn-digits-600.woff2) format('woff2');unicode-range:U+09E6-09EF}
+@font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/bn-digits-700.woff2) format('woff2');unicode-range:U+09E6-09EF}
+@font-face{font-family:'Hind Siliguri';font-style:normal;font-weight:800;font-display:swap;src:url(fonts/bn-digits-800.woff2) format('woff2');unicode-range:U+09E6-09EF}
