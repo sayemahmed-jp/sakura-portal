@@ -564,6 +564,7 @@ function shell(active, inner) {
   return `<div class="mtop"><button id="mnav" aria-label="মেনু খুলুন">☰</button><span class="kamon">${KAMON}</span><b>সাকুরা পোর্টাল</b><a href="#/scan" class="mscan" aria-label="আইডি / QR দিয়ে খুঁজুন" title="আইডি / QR">📷</a>${al.length ? `<a class="nb ${red ? 'red' : ''}" href="#/alerts" style="margin-left:auto">${al.length} সতর্কতা</a>` : ''}</div>
   <div class="shell"><aside class="side" id="side" aria-label="মেনু">
     <div class="brand"><span class="kamon">${KAMON}</span><div><b>${esc(S.settings.institute_bn || 'সাকুরা পোর্টাল')}</b><small>さくら日本語学院</small></div><button type="button" class="railb" id="railb" title="মেনু ছোট / বড় করুন" aria-label="মেনু ছোট / বড় করুন"><span></span></button></div>
+    ${mxHead(active, al, red, name, svg)}
     <nav class="nav">${nav}</nav>
     <div class="who" id="who">
       <div class="wmenu" id="wmenu" hidden>
@@ -600,6 +601,27 @@ function slidePill(active) {
   if (on) { const fix = () => { if (!on.isConnected) return; const r = { l: on.offsetLeft, w: on.offsetWidth }; put(r, 1); PILL_PREV = { ...r, o: 1 }; }; requestAnimationFrame(() => requestAnimationFrame(fix)); setTimeout(fix, 350); if (window.ResizeObserver) new ResizeObserver(fix).observe(on); }
   if (on) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
+// ---- phone menu (Facebook-style): a light full-height sheet with the person on top, big shortcut tiles,
+// then the folded sections, which open and close smoothly
+const MX_TILES = [['#/', '#E7F3FF', '#1B74E4'], ['#/students', '#E6F4EA', '#1E8E3E'], ['#/attendance', '#FFF4E5', '#E37400'], ['#/payments', '#FCE8E6', '#C5221F'], ['#/leads', '#F3E8FD', '#8430CE'], ['#/pending', '#E8F0FE', '#1967D2'], ['#/examregs', '#FEF7E0', '#B06000'], ['#/alerts', '#FDE7F3', '#B80672'], ['#/japan', '#E0F7FA', '#00838F'], ['#/calendar', '#EDE7F6', '#5E35B1']];
+function mxHead(active, al, red, name, svg) {
+  const tiles = MX_TILES.filter(([h]) => navAllowed(h) && NAV.find(x => x[0] === h)).slice(0, 8).map(([h, bg, fg]) => { const n = NAV.find(x => x[0] === h);
+    const cnt = h === '#/alerts' ? al.length : h === '#/pending' && Array.isArray(S.office_questions) ? S.office_questions.filter(x => !x.told_at && (isAdmin() ? !x.answered_at : !!x.answered_at)).length : 0;
+    return `<a href="${h}" class="mxtile ${active === h ? 'on' : ''}"><span class="ti" style="background:${bg};color:${fg}">${svg(n[2])}</span><span class="tl">${n[1]}</span>${cnt ? `<span class="tb ${h === '#/alerts' && !red ? 'amb' : ''}">${cnt}</span>` : ''}</a>`; }).join('');
+  return `<div class="mx"><div class="mxh"><h2>মেনু</h2><button type="button" class="mxx" id="mxclose" aria-label="মেনু বন্ধ করুন"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <button type="button" class="mxme" id="mxme"><span class="me">${esc((name.trim()[0] || '?').toUpperCase())}</span><span class="mt"><b>${esc(name)}</b><small>${ROLE_NAME[S.profile.role] || 'স্টাফ'} · ${esc(S.settings.institute_bn || 'সাকুরা জাপানিজ ইনস্টিটিউট')}</small></span><span class="kamon">${KAMON}</span></button>
+    ${tiles ? `<div class="mxl">আপনার শর্টকাট</div><div class="mxtiles">${tiles}</div>` : ''}<div class="mxl">সব মেনু</div></div>`;
+}
+// open / close a menu section with a smooth height animation instead of a jump
+function ngAnimate(d) {
+  const body = d.querySelector('.ngi'); if (!body || matchMedia('(prefers-reduced-motion: reduce)').matches) { d.open = !d.open; return; }
+  if (d._anim) d._anim.cancel();
+  const opening = !d.open; if (opening) d.open = true;
+  const h = body.scrollHeight; d.classList.toggle('opening', opening);
+  d._anim = body.animate(opening ? [{ height: '0px', opacity: 0 }, { height: h + 'px', opacity: 1 }] : [{ height: h + 'px', opacity: 1 }, { height: '0px', opacity: 0 }], { duration: opening ? 260 : 200, easing: 'cubic-bezier(.2,.8,.2,1)' });
+  d._anim.onfinish = () => { d._anim = null; d.classList.remove('opening'); if (!opening) d.open = false; const o = navOpenGet(); o[d.dataset.g] = d.open; navOpenSet(o); };
+}
+function mxOpen(on) { const sd = $('#side'); if (!sd) return; sd.classList.toggle('open', on); document.documentElement.classList.toggle('mx-open', on); }
 function railToggle() { const r = !document.documentElement.classList.contains('rail'); document.documentElement.classList.toggle('rail', r); try { localStorage.setItem('sakura_rail', r ? '1' : ''); } catch (_) {} }
 try { if (localStorage.getItem('sakura_rail')) document.documentElement.classList.add('rail'); } catch (_) {}
 function mount(active, inner, after) {
@@ -610,9 +632,17 @@ function mount(active, inner, after) {
   const rb = $('#railb'); if (rb) rb.onclick = railToggle;
   if (active === '#/settings') groupForm($('#stf'));
   $('#logout').onclick = () => { if (DEMO) { S.loaded = false; renderLogin(); } else sb.auth.signOut(); };
-  $('#mnav').onclick = () => $('#side').classList.toggle('open');
-  $$('.ng').forEach(d => d.addEventListener('toggle', () => { const o = navOpenGet(); o[d.dataset.g] = d.open; navOpenSet(o); }));
-  $('#scrim').onclick = () => $('#side').classList.remove('open');
+  document.documentElement.classList.remove('mx-open');
+  $('#mnav').onclick = () => mxOpen(!$('#side').classList.contains('open'));
+  $$('.ng').forEach(d => { const sm = d.querySelector('summary'); if (sm) sm.addEventListener('click', (e) => { e.preventDefault(); ngAnimate(d); }); });
+  $('#scrim').onclick = () => mxOpen(false);
+  const mxc = $('#mxclose'); if (mxc) mxc.onclick = () => mxOpen(false);
+  const mxm = $('#mxme'); if (mxm) mxm.onclick = () => { mxOpen(false); staffCardModal(S.profile, true); };
+  // swipe the sheet to the left to close it, like the phone apps
+  const sd = $('#side'); if (sd) { let x0 = null, y0 = 0, dx = 0;
+    sd.addEventListener('touchstart', (e) => { if (!sd.classList.contains('open')) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; }, { passive: true });
+    sd.addEventListener('touchmove', (e) => { if (x0 == null) return; dx = e.touches[0].clientX - x0; if (Math.abs(e.touches[0].clientY - y0) > Math.abs(dx)) { x0 = null; sd.style.transform = ''; return; } if (dx < 0) { sd.style.transition = 'none'; sd.style.transform = `translateX(${dx}px)`; } }, { passive: true });
+    sd.addEventListener('touchend', () => { if (x0 == null) return; sd.style.transition = ''; sd.style.transform = ''; if (dx < -80) mxOpen(false); x0 = null; }); }
   const wb = $('#whob'), wm = $('#wmenu');
   if (wb) { const setW = (o) => { wm.hidden = !o; wb.setAttribute('aria-expanded', o); $('#who').classList.toggle('open', o); }; wb.onclick = (e) => { e.stopPropagation(); setW(wm.hidden); }; wm.onclick = (e) => { if (!e.target.closest('[data-theme-to],[data-lang]')) setW(false); }; document.addEventListener('click', (e) => { if (e.target.isConnected && !e.target.closest('#who')) setW(false); }); document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setW(false); }); }
   const ib = $('#inst'); if (ib) ib.onclick = installApp;
