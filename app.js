@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS = { refund_policy: 'ভর্তির ৩ দিনে�
   institute_en: 'Sakura Japanese Institute',
   institute_ja: 'さくら日本語学院',
   address: '',
-  phone: '01711-005143',
+  phone: '01642-173100',
   whatsapp: '+81 70-9222-2401',
   email: 'info@sakura.institute',
   director_en: 'SAYEM AHMED',
