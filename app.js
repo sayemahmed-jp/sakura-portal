@@ -48,8 +48,61 @@ const DOC_TYPES = [
   ['photo', 'পাসপোর্ট সাইজ ছবি'], ['passport', 'পাসপোর্ট'], ['nid', 'NID / জন্ম নিবন্ধন'],
   ['ssc', 'SSC সনদ ও মার্কশিট'], ['hsc', 'HSC সনদ ও মার্কশিট'], ['degree', 'স্নাতক / ডিপ্লোমা সনদ'],
   ['jlpt', 'JLPT / NAT সনদ'], ['study_hours', 'স্টাডি-আওয়ার সার্টিফিকেট'], ['sponsor', 'স্পনসরের আয়ের প্রমাণ'],
-  ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ'], ['other', 'অন্যান্য']
+  ['bank', 'ব্যাংক স্টেটমেন্ট / সলভেন্সি'], ['relation', 'স্পনসরের সাথে সম্পর্কের প্রমাণ'],
+  ['tax', 'স্পনসরের আয়কর রিটার্ন ও কর সনদ (৩ বছর)'], ['trade', 'ট্রেড লাইসেন্স / ব্যবসার নিবন্ধন'], ['parents_id', 'বাবা-মায়ের জন্ম নিবন্ধন / NID'], ['other', 'অন্যান্য']
 ];
+// Early document check (প্রাথমিক যাচাই): done soon after admission, from sample copies, long before any school application.
+const VERIFY_MIN_BANK = 1800000;
+const VERIFY_CHECKS = [
+  ['tax', 'স্পনসরের আয়কর রিটার্ন আছে (অন্তত ৩ বছর), TIN সক্রিয়'],
+  ['biz_reg', 'ব্যবসা নিবন্ধিত: ট্রেড লাইসেন্স হালনাগাদ, মেয়াদ আছে'],
+  ['biz_name', 'ব্যবসার কাগজে মালিকের নাম ও ঠিকানা স্পনসরের NID-র সাথে মেলে'],
+  ['bank_own', 'স্পনসরের নিজের নামে ব্যক্তিগত ব্যাংক অ্যাকাউন্ট আছে'],
+  ['bank_amt', 'ব্যাংকে যথেষ্ট টাকা আছে (কমপক্ষে ১৮ লাখ টাকা)'],
+  ['bank_flow', 'লেনদেন স্বাভাবিক; হঠাৎ বড় জমা থাকলে তার উৎসের প্রমাণ আছে'],
+  ['bank_name', 'ব্যাংকের কাগজে স্পনসরের নাম, বাবার নাম, ঠিকানা NID-র সাথে হুবহু এক'],
+  ['income', 'ঘোষিত আয়, কর রিটার্ন আর ব্যাংক জমা একে অপরের সাথে সংগতিপূর্ণ'],
+  ['student_id', 'ছাত্রের নাম ও জন্মতারিখ পাসপোর্ট, NID/জন্ম নিবন্ধন আর সনদে হুবহু এক'],
+  ['parents', 'বাবা-মায়ের নাম ছাত্রের পাসপোর্ট, জন্ম নিবন্ধন, SSC/HSC সনদ আর বাবা-মায়ের নিজের জন্ম নিবন্ধন/NID-তে এক'],
+  ['address', 'ঠিকানা (গ্রাম/মহল্লা, থানা, জেলা) সব কাগজে এক'],
+  ['academic', 'সনদ ও মার্কশিটে নাম, বোর্ড, রোল, পাসের সাল মেলে; পড়াশোনার গ্যাপের ব্যাখ্যা আছে'],
+  ['relation', 'স্পনসরের সাথে ছাত্রের সম্পর্ক কাগজে প্রমাণিত (জন্ম নিবন্ধন / ফ্যামিলি ট্রি)'],
+];
+const VSTAT = { '': '— দেখা হয়নি', ok: '✓ ঠিক আছে', bad: '✗ সমস্যা আছে', na: 'প্রযোজ্য নয়' };
+function verifyOf(s) { return (s.japan_info && s.japan_info.verify) || {}; }
+function verifySummary(s) { const v = verifyOf(s); const c = v.checks || {}; let ok = 0, bad = 0;
+  VERIFY_CHECKS.forEach(([k]) => { const st = (c[k] || {}).s; if (st === 'ok' || st === 'na') ok++; else if (st === 'bad') bad++; });
+  return { ok, bad, total: VERIFY_CHECKS.length, v }; }
+function verifyCardHtml(s) {
+  const { ok, bad, total, v } = verifySummary(s); const c = v.checks || {};
+  const stLine = v.reviewed_at ? `<span class="pill active">পরিচালক দেখেছেন · ${fmtD(v.reviewed_at)}</span>` : v.sent_at ? `<span class="pill trial">পরিচালকের কাছে জমা · ${fmtD(v.sent_at)}</span>` : '<span class="pill">এখনো জমা দেওয়া হয়নি</span>';
+  return `<div class="card" style="margin-bottom:14px" id="vcard"><div class="row"><div><h2 style="margin:0">প্রাথমিক যাচাই (কাগজ মিলিয়ে দেখা)</h2>
+  <p class="small muted" style="margin:4px 0 0">ভর্তির কিছুদিন পর অভিভাবক/স্পনসরের সাথে মিটিং করে কাগজের নমুনা নিন, মিলিয়ে দেখুন, তারপর পরিচালকের কাছে জমা দিন।</p></div><span class="spacer"></span>
+  <b style="font-size:18px">${ok}/${total}</b>${bad ? `<span class="pill dropped" style="margin-left:6px">${bad}টি সমস্যা</span>` : ''}</div>
+  <form class="form" id="vf" style="margin-top:12px">
+  <label class="f">মিটিংয়ের তারিখ<input type="date" name="meeting" value="${esc(v.meeting || '')}"></label>
+  <label class="f">ব্যাংকে টাকার পরিমাণ (৳)<input type="number" name="bank_amount" min="0" step="1000" value="${esc(v.bank_amount || '')}" placeholder="যেমন 1850000"></label>
+  <label class="f">অভিভাবককে জানানো হয়েছে<input type="date" name="guardian_at" value="${esc(v.guardian_at || '')}"></label>
+  <label class="f">ঠিক করার শেষ তারিখ<input type="date" name="fix_by" value="${esc(v.fix_by || '')}"></label>
+  <div class="full tw"><table><tr><th>যা মিলিয়ে দেখবেন</th><th style="width:150px">অবস্থা</th><th>কোথায় ভুল / নোট</th></tr>${VERIFY_CHECKS.map(([k, l]) => { const x = c[k] || {}; return `<tr><td>${esc(l)}</td><td><select name="s_${k}" class="${x.s === 'bad' ? 'vbad' : x.s === 'ok' ? 'vok' : ''}">${Object.entries(VSTAT).map(([vk, vl]) => `<option value="${vk}" ${vk === (x.s || '') ? 'selected' : ''}>${vl}</option>`).join('')}</select></td><td><input name="n_${k}" value="${esc(x.n || '')}" placeholder="${x.s === 'bad' ? 'কোন কাগজে, কী ভুল' : ''}"></td></tr>`; }).join('')}</table></div>
+  <label class="f full">পরিচালকের মন্তব্য${isDirector() ? '' : ' (শুধু পরিচালক লিখবেন)'}<textarea name="director_note" rows="2" ${isDirector() ? '' : 'readonly'}>${esc(v.director_note || '')}</textarea></label>
+  <div class="full row" style="gap:8px;flex-wrap:wrap">${stLine}<span class="spacer"></span>
+  ${bad && waNum(guardianPhone(s)) ? `<button type="button" class="btn ghost" id="vwa">অভিভাবককে সমস্যার তালিকা পাঠান</button>` : ''}
+  <button type="button" class="btn ghost" id="vprint">প্রিন্ট</button>
+  ${isDirector() ? `<button type="button" class="btn ghost" id="vrev">${v.reviewed_at ? 'আবার দেখা বাকি করুন' : 'দেখা হয়েছে ✓'}</button>` : `<button type="button" class="btn ghost" id="vsend">${v.sent_at ? 'আবার জমা দিন' : 'পরিচালকের কাছে জমা দিন'}</button>`}
+  <button class="btn">সংরক্ষণ</button></div></form></div>`;
+}
+function verifyProblemsText(s) { const c = verifyOf(s).checks || {}; const L = VERIFY_CHECKS.filter(([k]) => (c[k] || {}).s === 'bad').map(([k, l], i) => `${i + 1}. ${l}${c[k].n ? ' — ' + c[k].n : ''}`);
+  const v = verifyOf(s); return `আসসালামু আলাইকুম। ${S.settings.institute_bn || 'সাকুরা জাপানিজ ইনস্টিটিউট'} থেকে বলছি। ${studentName(s)}-এর জাপানে আবেদনের কাগজ মিলিয়ে দেখতে গিয়ে নিচের বিষয়গুলো ঠিক করা দরকার:\n\n${L.join('\n')}${v.fix_by ? `\n\nঅনুগ্রহ করে ${fmtD(v.fix_by)}-এর মধ্যে ঠিক করে অফিসে কাগজ নিয়ে আসুন।` : '\n\nঠিক করে অফিসে কাগজ নিয়ে এলে আমরা আবার মিলিয়ে দেখব।'} ধন্যবাদ।`; }
+function printVerify(s) { const { v } = verifySummary(s); const c = v.checks || {};
+  const w = window.open('', '_blank'); if (!w) return toast('পপ-আপ চালু করুন', true);
+  w.document.write(`<!doctype html><html lang="bn"><head><meta charset="utf-8"><title>প্রাথমিক যাচাই — ${esc(studentName(s))}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap"><style>body{font:13px/1.5 'Hind Siliguri',sans-serif;margin:24px;color:#1F2433}h1{font-size:20px;margin:0}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#1F2433;color:#fff}.bad{color:#B8262B;font-weight:700}.ok{color:#2E7D4F}.m{color:#555}</style></head><body>
+  <div style="display:flex;align-items:center;gap:12px">${KAMON.replace('width="84%" height="84%"', 'width="54" height="54"')}<div><h1>প্রাথমিক কাগজ যাচাই</h1><div class="m">${esc(S.settings.institute_bn || '')}</div></div></div>
+  <p><b>ছাত্র:</b> ${esc(studentName(s))} · <b>ভর্তি নং:</b> ${esc(s.admission_no || '—')} · <b>লক্ষ্য সেশন:</b> ${esc(s.intake || '—')}<br><b>মিটিং:</b> ${v.meeting ? fmtD(v.meeting) : '—'} · <b>ব্যাংকে টাকা:</b> ${v.bank_amount ? tk(v.bank_amount) : '—'} · <b>ঠিক করার শেষ তারিখ:</b> ${v.fix_by ? fmtD(v.fix_by) : '—'}</p>
+  <table><tr><th>যা মিলিয়ে দেখা হয়েছে</th><th>অবস্থা</th><th>নোট</th></tr>${VERIFY_CHECKS.map(([k, l]) => { const x = c[k] || {}; return `<tr><td>${esc(l)}</td><td class="${x.s === 'bad' ? 'bad' : x.s === 'ok' ? 'ok' : ''}">${esc(VSTAT[x.s || ''])}</td><td>${esc(x.n || '')}</td></tr>`; }).join('')}</table>
+  ${v.director_note ? `<p><b>পরিচালকের মন্তব্য:</b> ${esc(v.director_note)}</p>` : ''}<p class="m" style="margin-top:30px">অফিসের সই: ____________ &nbsp;&nbsp; অভিভাবকের সই: ____________ &nbsp;&nbsp; তারিখ: ________</p>
+  <script>setTimeout(()=>print(),600)<\/script></body></html>`); w.document.close(); }
+
 const EXP_CAT = { rent: 'ঘর ভাড়া', salary: 'বেতন (শিক্ষক/স্টাফ)', utilities: 'বিদ্যুৎ, পানি, গ্যাস', internet: 'ইন্টারনেট ও ফোন', books: 'বই ও উপকরণ', marketing: 'বিজ্ঞাপন ও প্রচার', office: 'অফিস সামগ্রী ও আসবাব', japan: 'জাপান প্রসেসিং খরচ', other: 'অন্যান্য' };
 const LEAD_SRC = { facebook: 'ফেসবুক', walkin: 'সরাসরি অফিসে', phone: 'ফোন কল', whatsapp: 'WhatsApp', referral: 'পরিচিতের মাধ্যমে', website: 'ওয়েবসাইট', other: 'অন্যান্য' };
 const LEAD_ST = { new: 'নতুন', contacted: 'কথা হয়েছে', trial: 'ট্রায়াল ক্লাসে', joined: 'ভর্তি হয়েছে', lost: 'আগ্রহ নেই' };
@@ -647,6 +700,7 @@ function needsYouItems() {
   if (!isTeacher()) {
     (S.pay_proofs || []).filter(x => x.status === 'pending').forEach(x => it.push({ ic: '💳', t: `${nm(x.student_id)} ${tk(x.amount)} পাঠিয়েছে`, s: `${METHOD[x.method] || x.method || ''} · TrxID ${x.trx_id || '—'} · যাচাই বাকি`, act: { pp: x.id, l: 'যাচাই করুন' }, go: '#/proofs' }));
     (S.doc_requests || []).filter(x => x.status === 'pending').forEach(x => it.push({ ic: '📜', t: `${nm(x.student_id)}: সার্টিফিকেটের আবেদন`, s: 'তৈরি করে দিতে হবে', go: '#/requests' }));
+    if (isDirector()) S.students.filter(x => { const v = verifyOf(x); return v.sent_at && !v.reviewed_at; }).forEach(x => { const { bad } = verifySummary(x); it.push({ ic: '🔎', t: `${studentName(x)}: কাগজ যাচাই দেখুন`, s: bad ? `${bad}টি সমস্যা চিহ্নিত` : 'সব ঠিক বলে জমা', go: `#/student/${x.id}?t=docs` }); });
     const fresh = S.documents.filter(d => d.student_upload_at && d.status === 'received'); const per = new Set(fresh.map(d => d.student_id));
     per.forEach(sid => it.push({ ic: '📎', t: `${nm(sid)} কাগজ পাঠিয়েছে`, s: `${fresh.filter(d => d.student_id === sid).length}টি ফাইল দেখা বাকি`, go: '#/docinbox' }));
     S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).slice(0, 3).forEach(l => it.push({ ic: '📞', t: `${l.name}: ফলো-আপ`, s: l.next_follow_up < today ? `${fmtD(l.next_follow_up)} থেকে বাকি` : 'আজ ফোন করার দিন', go: '#/leads' }));
@@ -887,7 +941,7 @@ async function viewStudent(id, tab) {
   if (tab === 'docs') {
     const docs = new Map(S.documents.filter(d => d.student_id === s.id).map(d => [d.doc_type, d]));
     const done = DOC_TYPES.filter(([k]) => docs.get(k) && docs.get(k).status !== 'missing').length;
-    body = `<div class="card" style="margin-bottom:14px"><div class="row"><b>${done} / ${DOC_TYPES.length}</b> <span class="muted">কাগজ জমা হয়েছে</span><span class="spacer"></span>${[...docs.values()].some(x => x.file_path) ? '<button class="btn sm ghost" id="dzip">⬇ সব কাগজ ZIP</button>' : ''}<div class="bar" style="width:200px"><i style="width:${Math.round(done * 100 / DOC_TYPES.length)}%"></i></div></div></div>
+    body = (isTeacher() ? '' : verifyCardHtml(s)) + `<div class="card" style="margin-bottom:14px"><div class="row"><b>${done} / ${DOC_TYPES.length}</b> <span class="muted">কাগজ জমা হয়েছে</span><span class="spacer"></span>${[...docs.values()].some(x => x.file_path) ? '<button class="btn sm ghost" id="dzip">⬇ সব কাগজ ZIP</button>' : ''}<div class="bar" style="width:200px"><i style="width:${Math.round(done * 100 / DOC_TYPES.length)}%"></i></div></div></div>
     <div class="tw"><table><tr><th>কাগজ</th><th>অবস্থা</th><th>ফাইল</th><th class="hide-m">নোট</th></tr>${DOC_TYPES.map(([k, l]) => { const d = docs.get(k) || { status: 'missing' }; const al = docAlertFor(s, k); const dd = DOC_DATE[k]; return `<tr data-doc="${k}"><td><b>${l}</b>${d.student_upload_at ? `<div class="small" style="color:var(--navy)">📱 ছাত্র নিজে দিয়েছে · ${fmtDT(d.student_upload_at)}</div>` : ''}${d.feedback && d.status === 'missing' ? `<div class="small" style="color:var(--red)">↩ ফেরত পাঠানো: ${esc(d.feedback)}</div>` : ''}${dd ? `<label class="small muted ddt">${dd[1]} <input type="date" data-dt="${dd[0]}" value="${esc(d[dd[0]] || '')}"></label>` : ''}${al ? `<div style="margin-top:4px">${badge(al.level === 'red' ? 'due' : 'trial', al.issue)}</div>` : ''}</td><td><select data-dst>${Object.entries(DOC_STATUS).map(([sk, sl]) => `<option value="${sk}" ${d.status === sk ? 'selected' : ''}>${sl}</option>`).join('')}</select></td><td><div class="row" style="gap:6px">${d.file_path ? `<button class="btn sm ghost" data-view="${esc(d.file_path)}">দেখুন</button>` : ''}${d.file_path && d.status === 'received' && d.id ? `<button class="btn sm ghost" data-ret="${d.id}" title="ছাত্রকে আবার দিতে বলুন" style="color:var(--red)">↩</button>` : ''}<label class="btn sm ghost" style="cursor:pointer">${d.file_path ? 'বদলান' : 'আপলোড'}<input type="file" data-up accept="image/*,application/pdf" hidden></label></div></td><td class="hide-m"><input data-note value="${esc(d.note || '')}" placeholder="নোট" style="width:100%"></td></tr>`; }).join('')}</table></div>
     <p class="small muted">ছবি বা PDF আপলোড করা যায়। ফাইল সুরক্ষিত থাকে, শুধু স্টাফরা লগইন করে দেখতে পারেন।</p>`;
   }
@@ -959,6 +1013,20 @@ async function viewStudent(id, tab) {
         putLocal('documents', row); return row;
       };
       const z = $('#dzip'); if (z) z.onclick = () => downloadDocsZip(s);
+      const vf = $('#vf'); if (vf) {
+        const collect = () => { const fd = new FormData(vf); const cur = verifyOf(s); const checks = {};
+          VERIFY_CHECKS.forEach(([k]) => { const st = fd.get('s_' + k) || ''; const n = String(fd.get('n_' + k) || '').trim(); if (st || n) checks[k] = { s: st, n }; });
+          const amt = Number(fd.get('bank_amount')) || null;
+          if (amt && checks.bank_amt === undefined) checks.bank_amt = { s: amt >= VERIFY_MIN_BANK ? 'ok' : 'bad', n: amt >= VERIFY_MIN_BANK ? '' : `${tk(amt)} — ১৮ লাখের কম` };
+          return { ...cur, checks, meeting: fd.get('meeting') || null, bank_amount: amt, guardian_at: fd.get('guardian_at') || null, fix_by: fd.get('fix_by') || null, director_note: isDirector() ? String(fd.get('director_note') || '').trim() : (cur.director_note || '') }; };
+        const saveV = async (extra = {}) => { const verify = { ...collect(), ...extra }; putLocal('students', await API.update('students', s.id, { japan_info: { ...(s.japan_info || {}), verify } })); };
+        $$('select', vf).forEach(sel => sel.onchange = () => { sel.className = sel.value === 'bad' ? 'vbad' : sel.value === 'ok' ? 'vok' : ''; });
+        vf.onsubmit = async (e) => { e.preventDefault(); try { await saveV(); toast('যাচাই সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
+        const vs = $('#vsend'); if (vs) vs.onclick = async () => { try { await saveV({ sent_at: new Date().toISOString(), reviewed_at: null }); toast('পরিচালকের কাছে জমা হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
+        const vr = $('#vrev'); if (vr) vr.onclick = async () => { try { await saveV({ reviewed_at: verifyOf(s).reviewed_at ? null : new Date().toISOString() }); toast('সংরক্ষণ হয়েছে'); render(); } catch (err) { toast(errMsg(err), true); } };
+        const vp = $('#vprint'); if (vp) vp.onclick = () => printVerify(s);
+        const vw = $('#vwa'); if (vw) vw.onclick = async () => { const n = waNum(guardianPhone(s)); window.open(`https://wa.me/${n}?text=${encodeURIComponent(verifyProblemsText(s))}`, '_blank', 'noopener'); try { await saveV({ guardian_at: todayISO() }); render(); } catch (err) { } };
+      }
       $$('tr[data-doc]').forEach(tr => {
         const k = tr.dataset.doc;
         $('[data-dst]', tr).onchange = async (e) => { try { await saveDoc(k, { status: e.target.value }); toast('আপডেট হয়েছে'); } catch (err) { toast(errMsg(err), true); } };
