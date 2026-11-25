@@ -14,7 +14,7 @@ const BUCKET = 'documents';
 
 const LEVELS = ['N5', 'N4', 'N3'];
 const PACKAGES = ['N5', 'N4', 'N3', 'N5+N4', 'N5+N4+N3'];
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS = { refund_policy: 'ভর্তির ৩ দিনের মধ্যে জানালে সম্পূর্ণ ফি ফেরত; এরপর ফি ফেরতযোগ্য নয়।', cash_limit: 50000,
   institute_bn: 'সাকুরা জাপানিজ ইনস্টিটিউট',
   institute_en: 'Sakura Japanese Institute',
   institute_ja: 'さくら日本語学院',
@@ -215,8 +215,8 @@ function words(n) { // English amount in words, Indian grouping
 const KAMON = `<svg width="84%" height="84%" viewBox="-50 -50 100 100" aria-hidden="true"><g fill="#C8262C"><path d="M0,-7 C-15,-14 -20,-36 -8,-47 L0,-40.5 L8,-47 C20,-36 15,-14 0,-7Z" transform="rotate(0)"/><path d="M0,-7 C-15,-14 -20,-36 -8,-47 L0,-40.5 L8,-47 C20,-36 15,-14 0,-7Z" transform="rotate(72)"/><path d="M0,-7 C-15,-14 -20,-36 -8,-47 L0,-40.5 L8,-47 C20,-36 15,-14 0,-7Z" transform="rotate(144)"/><path d="M0,-7 C-15,-14 -20,-36 -8,-47 L0,-40.5 L8,-47 C20,-36 15,-14 0,-7Z" transform="rotate(216)"/><path d="M0,-7 C-15,-14 -20,-36 -8,-47 L0,-40.5 L8,-47 C20,-36 15,-14 0,-7Z" transform="rotate(288)"/></g><g fill="#E8555C" opacity=".55"><path d="M0,-9 C-8,-14 -11,-28 -5,-37 L0,-33 L5,-37 C11,-28 8,-14 0,-9Z" transform="rotate(0)"/><path d="M0,-9 C-8,-14 -11,-28 -5,-37 L0,-33 L5,-37 C11,-28 8,-14 0,-9Z" transform="rotate(72)"/><path d="M0,-9 C-8,-14 -11,-28 -5,-37 L0,-33 L5,-37 C11,-28 8,-14 0,-9Z" transform="rotate(144)"/><path d="M0,-9 C-8,-14 -11,-28 -5,-37 L0,-33 L5,-37 C11,-28 8,-14 0,-9Z" transform="rotate(216)"/><path d="M0,-9 C-8,-14 -11,-28 -5,-37 L0,-33 L5,-37 C11,-28 8,-14 0,-9Z" transform="rotate(288)"/></g><circle r="7.5" fill="#FFF6EE"/><g fill="#E9B949"><g transform="rotate(18)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(54)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(90)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(126)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(162)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(198)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(234)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(270)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(306)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g><g transform="rotate(342)"><line y2="-13" stroke="#E9B949" stroke-width="1.6"/><circle cy="-14" r="2.1"/></g></g><circle r="3.2" fill="#E9B949"/></svg>`;
 
 // ------------------------------------------------------------------ data layer
-const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback', 'staff_cards', 'certificates'];
-const OPTIONAL_TABLES = ['certificates', 'staff_cards', 'class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
+const TABLES = ['students', 'payments', 'sessions', 'attendance', 'documents', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'staff_invites', 'notices', 'homework', 'homework_submissions', 'student_questions', 'class_plans', 'video_views', 'doc_requests', 'pay_proofs', 'class_feedback', 'staff_cards', 'certificates', 'office_questions', 'exam_regs', 'cash_deposits'];
+const OPTIONAL_TABLES = ['office_questions', 'exam_regs', 'cash_deposits', 'certificates', 'staff_cards', 'class_feedback', 'pay_proofs', 'doc_requests', 'video_views', 'class_plans', 'student_questions', 'homework', 'homework_submissions', 'notices', 'staff_invites', 'materials', 'mock_tests', 'mock_questions', 'mock_attempts', 'expenses', 'inquiries', 'exams', 'exam_results', 'jp_schools', 'applications', 'teachers', 'commissions', 'holidays'];
 const Local = {
   key: (t) => 'sakura_demo_' + t,
   read(t) { try { return JSON.parse(localStorage.getItem(this.key(t)) || '[]'); } catch { return []; } },
@@ -308,7 +308,7 @@ const Remote = {
 };
 const API = DEMO ? Local : Remote;
 
-const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications'].includes(t));
+const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications', 'office_questions', 'exam_regs', 'cash_deposits'].includes(t));
 // ---- keep every open screen up to date: coming back to the portal (or every few minutes) reloads the data,
 // so a change made on another phone or by another staff member shows without pressing refresh
 let _loadedAt = Date.now();
@@ -542,9 +542,9 @@ const ICON = {
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
 };
-const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/tnotes', 'শিক্ষকের নোট', 'book'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
+const NAV = [['#/scan', 'আইডি / QR দিয়ে খুঁজুন', 'key'], ['#/tnotes', 'শিক্ষকের নোট', 'book'], ['#/docinbox', 'ছাত্রদের পাঠানো কাগজ', 'log'], ['#/feedback', 'ছাত্রদের মতামত', 'chart'], ['#/proofs', 'অনলাইন পেমেন্ট যাচাই', 'money'], ['#/requests', 'সার্টিফিকেটের আবেদন', 'log'], ['#/questions', 'ছাত্রদের প্রশ্ন', 'chat'], ['#/homework', 'বাড়ির কাজ', 'pen'], ['#/notices', 'নোটিশ বোর্ড', 'mega'], ['#/', 'ড্যাশবোর্ড', 'home'], ['#/weekly', 'সাপ্তাহিক সারাংশ', 'trend'], ['#/alerts', 'সতর্কতা', 'bell'], ['#/students', 'ছাত্র-ছাত্রী', 'users'], ['#/leads', 'আগ্রহী ছাত্র', 'chat'], ['#/pending', 'উত্তর বাকি প্রশ্ন', 'chat'], ['#/examregs', 'পরীক্ষার রেজিস্ট্রেশন', 'pen'], ['#/cash', 'নগদ ও ব্যাংকে জমা', 'wallet'], ['#/payments', 'ফি ও হিসাব', 'money'], ['#/expenses', 'খরচ ও লাভ', 'wallet'], ['#/attendance', 'হাজিরা', 'check'], ['#/calendar', 'ক্যালেন্ডার ও রুটিন', 'cal'], ['#/teachers', 'শিক্ষক ও বেতন', 'teacher'], ['#/exams', 'পরীক্ষা ও রেজাল্ট', 'pen'], ['#/materials', 'পড়ার উপকরণ', 'book'], ['#/mocks', 'মক টেস্ট', 'quiz'], ['#/japan', 'জাপান আবেদন', 'plane'], ['#/reports', 'রিপোর্ট', 'chart'], ['#/audit', 'কাজের রেকর্ড', 'log'], ['#/people', 'স্টাফ ও শিক্ষক', 'key'], ['#/settings', 'সেটিংস', 'gear']];
 // menu sections — each page sits in one, and the page header shows "section › page"
-const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/japan']], ['পড়াশোনা', ['#/tnotes', '#/exams', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
+const NAV_GROUPS = [['প্রতিদিনের কাজ', ['#/scan', '#/', '#/alerts', '#/attendance', '#/calendar', '#/weekly']], ['ছাত্র ও ভর্তি', ['#/students', '#/docinbox', '#/requests', '#/leads', '#/pending', '#/japan']], ['পড়াশোনা', ['#/tnotes', '#/exams', '#/examregs', '#/homework', '#/questions', '#/feedback', '#/materials', '#/mocks', '#/notices']], ['টাকা-পয়সা', ['#/payments', '#/proofs', '#/cash', '#/expenses', '#/teachers', '#/reports']], ['প্রশাসন', ['#/people', '#/audit', '#/settings']]];
 // the most-used pages sit in a bar across the top; everything else is in the side menu, folded by topic
 const TOP_NAV = ['#/', '#/attendance', '#/students', '#/payments', '#/alerts', '#/scan'];
 const SIDE_ICON = { 'প্রতিদিনের কাজ': 'cal', 'ছাত্র ও ভর্তি': 'users', 'পড়াশোনা': 'book', 'টাকা-পয়সা': 'money', 'প্রশাসন': 'gear' };
@@ -660,6 +660,9 @@ function render() {
   if (p[0] === 'homework') return p[1] ? viewHomework(p[1], q) : viewHomeworkList(q);
   if (p[0] === 'mocks') return viewMocks(q);
   if (p[0] === 'mock') return viewMock(p[1], q);
+  if (p[0] === 'pending') return window.viewPending(q);
+  if (p[0] === 'examregs') return window.viewExamRegs(q);
+  if (p[0] === 'cash') return window.viewCash(q);
   if (p[0] === 'settings') return viewSettings();
   if (p[0] === 'people') return viewPeople();
   return viewDashboard();
@@ -709,6 +712,7 @@ function needsYouItems() {
     S.inquiries.filter(l => ['new', 'contacted', 'trial'].includes(l.status) && l.next_follow_up && l.next_follow_up <= today).slice(0, 3).forEach(l => it.push({ ic: '📞', t: `${l.name}: ফলো-আপ`, s: l.next_follow_up < today ? `${fmtD(l.next_follow_up)} থেকে বাকি` : 'আজ ফোন করার দিন', go: '#/leads' }));
   }
   (S.student_questions || []).filter(x => x.status === 'open').forEach(x => it.push({ ic: '💬', t: `${nm(x.student_id)} প্রশ্ন করেছে`, s: String(x.question || x.body || '').slice(0, 70), go: '#/questions' }));
+  if (typeof window.officeNeeds === 'function') window.officeNeeds(it);
   const miss = missingAttendance(); if (miss.length) it.push({ ic: '✅', t: `${miss.length}টি ক্লাসের হাজিরা বাকি`, s: miss.slice(0, 2).map(x => `${fmtD(x.date)} ${x.level}`).join(' · '), go: `#/attendance?d=${miss[0].date}&l=${miss[0].level}&b=${miss[0].batch}`, warn: true });
   return it;
 }
@@ -896,7 +900,7 @@ function viewStudentForm(id, leadId) {
     ${sel('current_level', 'এখন কোন লেভেলের ক্লাসে', Object.fromEntries(LEVELS.map(l => [l, l])))}
     ${sel('batch', 'ব্যাচ', BATCH)}${inp('start_date', 'ক্লাস শুরুর তারিখ', 'date')}
     ${inp('total_fee', 'মোট ফি (৳)', 'number', 'min="0" step="1" required')}${inp('discount', 'ছাড় (৳)' + (canDiscount() ? '' : ' 🔒'), 'number', 'min="0" step="1"' + (canDiscount() ? '' : ' readonly title="ছাড় দিতে পারেন শুধু পরিচালক"'))}${staffCanDiscount() ? `<label class="f full">ছাড়ের কারণ (ছাড় দিলে লিখুন — পরিচালক দেখবেন)<input name="disc_reason" maxlength="200" value="${esc(((v.japan_info || {}).disc || {}).reason || '')}" placeholder="যেমন: দুই ভাই একসাথে ভর্তি / প্রথম ব্যাচ পূরণ করতে"></label><p class="small full" style="margin:-4px 0 0;color:var(--red)">ছাড়ের কথা ছাত্রকে গোপন রাখতে বলুন। পরিচালক সঙ্গে সঙ্গে জানতে পারবেন।</p>` : ''}${inp('processing_fee', 'জাপান প্রসেসিং ফি (৳, না থাকলে খালি)' + (isAdmin() ? '' : ' 🔒'), 'number', 'min="0" step="1"' + (isAdmin() ? '' : ' readonly title="প্রসেসিং ফি ঠিক করেন শুধু পরিচালক"'))}${isAdmin() ? '' : '<p class="small muted full" style="margin:-4px 0 0">🔒 ' + (staffCanDiscount() ? '' : 'ছাড়, ') + 'প্রসেসিং ফি আর প্যাকেজের দামের চেয়ে কম ফি — এগুলো শুধু পরিচালক ঠিক করতে পারেন।</p>'}
-    ${inp('next_due_date', 'পরের কিস্তির তারিখ', 'date')}${sel('status', 'অবস্থা', STATUS)}
+    ${v.next_due_date ? inp('next_due_date', 'পরের কিস্তির তারিখ', 'date') : ''}${sel('status', 'অবস্থা', STATUS)}
     <label class="f full">নোট<textarea name="notes">${esc(v.notes || '')}</textarea></label>
     <div class="full row" style="justify-content:flex-end"><a class="btn ghost" href="${s ? '#/student/' + s.id : '#/students'}">বাতিল</a><button class="btn" type="submit">${s ? 'সংরক্ষণ' : 'ভর্তি করুন'}</button></div>
   </form>`, () => {
@@ -1216,8 +1220,9 @@ function leadModal(l) {
     <label class="f">আবার কবে যোগাযোগ করবেন<input name="next_follow_up" type="date" value="${esc(v.next_follow_up || '')}"></label>
     <label class="f">প্রথম যোগাযোগের তারিখ<input name="created_on" type="date" value="${esc(v.created_on || todayISO())}"></label>
     <label class="f full">নোট<textarea name="notes" placeholder="যেমন: HSC পাস ২০২৫, এপ্রিল সেশনে জাপান যেতে চায়, বাবা স্পনসর">${esc(v.notes || '')}</textarea></label>
-    <div class="full row" style="justify-content:flex-end">${l && isAdmin() ? '<button type="button" class="btn ghost" id="ld" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}<button type="button" class="btn ghost" id="lc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
+    <div class="full row" style="justify-content:flex-end">${l && isAdmin() ? '<button type="button" class="btn ghost" id="ld" style="color:var(--red);margin-right:auto">মুছুন</button>' : ''}${l ? '<button type="button" class="btn ghost" id="lpq">❓ উত্তর বাকি প্রশ্ন</button>' : ''}<button type="button" class="btn ghost" id="lc">বাতিল</button><button class="btn" type="submit">সংরক্ষণ</button></div></form>`);
   $('#lc').onclick = closeModal;
+  const lpq = $('#lpq'); if (lpq) lpq.onclick = () => { closeModal(); window.pendingModal(null, { person: l.name, phone: l.phone, inquiry_id: l.id, context: (l.notes || '').slice(0, 150) }); };
   const del = $('#ld'); if (del) del.onclick = async () => { closeModal(); if (!(await confirmBox(`${l.name}-এর তথ্য মুছে যাবে।`))) return; try { await API.remove('inquiries', l.id); S.inquiries = S.inquiries.filter(x => x.id !== l.id); toast('মুছে ফেলা হয়েছে'); render(); } catch (e) { toast(errMsg(e), true); } };
   $('#lf2').onsubmit = async (e) => {
     e.preventDefault(); const d = formData(e.target); const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
@@ -2437,6 +2442,9 @@ function viewSettings() {
     <label class="f">পরের JLPT-র তারিখ<input name="jlpt_date" type="date" value="${esc(st.jlpt_date || '')}" ${ro}></label>
     <label class="f">পরের NAT-TEST-এর তারিখ (ঐচ্ছিক)<input name="nat_date" type="date" value="${esc(st.nat_date || '')}" ${ro}></label>
     <p class="full small muted" style="margin:0">খালি রাখলে ছাত্ররা জুলাই/ডিসেম্বরের প্রথম রবিবার (JLPT-র সাধারণ দিন) "আনুমানিক" হিসেবে দেখবে। বাংলাদেশে পরীক্ষার আসল তারিখ ঘোষণা হলে এখানে বসিয়ে দিন।</p>
+    <h3>নগদ আর ফেরত নীতি</h3>
+    <label class="f">অফিসে নগদ কত হলে ব্যাংকে জমা (৳)<input name="cash_limit" type="number" min="1000" step="1000" value="${esc(st.cash_limit || 50000)}" ${ro}></label>
+    <label class="f full">ফেরত নীতি (রশিদে ছাপা হয়)<input name="refund_policy" maxlength="200" value="${esc(st.refund_policy || DEFAULT_SETTINGS.refund_policy)}" ${ro}></label>
     <h3>স্টাফের ছাড় দেওয়ার অনুমতি</h3>
     <label class="f full" style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" name="staff_discount" ${st.staff_discount === true ? 'checked' : ''} ${ro} style="width:auto"> অফিস স্টাফ ভর্তির সময় নিজে ছাড় দিতে পারবেন (কারণ লিখতে হবে; প্রতিটি ছাড় আপনার "কাজ বাকি" তালিকায় আসবে)</label>
     <h3>বন্ধুকে আনুন (রেফারেল)</h3>
@@ -2459,7 +2467,7 @@ function viewSettings() {
   ${DEMO ? `<div class="card" style="margin-top:16px"><h2>ডেমো</h2><p class="small muted">পরীক্ষা করার জন্য কয়েকজন কাল্পনিক ছাত্র আর হাজিরা যোগ করুন, অথবা সব ডেমো তথ্য মুছে দিন।</p><div class="row"><button class="btn ghost" id="seed">ডেমো তথ্য যোগ করুন</button><button class="btn ghost" id="wipe" style="color:var(--red)">সব ডেমো তথ্য মুছুন</button></div></div>` : ''}`, () => {
     $('#stf').onsubmit = async (e) => {
       e.preventDefault(); const d = formData(e.target);
-      const data = { ...S.settings, staff_discount: !!e.target.staff_discount && e.target.staff_discount.checked, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', ref_reward: (d.ref_reward || '').trim(), pay_bkash: (d.pay_bkash || '').trim(), pay_nagad: (d.pay_nagad || '').trim(), pay_bank: (d.pay_bank || '').trim(), time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
+      const data = { ...S.settings, cash_limit: Math.max(1000, num(d.cash_limit) || 50000), refund_policy: String(d.refund_policy || '').trim() || DEFAULT_SETTINGS.refund_policy, staff_discount: !!e.target.staff_discount && e.target.staff_discount.checked, address: d.address, phone: d.phone, whatsapp: d.whatsapp, email: d.email, director_en: d.director_en, director_ja: d.director_ja, jlpt_date: d.jlpt_date || '', nat_date: d.nat_date || '', ref_reward: (d.ref_reward || '').trim(), pay_bkash: (d.pay_bkash || '').trim(), pay_nagad: (d.pay_nagad || '').trim(), pay_bank: (d.pay_bank || '').trim(), time_morning: (d.time_morning || '').trim(), time_evening: (d.time_evening || '').trim(), online_link: /^https:\/\//.test((d.online_link || '').trim()) ? d.online_link.trim() : '', hours_per_class: d.hours_per_class || 2, fees: Object.fromEntries(PACKAGES.map(p => [p, d['fee_' + p] || 0])), textbooks: Object.fromEntries(LEVELS.map(l => [l, d['tb_' + l]])), wa_due: d.wa_due || DEFAULT_SETTINGS.wa_due, wa_absent: d.wa_absent || DEFAULT_SETTINGS.wa_absent, wa_lead: d.wa_lead || DEFAULT_SETTINGS.wa_lead, wa_result: d.wa_result || DEFAULT_SETTINGS.wa_result, wa_japan: d.wa_japan || DEFAULT_SETTINGS.wa_japan, wa_doc: d.wa_doc || DEFAULT_SETTINGS.wa_doc, wa_parent: d.wa_parent && d.wa_parent.includes('{link}') ? d.wa_parent : DEFAULT_SETTINGS.wa_parent, alert_passport_months: d.alert_passport_months || 6, alert_fresh_days: d.alert_fresh_days || 90, alert_deadline_days: d.alert_deadline_days || 14, id_valid_months: d.id_valid_months || 12, class_days: $$('[data-cd]').filter(x => x.checked).map(x => num(x.dataset.cd)) };
       if (!data.class_days.length) return toast('অন্তত একটা ক্লাসের দিন বাছুন', true);
       try { await API.saveSettings(data); S.settings = data;
         const nm = (data.director_en || '').trim();
@@ -2570,7 +2578,7 @@ function printReceipt(p) {
   <tr><th>টাকার পরিমাণ</th><td><b style="font-size:17px;color:#C8372B">${tk(p.amount)}</b><br><span style="font-size:12px">In words: Taka ${words(p.amount)} only</span></td></tr>
   <tr><th>${proc ? 'প্রসেসিং ফি' : 'মোট ফি'} · মোট পরিশোধিত · বকেয়া</th><td>${tk(feeTotal)} · ${tk(paidTotal)} · <b>${tk(due)}</b>${s.next_due_date && due && !proc ? ' · পরের কিস্তি ' + fmtD(s.next_due_date) : ''}</td></tr></table>
   <div style="display:flex;justify-content:space-between;margin-top:34px;font-size:12.5px"><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px">প্রদানকারীর স্বাক্ষর</div><div style="border-top:1px dotted #8A7F6C;width:40%;padding-top:4px;text-align:right">গ্রহণকারীর স্বাক্ষর ও সিল</div></div>
-  <div style="font-size:11px;color:#6E665A;margin-top:8px">ফেরত নীতি: ক্লাস শুরুর অন্তত ৩ দিন আগে বাতিল করলে ৮০% ফেরত। রশিদটি যত্নে রাখুন।</div></div></div>`;
+  <div style="font-size:11px;color:#6E665A;margin-top:8px">ফেরত নীতি: ${esc(S.settings.refund_policy || DEFAULT_SETTINGS.refund_policy)} রশিদটি যত্নে রাখুন।</div></div></div>`;
   printWindow('Receipt ' + p.receipt_no, copy('অফিস কপি') + '<div style="border-top:1.5px dashed #8A7F6C;margin:4px 0 14px"></div>' + copy('ছাত্র কপি'));
 }
 // certificates (study hours, transcript, mock pass, enrolment, completion, attendance, recommendation) live in certs.js
@@ -3877,7 +3885,7 @@ async function fullBackup() {
 }
 
 // certs.js (loaded right after this file) builds on these
-Object.assign(window, { S, API, Local, DEMO, sb, uuid, todayISO, num, esc, fmtD, attOf, sessionMap, studentResults, pctOf, passed, attemptRow, LEVELS, headHtml, printWindow, loadQR, qrSvg, openModal, closeModal, toast, errMsg, badge, isAdmin, isTeacher, byId, studentName, $, $$ });
+Object.assign(window, { S, API, Local, DEMO, sb, uuid, todayISO, num, esc, fmtD, attOf, sessionMap, studentResults, pctOf, passed, attemptRow, LEVELS, headHtml, printWindow, loadQR, qrSvg, openModal, closeModal, toast, errMsg, badge, isAdmin, isTeacher, byId, studentName, $, $$, mount, render, fmtDT, tk, formData, putLocal, waNum, confirmBox });
 
 boot().catch(e => { $('#app').innerHTML = `<div class="boot">${esc(errMsg(e))}</div>`; });
 })();
