@@ -308,7 +308,7 @@ const Remote = {
 };
 const API = DEMO ? Local : Remote;
 
-const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['payments', 'documents', 'inquiries', 'jp_schools', 'applications', 'office_questions', 'exam_regs', 'cash_deposits'].includes(t));
+const staffSkip = (t) => (!isAdmin() && ['expenses', 'commissions', 'staff_invites'].includes(t)) || (isTeacher() && ['documents', 'inquiries', 'jp_schools', 'applications', 'office_questions', 'exam_regs', 'cash_deposits'].includes(t));
 // ---- keep every open screen up to date: coming back to the portal (or every few minutes) reloads the data,
 // so a change made on another phone or by another staff member shows without pressing refresh
 let _loadedAt = Date.now();
@@ -321,7 +321,7 @@ async function softRefresh() {
 document.addEventListener('visibilitychange', softRefresh); addEventListener('focus', softRefresh); setInterval(softRefresh, 180000);
 async function loadAll() {
   _loadedAt = Date.now();
-  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(DEMO ? t : t === 'teachers' && !isAdmin() ? 'teacher_list' : t === 'students' && isTeacher() ? 'student_roster' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
+  const [settings, profiles, ...rest] = await Promise.all([API.getSettings(), API.profiles(), ...TABLES.map(t => staffSkip(t) ? Promise.resolve([]) : API.fetchAll(DEMO ? t : t === 'teachers' && !isAdmin() ? 'teacher_list' : t).catch(e => { if (OPTIONAL_TABLES.includes(t)) { console.warn('Table not ready: ' + t, e); return []; } throw e; }))]);
   S.settings = { ...DEFAULT_SETTINGS, ...settings, fees: { ...DEFAULT_SETTINGS.fees, ...(settings.fees || {}) }, textbooks: { ...DEFAULT_SETTINGS.textbooks, ...(settings.textbooks || {}) } };
   for (const k of ['wa_due', 'wa_absent', 'wa_lead', 'wa_result', 'wa_japan', 'wa_doc', 'wa_parent']) if (!S.settings[k]) S.settings[k] = DEFAULT_SETTINGS[k];
   S.profiles = profiles;
@@ -337,7 +337,7 @@ function procPaidOf(sid) { return S.payments.filter(p => p.student_id === sid &&
 function procDueOf(st) { return Math.max(0, num(st.processing_fee) - procPaidOf(st.id)); }
 function commIncome(m) { return (S.commissions || []).filter(c => c.status === 'received' && (c.received_on || '').startsWith(m)).reduce((a, c) => a + num(c.amount_bdt), 0); }
 function incomeOf(m) { return monthSum(S.payments, 'paid_on', m) + commIncome(m); }
-function staffCanDiscount() { return !isAdmin() && S.settings && S.settings.staff_discount === true; }
+function staffCanDiscount() { return !isAdmin() && !isTeacher() && S.settings && S.settings.staff_discount === true; }
 function canDiscount() { return isAdmin() || staffCanDiscount(); }
 function netFee(st) { return Math.max(0, num(st.total_fee) - num(st.discount)); }
 function dueOf(st) { return Math.max(0, netFee(st) - paidOf(st.id)); }
@@ -656,7 +656,7 @@ function render() {
   const [path, query] = h.split('?'); const q = new URLSearchParams(query || '');
   const p = path.split('/').filter(Boolean);
   window.scrollTo(0, 0);
-  if (isTeacher() && (!teacherRoutes().includes(p[0] || '') || (p[0] === 'students' && p[1] === 'new') || (p[0] === 'student' && p[2]))) return mount('#/', TEACHER_ONLY_MSG);
+  if (isTeacher() && !teacherRoutes().includes(p[0] || '')) return mount('#/', TEACHER_ONLY_MSG);
   if (ADMIN_ROUTES.includes(p[0]) && !isAdmin()) return mount('#/', ADMIN_ONLY_MSG);
   if (p[0] === 'students' && p[1] === 'new') return viewStudentForm(null, q.get('lead'));
   if (p[0] === 'students') return viewStudents(q);
@@ -884,15 +884,15 @@ function viewStudents(q) {
     return true;
   }).sort((a, b) => (b.admission_no || '').localeCompare(a.admission_no || ''));
   mount('#/students', `
-  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${!isAdmin() ? '' : list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}${isTeacher() ? '' : '<a class="btn" href="#/students/new">+ নতুন ছাত্র</a>'}</div></div>
+  <div class="top"><div><h1>ছাত্র-ছাত্রী</h1><p>${list.length} জন দেখানো হচ্ছে</p></div><div class="row">${!isAdmin() ? '' : list.length ? `<button class="btn ghost" id="idall">আইডি কার্ড প্রিন্ট (${list.length} জন)</button>` : ''}<a class="btn" href="#/students/new">+ নতুন ছাত্র</a></div></div>
   <form class="row card" id="flt" style="padding:12px;margin-bottom:14px">
     <input class="search" name="s" placeholder="নাম, ভর্তি নম্বর বা ফোন দিয়ে খুঁজুন" value="${esc(f.s)}">
     <select name="l"><option value="">সব লেভেল</option>${LEVELS.map(l => `<option ${f.l === l ? 'selected' : ''}>${l}</option>`).join('')}</select>
     <select name="b"><option value="">সব ব্যাচ</option>${Object.entries(BATCH).map(([k, v]) => `<option value="${k}" ${f.b === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <select name="st"><option value="current" ${f.st === 'current' ? 'selected' : ''}>চলমান + ট্রায়াল</option><option value="all" ${f.st === 'all' ? 'selected' : ''}>সবাই</option>${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${f.st === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <button class="btn ghost">খুঁজুন</button></form>
-  <div class="tw">${list.length ? `<table class="stack"><tr><th>ভর্তি নং</th><th>নাম</th><th>লেভেল · ব্যাচ</th>${isTeacher() ? '' : '<th class="hide-m">ফোন</th>'}<th>অবস্থা</th>${isTeacher() ? '' : '<th class="num">বকেয়া</th>'}<th class="hide-m">উপস্থিতি</th></tr>
-    ${list.map(s => { const due = dueOf(s); const a = attOf(s.id, smap); return `<tr class="click" data-go="#/student/${s.id}"><td class="mt" data-l=""><span><b>${esc(s.name_bn || s.name_en || '')}</b><span class="small muted"> · ${esc(s.admission_no)}</span></span></td><td class="dm">${esc(s.admission_no)}</td><td class="dm"><b>${esc(s.name_bn || '')}</b><div class="small muted">${esc(s.name_en || '')}</div></td><td data-l="লেভেল · ব্যাচ">${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td>${isTeacher() ? '' : `<td class="hide-m">${esc(s.phone)}</td>`}<td data-l="অবস্থা">${badge(s.status, STATUS[s.status] || s.status)}</td>${isTeacher() ? '' : `<td class="num" data-l="বকেয়া">${due ? `<span style="color:var(--red);font-weight:600">${tk(due)}</span>` : badge('paid', 'পরিশোধিত')}</td>`}<td data-l="উপস্থিতি">${bar(a.pct)}</td></tr>`; }).join('')}</table>` : '<div class="empty">কোনো ছাত্র পাওয়া যায়নি</div>'}</div>`,
+  <div class="tw">${list.length ? `<table class="stack"><tr><th>ভর্তি নং</th><th>নাম</th><th>লেভেল · ব্যাচ</th><th class="hide-m">ফোন</th><th>অবস্থা</th><th class="num">বকেয়া</th><th class="hide-m">উপস্থিতি</th></tr>
+    ${list.map(s => { const due = dueOf(s); const a = attOf(s.id, smap); return `<tr class="click" data-go="#/student/${s.id}"><td class="mt" data-l=""><span><b>${esc(s.name_bn || s.name_en || '')}</b><span class="small muted"> · ${esc(s.admission_no)}</span></span></td><td class="dm">${esc(s.admission_no)}</td><td class="dm"><b>${esc(s.name_bn || '')}</b><div class="small muted">${esc(s.name_en || '')}</div></td><td data-l="লেভেল · ব্যাচ">${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</td><td class="hide-m">${esc(s.phone)}</td><td data-l="অবস্থা">${badge(s.status, STATUS[s.status] || s.status)}</td><td class="num" data-l="বকেয়া">${due ? `<span style="color:var(--red);font-weight:600">${tk(due)}</span>` : badge('paid', 'পরিশোধিত')}</td><td data-l="উপস্থিতি">${bar(a.pct)}</td></tr>`; }).join('')}</table>` : '<div class="empty">কোনো ছাত্র পাওয়া যায়নি</div>'}</div>`,
   () => {
     $('#flt').onsubmit = (e) => { e.preventDefault(); const d = formData(e.target); const p = new URLSearchParams(Object.entries(d).filter(([, v]) => v)); location.hash = '#/students?' + p; };
     $$('#flt select').forEach(sel => sel.onchange = () => $('#flt').requestSubmit());
@@ -965,11 +965,11 @@ async function viewStudent(id, tab) {
   const s = byId(S.students, id);
   if (!s) return mount('#/students', '<div class="empty">ছাত্র পাওয়া যায়নি</div>');
   const smap = sessionMap(); const a = attOf(s.id, smap); const paid = paidOf(s.id); const due = dueOf(s);
-  const TABS = isTeacher() ? [['info', 'তথ্য'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট']] : [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
+  const TABS = isTeacher() ? [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট']] : [['info', 'তথ্য'], ['fees', 'ফি'], ['att', 'হাজিরা'], ['exams', 'পরীক্ষা'], ['mock', 'মক টেস্ট'], ['docs', 'কাগজপত্র'], ['japan', 'জাপান প্রসেস'], ...(isAdmin() ? [['hist', 'ইতিহাস']] : [])];
   if (isTeacher() && !TABS.some(([k]) => k === tab)) tab = 'info';
   let body = '';
   if (tab === 'info') {
-    const kv = isTeacher() ? [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['প্যাকেজ', s.package], ['এখনকার লেভেল', s.current_level], ['ব্যাচ', BATCH[s.batch]], ['ক্লাস শুরু', fmtD(s.start_date)], ['অবস্থা', STATUS[s.status]]] : [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
+    const kv = false ? [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['প্যাকেজ', s.package], ['এখনকার লেভেল', s.current_level], ['ব্যাচ', BATCH[s.batch]], ['ক্লাস শুরু', fmtD(s.start_date)], ['অবস্থা', STATUS[s.status]]] : [['ভর্তি নম্বর', s.admission_no], ['ভর্তির তারিখ', fmtD(s.admission_date)], ['ইংরেজি নাম', s.name_en], ['জন্ম তারিখ', fmtD(s.dob)], ['লিঙ্গ', { male: 'ছেলে', female: 'মেয়ে' }[s.gender] || '—'], ['NID / জন্ম নিবন্ধন', s.nid], ['পাসপোর্ট', s.passport_no], ['মোবাইল', s.phone], ['ইমেইল', s.email], ['বর্তমান ঠিকানা', s.address_present], ['স্থায়ী ঠিকানা', s.address_permanent], ['শিক্ষাগত যোগ্যতা', s.education], ['অভিভাবক', [s.guardian_name, s.guardian_relation && `(${s.guardian_relation})`].filter(Boolean).join(' ')], ['অভিভাবকের মোবাইল', s.guardian_phone], ['প্যাকেজ', s.package], ['লেভেল · ব্যাচ', s.current_level + ' · ' + (BATCH[s.batch] || '')], ['ক্লাস শুরু', fmtD(s.start_date)], ['নোট', s.notes]];
     body = `<div class="card"><dl class="kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v || '—')}</dd>`).join('')}</dl></div>`;
   }
   if (tab === 'fees') {
@@ -1020,8 +1020,8 @@ async function viewStudent(id, tab) {
   if (tab === 'hist') body = '<div id="histbox"><div class="empty">লোড হচ্ছে…</div></div>';
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
-  <div class="top"><div class="phead"><label class="avatar avup" id="avl" title="${isTeacher() ? '' : 'ছবি দিন / বদলান'}"><span id="av">${esc(initials(s))}</span>${isTeacher() ? '' : '<i class="avcam">📷</i><input type="file" id="avfile" accept="image/*" hidden>'}</label><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="admf">🧾 ভর্তি চুক্তিপত্র</button><button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><button class="btn ghost" id="certs">🎓 সার্টিফিকেট</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
+  <div class="top"><div class="phead"><label class="avatar avup" id="avl" title="${isTeacher() ? '' : 'ছবি দিন / বদলান'}"><span id="av">${esc(initials(s))}</span>${isTeacher() ? '' : '<i class="avcam">📷</i><input type="file" id="avfile" accept="image/*" hidden>'}</label><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
+  <div class="row no-print">${isTeacher() ? `<button class="btn ghost" id="admf">🧾 ভর্তি চুক্তিপত্র</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>` : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="admf">🧾 ভর্তি চুক্তিপত্র</button><button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><button class="btn ghost" id="certs">🎓 সার্টিফিকেট</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
