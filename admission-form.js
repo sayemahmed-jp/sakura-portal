@@ -77,7 +77,7 @@
     const body = fill(T.p1, d) + fill(T.p2, d) + (withReceipt ? fill(T.p3, d) : '');
     const title = 'ভর্তি চুক্তিপত্র — ' + (s.admission_no || '') + ' ' + (s.name_bn || s.name_en || '');
     return `<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(title)}</title>${head}</head><body>
-<div class="noprint"><button onclick="window.print()">🖨 প্রিন্ট করুন</button></div>${body}</body></html>`;
+<div class="noprint"><button onclick="window.print()">🖨 প্রিন্ট করুন</button></div>${body}<script>(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){document.querySelectorAll('.v').forEach(function(v){var f=10;while(v.scrollWidth>v.clientWidth+1&&f>6.5){f-=.5;v.style.fontSize=f+'pt';}});});<\/script></body></html>`;
   }
 
   async function printAdmission(s, payId) {
