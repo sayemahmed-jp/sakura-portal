@@ -909,6 +909,8 @@ function viewStudentForm(id, leadId) {
   const v = s || { admission_no: nextAdmissionNo(), admission_date: todayISO(), package: 'N5', current_level: 'N5', batch: 'morning', status: 'trial', total_fee: S.settings.fees.N5, discount: 0, japan_stage: 'none' };
   if (!s && lead) { v.name_bn = lead.name; v.phone = lead.phone; if (LEVELS.includes(lead.interest)) { v.package = lead.interest; v.current_level = lead.interest; v.total_fee = S.settings.fees[lead.interest]; } v.notes = lead.notes ? 'আগ্রহী তালিকা থেকে: ' + lead.notes : ''; }
   const inp = (name, label, type = 'text', extra = '') => `<label class="f ${extra.includes('full') ? 'full' : ''}">${label}<input name="${name}" type="${type}" value="${esc(v[name] ?? '')}" ${extra.replace('full', '')}></label>`;
+  const admv = (v.japan_info || {}).adm || {};
+  const admInp = (k, label, full = '') => `<label class="f ${full}">${label}<input name="adm_${k}" type="text" value="${esc(admv[k] ?? '')}"></label>`;
   const sel = (name, label, opts) => `<label class="f">${label}<select name="${name}">${Object.entries(opts).map(([k, l]) => `<option value="${esc(k)}" ${String(v[name]) === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
   mount('#/students', `
   <div class="top"><div><h1>${s ? 'তথ্য সম্পাদনা' : 'নতুন ছাত্র ভর্তি'}</h1><p>${esc(v.admission_no)}${lead ? ' · আগ্রহী তালিকা থেকে: ' + esc(lead.name) : ''}</p></div></div>
@@ -925,6 +927,10 @@ function viewStudentForm(id, leadId) {
     <h3>অভিভাবক</h3>
     ${inp('guardian_name', 'অভিভাবকের নাম')}${inp('guardian_relation', 'সম্পর্ক')}
     ${inp('guardian_phone', 'অভিভাবকের মোবাইল', 'tel')}
+    ${admInp('gjob', 'অভিভাবকের পেশা')}${admInp('emergency', 'জরুরি যোগাযোগ (নাম ও নম্বর)')}
+    <h3>ভর্তি চুক্তিপত্রের জন্য</h3>
+    ${admInp('prior', 'আগে জাপানি শিখেছেন? কোন লেভেল')}<label class="f">জাপানে পড়তে যাওয়ার পরিকল্পনা<select name="adm_plan">${[['', '—'], ['yes', 'হ্যাঁ'], ['no', 'না']].map(([k, l]) => `<option value="${k}" ${(admv.plan || '') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    ${admInp('trials', 'ফ্রি ট্রায়াল ক্লাসের তারিখ (৩টি)', 'full')}
     <h3>কোর্স ও ফি</h3>
     ${sel('package', 'প্যাকেজ (ফি অনুযায়ী)', Object.fromEntries(PACKAGES.map(p => [p, p + ' — ' + tk(S.settings.fees[p])])))}
     ${sel('current_level', 'এখন কোন লেভেলের ক্লাসে', Object.fromEntries(LEVELS.map(l => [l, l])))}
@@ -939,14 +945,16 @@ function viewStudentForm(id, leadId) {
     f.onsubmit = async (e) => {
       e.preventDefault(); const d = formData(f); d.total_fee = d.total_fee || 0; d.discount = d.discount || 0; d.processing_fee = d.processing_fee || 0;
       const dReason = String(d.disc_reason || '').trim(); delete d.disc_reason;
-      if (staffCanDiscount()) { if (num(d.discount) !== num(v.discount)) { if (num(d.discount) > 0 && !dReason) return toast('ছাড়ের কারণ লিখুন', true); d.japan_info = { ...(v.japan_info || {}), disc: { amt: num(d.discount), reason: dReason, by: (S.profile && S.profile.name) || '', at: new Date().toISOString(), seen: false } }; } else if (dReason && v.japan_info && v.japan_info.disc) d.japan_info = { ...v.japan_info, disc: { ...v.japan_info.disc, reason: dReason } }; }
+      const admNew = {}; for (const k of ['prior', 'plan', 'gjob', 'emergency', 'trials']) { admNew[k] = String(d['adm_' + k] || '').trim(); delete d['adm_' + k]; }
+      if (JSON.stringify(admNew) !== JSON.stringify({ prior: '', plan: '', gjob: '', emergency: '', trials: '', ...admv })) d.japan_info = { ...(v.japan_info || {}), adm: admNew };
+      if (staffCanDiscount()) { if (num(d.discount) !== num(v.discount)) { if (num(d.discount) > 0 && !dReason) return toast('ছাড়ের কারণ লিখুন', true); d.japan_info = { ...(d.japan_info || v.japan_info || {}), disc: { amt: num(d.discount), reason: dReason, by: (S.profile && S.profile.name) || '', at: new Date().toISOString(), seen: false } }; } else if (dReason && v.japan_info && v.japan_info.disc) d.japan_info = { ...(d.japan_info || v.japan_info), disc: { ...v.japan_info.disc, reason: dReason } }; }
       if (!isAdmin()) { if (!staffCanDiscount()) d.discount = num(v.discount); d.processing_fee = num(v.processing_fee); const lp = num(S.settings.fees[d.package]); if ((!s || d.total_fee !== num(s.total_fee)) && lp && d.total_fee < lp) return toast(`মোট ফি প্যাকেজের দাম (${tk(lp)})-এর চেয়ে কম রাখতে পারেন শুধু পরিচালক`, true); }
       const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
       try {
         const row = s ? await API.update('students', s.id, d) : await API.insert('students', d);
         putLocal('students', row);
         if (!s && lead) { try { putLocal('inquiries', await API.update('inquiries', lead.id, { status: 'joined', student_id: row.id })); } catch (err) { console.warn(err); } }
-        toast(s ? 'সংরক্ষণ হয়েছে' : 'ভর্তি সম্পন্ন'); location.hash = '#/student/' + row.id;
+        toast(s ? 'সংরক্ষণ হয়েছে' : 'ভর্তি সম্পন্ন — টাকা জমা নিয়ে "🧾 ভর্তি চুক্তিপত্র" প্রিন্ট করুন'); location.hash = '#/student/' + row.id;
       } catch (err) { toast(errMsg(err), true); btn.disabled = false; }
     };
   });
@@ -1013,11 +1021,12 @@ async function viewStudent(id, tab) {
   const photo = S.documents.find(d => d.student_id === s.id && d.doc_type === 'photo' && d.file_path);
   mount('#/students', `
   <div class="top"><div class="phead"><label class="avatar avup" id="avl" title="${isTeacher() ? '' : 'ছবি দিন / বদলান'}"><span id="av">${esc(initials(s))}</span>${isTeacher() ? '' : '<i class="avcam">📷</i><input type="file" id="avfile" accept="image/*" hidden>'}</label><div><h1>${esc(s.name_bn || s.name_en)}</h1><p>${esc(s.name_en)} · ${esc(s.admission_no)} · ${esc(s.current_level)} · ${esc(BATCH[s.batch] || '')}</p><div class="row" style="margin-top:4px">${badge(s.status, STATUS[s.status])}${isTeacher() ? '' : due ? badge('due', 'বকেয়া ' + tk(due)) : badge('paid', 'ফি পরিশোধিত')}</div></div></div>
-  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><button class="btn ghost" id="certs">🎓 সার্টিফিকেট</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
+  <div class="row no-print">${isTeacher() ? '' : `${waBtn(guardianPhone(s), `আসসালামু আলাইকুম। ${S.settings.institute_bn} থেকে বলছি। `, 'অভিভাবক')}<button class="btn ghost" id="plink">অভিভাবকের লিংক${s.parent_token ? ' ✓' : ''}</button><button class="btn ghost" id="ssite">ছাত্রদের সাইট${s.auth_user_id ? ' ✓' : ''}</button>${isAdmin() ? '<button class="btn ghost" id="idc">আইডি কার্ড</button>' : ''}<button class="btn ghost" id="admf">🧾 ভর্তি চুক্তিপত্র</button><button class="btn ghost" id="dos">📄 সম্পূর্ণ ফাইল</button><button class="btn ghost" id="certs">🎓 সার্টিফিকেট</button><a class="btn" href="#/student/${s.id}/edit">✏️ সম্পাদনা</a>${isAdmin() ? '<button class="btn ghost" id="del" style="color:var(--red);border-color:var(--red)">মুছুন</button>' : ''}`}</div></div>
   <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>${body}`, () => {
     $$('[data-tab]').forEach(b => b.onclick = () => { location.hash = `#/student/${s.id}?t=${b.dataset.tab}`; });
     const pms = $('#pms'); if (pms) pms.onclick = () => printMockSheet(s);
     if (tab === 'mock') { bindGo(); $$('[data-mcert]').forEach(b => b.onclick = () => printMockCertificate(s, b.dataset.mcert)); }
+    const admf = $('#admf'); if (admf) admf.onclick = () => window.printAdmission ? window.printAdmission(s) : toast('ভর্তি ফর্ম লোড হয়নি — পাতা রিফ্রেশ করুন', true);
     const dos = $('#dos'); if (dos) dos.onclick = () => printDossier(s);
     const certs = $('#certs'); if (certs) certs.onclick = () => certListModal(s);
     if ($('#plink')) { const ic = $('#idc'); if (ic) ic.onclick = () => printIdCards([s]); $('#plink').onclick = () => parentLinkModal(s); $('#ssite').onclick = () => studentSiteModal(s); }

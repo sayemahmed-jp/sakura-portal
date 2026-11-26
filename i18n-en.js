@@ -284,3 +284,15 @@ window.SK_EN = {"পুরো কোর্স ফি পরিশোধ হল�
  "মেনু বন্ধ করুন": "Close menu",
  "কাজ বাকি": "needs you"
 });
+(function (add) { for (const k in add) if (!Object.prototype.hasOwnProperty.call(window.SK_EN, k)) window.SK_EN[k] = add[k]; })({
+ "🧾 ভর্তি চুক্তিপত্র": "🧾 Admission agreement",
+ "ভর্তি চুক্তিপত্রের জন্য": "For the admission agreement",
+ "অভিভাবকের পেশা": "Guardian's occupation",
+ "জরুরি যোগাযোগ (নাম ও নম্বর)": "Emergency contact (name and number)",
+ "আগে জাপানি শিখেছেন? কোন লেভেল": "Studied Japanese before? Which level",
+ "জাপানে পড়তে যাওয়ার পরিকল্পনা": "Plans to study in Japan",
+ "ফ্রি ট্রায়াল ক্লাসের তারিখ (৩টি)": "Free trial class dates (3)",
+ "হ্যাঁ": "Yes", "না": "No",
+ "ভর্তি ফর্ম লোড হয়নি — পাতা রিফ্রেশ করুন": "Admission form not loaded — refresh the page",
+ "ভর্তি সম্পন্ন — টাকা জমা নিয়ে \"🧾 ভর্তি চুক্তিপত্র\" প্রিন্ট করুন": "Admitted — take the payment, then print \"🧾 Admission agreement\""
+});
