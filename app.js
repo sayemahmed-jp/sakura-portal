@@ -3552,7 +3552,7 @@ function viewTeacherHome() {
   const mocks = (S.mock_attempts || []).filter(a => a.submitted_at).sort((a, b) => b.submitted_at.localeCompare(a.submitted_at)).slice(0, 8);
   mount('#/', `
   <div class="top"><div>${heroTitle()}<p>আজ ${fmtD(today)} · শিক্ষকের পাতা</p></div>
-    <div class="row no-print"><a class="btn" href="#/attendance">আজকের হাজিরা</a><a class="btn ghost" href="#/exams">পরীক্ষা ও নম্বর</a><a class="btn ghost" href="#/mocks">মক টেস্ট</a><a class="btn ghost" href="#/materials">পড়ার উপকরণ</a></div></div>
+    <div class="row no-print"><a class="btn gold" href="#/students/new">+ নতুন ভর্তি</a><a class="btn" href="#/attendance">আজকের হাজিরা</a><a class="btn ghost" href="#/exams">পরীক্ষা ও নম্বর</a><a class="btn ghost" href="#/mocks">মক টেস্ট</a><a class="btn ghost" href="#/materials">পড়ার উপকরণ</a></div></div>
   ${todayOff.off ? `<div class="alertbar" style="margin-bottom:16px"><b>আজ ক্লাস নেই</b><span>${esc(todayOff.why)}</span></div>` : ''}
   ${missAtt.length ? `<a class="alertbar" href="#/attendance?d=${missAtt[0].date}&l=${missAtt[0].level}&b=${missAtt[0].batch}" style="margin-bottom:16px"><b>${missAtt.length}টি ক্লাসের হাজিরা নেওয়া হয়নি</b><span>${missAtt.slice(0, 3).map(x => `${fmtD(x.date)} ${x.level} ${BATCH[x.batch]}`).join(' · ')}${missAtt.length > 3 ? ' …' : ''}</span></a>` : ''}
   <div class="grid g2 hero">${upNextCard()}${needsYouCard()}</div>
