@@ -44,17 +44,23 @@
   // ---- pre-made VOICEVOX clips (voice/<hash>.mp3): same voices on every phone; the device voice is only the fallback
   const VBASE = (() => { try { return new URL('voice/', document.currentScript.src).href; } catch (_) { return 'voice/'; } })();
   const VID = { n: 8, f: 14, m: 11 };   // 春日部つむぎ (narration), 冥鳴ひまり (woman), 玄野武宏 (man)
-  let IDX = null, AUD = null;
+  let IDX = null, AUD = null, EL = null;
   try { fetch(VBASE + 'index.json').then(r => r.ok ? r.json() : []).then(j => { IDX = new Set(j); }).catch(() => {}); } catch (_) { /* offline */ }
   const fnv = (s, h) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
   const hkey = (text, v) => { const s = text + '|' + v; const r = s.split('').reverse().join(''); return fnv(s, 2166136261).toString(16).padStart(8, '0') + fnv(r, 2166136261).toString(16).padStart(8, '0'); };
   function clipPlay(parts, onEnd) {
-    if (!IDX || !parts.length) return false;
-    const keys = parts.map(p => hkey(p.text, VID[p.who] || 8)); if (!keys.every(k => IDX.has(k))) return false;
+    if (!parts.length) return false;
+    const keys = parts.map(p => hkey(p.text, VID[p.who] || 8));
+    const sure = !!IDX; if (sure && !keys.every(k => IDX.has(k))) return false;   // list not loaded yet (slow phone): try the clip, fall back if it is missing
     stop(); const run = RUN; let i = 0;
+    // one audio element for the whole dialogue: phones (iPhone especially) only let a page play sound from an element
+    // the user's tap started, so a fresh new Audio() for line 2, 3… could be blocked and the device voice took over
+    const a = EL || (EL = new Audio()); a.preload = 'auto'; AUD = a;
+    let fell = false; const fb = (from) => { if (fell || run !== RUN) return; fell = true; AUD = null; try { a.pause(); } catch (_) { /* */ } fallback(parts.slice(from), onEnd); };
     const next = () => { if (run !== RUN) return; const k = keys[i++]; if (!k) { AUD = null; if (onEnd) onEnd(); return; }
-      const a = new Audio(VBASE + k + '.mp3'); AUD = a; a.onended = () => setTimeout(next, i < keys.length ? 650 : 0); a.onerror = () => setTimeout(next, 50);
-      const pr = a.play(); if (pr && pr.catch) pr.catch(() => { if (i === 1 && run === RUN) { AUD = null; fallback(parts, onEnd); } }); };
+      a.onended = () => setTimeout(next, i < keys.length ? 650 : 0); a.onerror = () => { if (fell || run !== RUN) return; if (!sure) fb(i - 1); else setTimeout(next, 50); };
+      a.src = VBASE + k + '.mp3';
+      const at = i; const pr = a.play(); if (pr && pr.catch) pr.catch((e) => { if (e && e.name === 'NotAllowedError') fb(at - 1); }); };   // blocked by the phone → device voice for the rest
     next(); return true;
   }
   let fallback = () => {};
